@@ -550,8 +550,8 @@ private fun NavigationItem(
         Text(
             text = label,
             color = Parchment.copy(alpha = if (selected) 1f else 0.68f),
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontSize = if (selected) 13.sp else 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             letterSpacing = 0.2.sp,
         )
     }
