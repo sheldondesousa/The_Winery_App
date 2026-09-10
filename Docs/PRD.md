@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Suggestions come from an on-device LLM, escalating to a cloud LLM for complex or high-stakes queries. Suggestions are corroborated against a static Kaggle wine-reviews dataset, with an optional web-search verification step on the matched winery.
+A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Suggestions come from an on-device LLM, escalating to a cloud LLM for complex or high-stakes queries. Suggestions may be compared against a static, user-selected Kaggle wine-reviews dataset, with an optional web-search verification step on the matched winery. Gemma does not depend on Kaggle to produce an AI recommendation or populate the AI profile; the dataset is a separate comparative source.
 
 ## 2. MVP Scope
 
@@ -32,6 +32,8 @@ Five screens:
 Used by both the AI suggestion and the Kaggle "from reviewers" match, so the two are directly comparable without prose interpretation:
 
 ```
+name
+winery
 variety
 region
 body          (light | medium | full | Unknown)
@@ -39,9 +41,12 @@ tannin        (low | medium | high | Unknown)
 acidity       (low | medium | high | Unknown)
 flavor_notes  (2-4 short tags)
 rating        (Unknown if source has none)
+confidence    (AI only, integer 0-100 self-assessment; not verified accuracy)
 ```
 
 Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unknown` is styled in muted/secondary text, visually distinct from resolved values.
+
+For category-level requests such as "Malbec," the AI may use learned knowledge to provide typical variety characteristics even when no exact bottle is identified. Bottle-specific winery, vintage, critic rating, or provenance claims remain `Unknown` unless the model identifies them with sufficient confidence or a separate source supplies them.
 
 ---
 
@@ -80,7 +85,7 @@ Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unkn
   - **AC2b:** Given the LLM can produce any number of suggestions within one session, when the user's query shifts to a different topic within the same session, then earlier suggestion cards remain visible in the thread rather than being cleared or collapsed.
 
 ### Content Tone
-- **AC3:** Given the on-device or cloud model generates a response, when phrased, then it uses casual, personable language (e.g. "This could work well — a Malbec would bring some dark fruit into it") rather than a structured field:value breakdown. Structured extraction (variety, region, etc.) still happens behind the scenes to feed Stage Show — it's just not what's shown in the thread.
+- **AC3:** Given the on-device or cloud model generates a response, when phrased, then it uses casual, personable language (e.g. "This could work well — a Malbec would bring some dark fruit into it") rather than a structured field:value breakdown. The model also returns a hidden structured profile for Stage Show; this machine-readable payload is removed before the response is rendered in Chat.
 
 ### Data & Content
 - **AC4:** Given a query is assessed as high-stakes or complex per the routing logic, when this is detected, then the query is escalated to the cloud LLM. The response stays in the same casual tone; escalation is not called out with a visible badge in the thread.
@@ -125,6 +130,8 @@ Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unkn
   - `flavor_notes`
   - `rating` (Unknown if the source has none)
 - **AC4a:** Given the "Kaggle" toggle position is active, when Stage Show renders, then the same schema fields display, sourced from the matched reviewer entry instead.
+- **AC4b:** Given the AI profile contains a self-assessed confidence value, when Stage Show renders, then it displays as "AI confidence" with copy clarifying that it is a model estimate, not verified accuracy.
+- **AC4c:** Given no Kaggle comparison exists, when Stage Show renders, then Gemma still populates AI fields from learned knowledge where supportable; absence of Kaggle is not a reason to make AI fields `Unknown`.
 - **AC5:** Given a field value is Unknown on either toggle position, when displayed, then it renders in muted/secondary text, visually distinct from resolved values.
 - **AC6:** Given both an AI suggestion and a Kaggle match exist, when Stage Show renders (regardless of which toggle position is active), then an agreement indicator is shown near the toggle ("Similar pick" / "Different take") based on variety + region overlap between the two.
 - **AC7:** Given the "Kaggle" toggle is active and the matched winery has been verified via web search, when this is the case, then a verified indicator displays near the winery name.
@@ -214,3 +221,27 @@ Surfaced here for validation before development starts:
 9. Favorites: sort order for the list.
 10. Favorites: confirmation step assumed required before removing a saved wine.
 11. **Scope confirmation:** location/price lookup (Google Places), discussed earlier in this project, is not part of these five MVP screens — confirm this is an intentional deferral.
+12. Final system prompt and confidence-calibration policy. The current structured-output instruction is implementation scaffolding and has not been approved as the final product prompt.
+
+---
+
+## 11. Implementation Status
+
+Implemented on native Android with Kotlin and Jetpack Compose:
+
+- Splash branding, authenticated resumable Gemma E2B download, byte progress, SHA-256 verification, three automatic retries, and manual retry state
+- Offline LiteRT-LM conversation inference after model installation
+- Chat header, empty state, conversation thread, input composer, dark status-bar treatment, and labeled bottom navigation
+- 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
+- Full-screen Stage Show navigation and layout, structured AI profile parsing, optional AI/Kaggle UI states, pairing action, favorite state, and 10-dot rating interaction
+- AI-confidence display at 12sp with an explicit accuracy disclaimer
+
+Not yet complete:
+
+- Final product-owned system prompt
+- Frank Ruhl Libre font bundling
+- Kaggle dataset import, matching, and comparison pipeline
+- Cloud routing and web verification
+- Persistent History, Favorites, ratings, and notes
+- Real model-generated cheese pairing on Stage Show; the current Stage Show result is placeholder copy
+- Physical-device execution of the Stage Show instrumentation tests and final responsive visual QA
