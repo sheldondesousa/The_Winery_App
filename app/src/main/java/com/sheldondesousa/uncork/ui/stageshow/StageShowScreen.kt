@@ -60,6 +60,7 @@ data class WineProfile(
     val rating: String = "Unknown",
     val cheesePairing: String? = null,
     val verified: Boolean = false,
+    val confidencePercent: Int? = null,
 )
 
 data class StageWine(
@@ -70,9 +71,15 @@ data class StageWine(
 
 fun WineSuggestion.toStageWine(): StageWine = StageWine(
     ai = WineProfile(
-        winery = name,
-        variety = name,
+        winery = winery,
+        variety = variety,
         region = region,
+        body = body,
+        tannin = tannin,
+        acidity = acidity,
+        flavorNotes = flavorNotes,
+        rating = sourceRating,
+        confidencePercent = confidencePercent,
     ),
 )
 
@@ -155,6 +162,24 @@ fun StageShowRoute(
                 selected = source,
                 sourcesAgree = wine.sourcesAgree,
                 onSelect = { source = it },
+            )
+        }
+
+        if (source == WineSource.AI && profile.confidencePercent != null) {
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = "AI CONFIDENCE · ${profile.confidencePercent}%",
+                color = Wine,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.4.sp,
+            )
+            Text(
+                text = "Model estimate, not verified accuracy",
+                modifier = Modifier.padding(top = 4.dp),
+                color = InkMuted,
+                fontSize = 12.sp,
+                fontStyle = FontStyle.Italic,
             )
         }
 

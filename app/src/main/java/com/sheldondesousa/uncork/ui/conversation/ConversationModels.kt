@@ -17,6 +17,14 @@ data class ChatMessage(
 data class WineSuggestion(
     val name: String,
     val region: String,
+    val winery: String = name,
+    val variety: String = name,
+    val body: String = "Unknown",
+    val tannin: String = "Unknown",
+    val acidity: String = "Unknown",
+    val flavorNotes: String = "Unknown",
+    val sourceRating: String = "Unknown",
+    val confidencePercent: Int? = null,
     val favoriteRating: Int? = null,
     val isFavorite: Boolean = false,
 )
@@ -43,4 +51,3 @@ class DemoConversationResponder : ConversationResponder {
         )
     }
 }
-

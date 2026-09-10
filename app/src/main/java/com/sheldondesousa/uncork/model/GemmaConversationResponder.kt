@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 
 class GemmaConversationResponder(
@@ -41,7 +42,10 @@ class GemmaConversationResponder(
 
         if (response.isBlank()) error("The on-device model returned an empty response.")
         val suggestion = extractSuggestion(response)
-        val visibleResponse = response.replace(WINE_MARKER, "").trim()
+        val visibleResponse = response
+            .replace(WINE_PROFILE_MARKER, "")
+            .replace(LEGACY_WINE_MARKER, "")
+            .trim()
 
         ChatMessage(
             id = System.nanoTime(),
@@ -103,24 +107,68 @@ class GemmaConversationResponder(
     }
 
     companion object {
-        private val WINE_MARKER = Regex(
+        private val WINE_PROFILE_MARKER = Regex(
+            pattern = "\\[WINE_PROFILE](.+?)\\[/WINE_PROFILE]",
+            options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
+        private val LEGACY_WINE_MARKER = Regex(
             pattern = "\\[WINE]\\s*(.+?)\\s*\\|\\s*(.+?)\\s*\\[/WINE]",
             options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
 
         private fun extractSuggestion(response: String): WineSuggestion? {
-            val match = WINE_MARKER.find(response) ?: return null
+            WINE_PROFILE_MARKER.find(response)?.groupValues?.getOrNull(1)?.let { payload ->
+                runCatching {
+                    val json = JSONObject(payload.trim())
+                    val name = json.requiredString("name")
+                    val region = json.requiredString("region")
+                    WineSuggestion(
+                        name = name,
+                        region = region,
+                        winery = json.knownString("winery", name),
+                        variety = json.knownString("variety", name),
+                        body = json.level("body"),
+                        tannin = json.level("tannin"),
+                        acidity = json.level("acidity"),
+                        flavorNotes = json.knownString("flavor_notes"),
+                        sourceRating = json.knownString("rating"),
+                        confidencePercent = json.optInt("confidence", -1).takeIf { it in 0..100 },
+                    )
+                }.getOrNull()?.let { return it }
+            }
+
+            val match = LEGACY_WINE_MARKER.find(response) ?: return null
             val name = match.groupValues[1].trim()
             val region = match.groupValues[2].trim()
             if (name.isBlank() || region.isBlank()) return null
             return WineSuggestion(name = name, region = region)
         }
 
+        private fun JSONObject.requiredString(key: String): String =
+            optString(key).trim().takeIf { it.isNotEmpty() } ?: error("Missing $key")
+
+        private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String =
+            optString(key).trim().takeIf { it.isNotEmpty() && !it.equals("null", true) } ?: fallback
+
+        private fun JSONObject.level(key: String): String {
+            val value = knownString(key).lowercase()
+            return when (value) {
+                "low", "medium", "high" -> value.replaceFirstChar(Char::uppercase)
+                else -> "Unknown"
+            }
+        }
+
         private const val SYSTEM_INSTRUCTION =
             "You are Uncork, a warm and concise personal sommelier. Recommend wine pairings " +
                 "in casual language. Do not include cheese unless explicitly requested. Never " +
                 "invent unavailable facts; say when information is uncertain. Whenever you " +
-                "recommend a specific wine, finish with exactly [WINE]wine name|region[/WINE]. " +
-                "This marker is required for the app UI and must not be explained."
+                "recommend a specific wine, finish with exactly one compact JSON object between " +
+                "[WINE_PROFILE] and [/WINE_PROFILE]. Use keys name, winery, variety, region, body, " +
+                "tannin, acidity, flavor_notes, rating, and confidence. Body, tannin, and acidity " +
+                "must be low, medium, high, or Unknown. Rating must be a known critic or source " +
+                "rating or Unknown; never invent one. Confidence is a conservative integer from " +
+                "0 to 100 representing certainty in the profile, not verified accuracy. Use " +
+                "Unknown for facts you cannot support. The marker is required for the app UI and " +
+                "must not be explained."
     }
 }
