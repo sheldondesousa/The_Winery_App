@@ -481,8 +481,7 @@ private fun BottomNavigation(selected: AppTab) {
             .fillMaxWidth()
             .background(Wine)
             .navigationBarsPadding()
-            .height(72.dp)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .height(72.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         NavigationItem(
@@ -531,8 +530,6 @@ private fun NavigationItem(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .padding(horizontal = 4.dp)
-            .clip(RoundedCornerShape(18.dp))
             .background(if (selected) Parchment.copy(alpha = 0.16f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(role = Role.Tab) { }
             .semantics { contentDescription = label },
