@@ -170,7 +170,7 @@ fun StageShowRoute(
             Text(
                 text = "AI CONFIDENCE · ${profile.confidencePercent}%",
                 color = Wine,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.4.sp,
             )
