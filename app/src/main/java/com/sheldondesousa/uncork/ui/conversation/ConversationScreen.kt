@@ -45,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -69,7 +68,7 @@ import com.sheldondesousa.uncork.ui.theme.Wine
 import kotlinx.coroutines.launch
 
 private enum class AppTab(val label: String) {
-    Conversation("Conversation"),
+    Conversation("Chat"),
     History("History"),
     Favorites("Favorites"),
 }
@@ -480,16 +479,10 @@ private fun BottomNavigation(selected: AppTab) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .height(86.dp)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
-            )
-            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
             .background(Wine)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .navigationBarsPadding()
+            .height(72.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         NavigationItem(
@@ -523,17 +516,16 @@ private fun NavigationItem(
     modifier: Modifier = Modifier,
     icon: @Composable () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxHeight()
             .padding(horizontal = 4.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(if (selected) Parchment.copy(alpha = 0.16f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(role = Role.Tab) { }
-            .padding(horizontal = 12.dp)
             .semantics { contentDescription = label },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.material3.LocalContentColor provides Parchment.copy(
@@ -542,15 +534,13 @@ private fun NavigationItem(
         ) {
             Box(Modifier.size(27.dp), contentAlignment = Alignment.Center) { icon() }
         }
-        if (selected) {
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = label,
-                color = Parchment,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.2.sp,
-            )
-        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = label,
+            color = Parchment.copy(alpha = if (selected) 1f else 0.68f),
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            letterSpacing = 0.2.sp,
+        )
     }
 }
