@@ -12,6 +12,7 @@ import com.google.ai.edge.litertlm.SamplerConfig
 import com.sheldondesousa.uncork.ui.conversation.ChatMessage
 import com.sheldondesousa.uncork.ui.conversation.ConversationResponder
 import com.sheldondesousa.uncork.ui.conversation.MessageAuthor
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
@@ -39,11 +40,14 @@ class GemmaConversationResponder(
         }.trim()
 
         if (response.isBlank()) error("The on-device model returned an empty response.")
+        val suggestion = extractSuggestion(response)
+        val visibleResponse = response.replace(WINE_MARKER, "").trim()
 
         ChatMessage(
             id = System.nanoTime(),
             author = MessageAuthor.Assistant,
-            text = response,
+            text = visibleResponse.ifBlank { response },
+            suggestion = suggestion,
         )
     }
 
@@ -99,9 +103,24 @@ class GemmaConversationResponder(
     }
 
     companion object {
+        private val WINE_MARKER = Regex(
+            pattern = "\\[WINE]\\s*(.+?)\\s*\\|\\s*(.+?)\\s*\\[/WINE]",
+            options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
+
+        private fun extractSuggestion(response: String): WineSuggestion? {
+            val match = WINE_MARKER.find(response) ?: return null
+            val name = match.groupValues[1].trim()
+            val region = match.groupValues[2].trim()
+            if (name.isBlank() || region.isBlank()) return null
+            return WineSuggestion(name = name, region = region)
+        }
+
         private const val SYSTEM_INSTRUCTION =
             "You are Uncork, a warm and concise personal sommelier. Recommend wine pairings " +
                 "in casual language. Do not include cheese unless explicitly requested. Never " +
-                "invent unavailable facts; say when information is uncertain."
+                "invent unavailable facts; say when information is uncertain. Whenever you " +
+                "recommend a specific wine, finish with exactly [WINE]wine name|region[/WINE]. " +
+                "This marker is required for the app UI and must not be explained."
     }
 }

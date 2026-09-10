@@ -13,6 +13,9 @@ import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.ModelFileManager
 import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
+import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
+import com.sheldondesousa.uncork.ui.stageshow.StageWine
+import com.sheldondesousa.uncork.ui.stageshow.toStageWine
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,9 +34,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             UncorkTheme {
                 var modelReady by remember { mutableStateOf(false) }
+                var stageWine by remember { mutableStateOf<StageWine?>(null) }
 
                 if (modelReady) {
-                    ConversationRoute(responder = gemmaResponder)
+                    ConversationRoute(
+                        responder = gemmaResponder,
+                        onSuggestionClick = { stageWine = it.toStageWine() },
+                    )
+                    stageWine?.let { wine ->
+                        StageShowRoute(
+                            wine = wine,
+                            onBack = { stageWine = null },
+                        )
+                    }
                 } else {
                     SplashRoute(
                         modelFileManager = modelFileManager,
