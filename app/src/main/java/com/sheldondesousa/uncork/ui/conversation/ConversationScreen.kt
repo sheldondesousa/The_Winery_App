@@ -363,7 +363,7 @@ private fun ReplyingIndicator() {
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            text = "Considering the pairing…",
+            text = "Thinking…",
             color = InkMuted,
             fontSize = 14.sp,
             fontStyle = FontStyle.Italic,
