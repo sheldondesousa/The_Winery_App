@@ -287,7 +287,7 @@ private fun MessageBubble(
                     modifier = Modifier
                         .padding(start = 18.dp, top = 4.dp, bottom = 4.dp)
                         .clip(RoundedCornerShape(11.dp))
-                        .background(Color.Black.copy(alpha = 0.10f))
+                        .background(Color.Black.copy(alpha = 0.05f))
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     Text(
