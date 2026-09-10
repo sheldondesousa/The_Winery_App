@@ -492,6 +492,7 @@ private fun BottomNavigation(selected: AppTab) {
         ) {
             Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null)
         }
+        NavigationDivider()
         NavigationItem(
             label = AppTab.History.label,
             selected = selected == AppTab.History,
@@ -499,6 +500,7 @@ private fun BottomNavigation(selected: AppTab) {
         ) {
             Icon(Icons.Outlined.History, contentDescription = null)
         }
+        NavigationDivider()
         NavigationItem(
             label = AppTab.Favorites.label,
             selected = selected == AppTab.Favorites,
@@ -507,6 +509,16 @@ private fun BottomNavigation(selected: AppTab) {
             Icon(Icons.Outlined.FavoriteBorder, contentDescription = null)
         }
     }
+}
+
+@Composable
+private fun NavigationDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .fillMaxHeight(0.58f)
+            .background(Parchment.copy(alpha = 0.24f)),
+    )
 }
 
 @Composable
