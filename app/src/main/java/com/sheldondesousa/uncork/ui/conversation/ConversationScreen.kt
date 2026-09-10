@@ -261,7 +261,7 @@ private fun MessageBubble(
                     .background(Wine.copy(alpha = 0.08f))
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 color = Wine,
-                fontSize = 18.sp,
+                fontSize = 15.sp,
                 lineHeight = 26.sp,
             )
         } else {
@@ -280,7 +280,7 @@ private fun MessageBubble(
                     Text(
                         text = message.text,
                         color = Ink,
-                        fontSize = 19.sp,
+                        fontSize = 16.sp,
                         lineHeight = 28.sp,
                     )
                     message.suggestion?.let { suggestion ->
