@@ -8,4 +8,4 @@
 .externalNativeBuild
 .cxx
 app/build
-
+gradle/gradle-daemon-jvm.properties

@@ -1,0 +1,506 @@
+package com.sheldondesousa.uncork.ui.conversation
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.sheldondesousa.uncork.ui.theme.Hairline
+import com.sheldondesousa.uncork.ui.theme.Ink
+import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.Parchment
+import com.sheldondesousa.uncork.ui.theme.Wine
+import kotlinx.coroutines.launch
+
+private enum class AppTab(val label: String) {
+    Conversation("Conversation"),
+    History("History"),
+    Favorites("Favorites"),
+}
+
+@Composable
+fun ConversationRoute(
+    responder: ConversationResponder = remember { DemoConversationResponder() },
+    onSuggestionClick: (WineSuggestion) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val messages = remember { mutableStateListOf<ChatMessage>() }
+    var draft by rememberSaveable { mutableStateOf("") }
+    var isReplying by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun submit() {
+        val query = draft.trim()
+        if (query.isEmpty() || isReplying) return
+
+        messages += ChatMessage(
+            id = System.nanoTime(),
+            author = MessageAuthor.User,
+            text = query,
+        )
+        draft = ""
+        isReplying = true
+        errorMessage = null
+
+        scope.launch {
+            runCatching { responder.replyTo(query) }
+                .onSuccess { messages += it }
+                .onFailure {
+                    errorMessage = "I couldn’t finish that suggestion. Check your connection and try again."
+                }
+            isReplying = false
+        }
+    }
+
+    ConversationScreen(
+        messages = messages,
+        draft = draft,
+        isReplying = isReplying,
+        errorMessage = errorMessage,
+        onDraftChange = { draft = it },
+        onSend = ::submit,
+        onSuggestionClick = onSuggestionClick,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun ConversationScreen(
+    messages: List<ChatMessage>,
+    draft: String,
+    isReplying: Boolean,
+    errorMessage: String?,
+    onDraftChange: (String) -> Unit,
+    onSend: () -> Unit,
+    onSuggestionClick: (WineSuggestion) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(messages.size, isReplying, errorMessage) {
+        val extraRows = (if (isReplying) 1 else 0) + (if (errorMessage != null) 1 else 0)
+        val finalIndex = messages.lastIndex + extraRows
+        if (finalIndex >= 0) listState.animateScrollToItem(finalIndex)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Parchment)
+            .statusBarsPadding()
+            .imePadding(),
+    ) {
+        ConversationHeader()
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            if (messages.isEmpty() && !isReplying && errorMessage == null) {
+                EmptyConversation()
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        start = 20.dp,
+                        top = 24.dp,
+                        end = 20.dp,
+                        bottom = 20.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    items(messages, key = { it.id }) { message ->
+                        MessageBubble(
+                            message = message,
+                            onSuggestionClick = onSuggestionClick,
+                        )
+                    }
+                    if (isReplying) {
+                        item(key = "replying") { ReplyingIndicator() }
+                    }
+                    if (errorMessage != null) {
+                        item(key = "error") { ErrorBubble(errorMessage) }
+                    }
+                }
+            }
+        }
+
+        MessageComposer(
+            value = draft,
+            enabled = !isReplying,
+            onValueChange = onDraftChange,
+            onSend = onSend,
+        )
+        BottomNavigation(selected = AppTab.Conversation)
+    }
+}
+
+@Composable
+private fun ConversationHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Uncork",
+            color = Ink,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = "AI SOMMELIER",
+            color = Wine,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 2.sp,
+        )
+    }
+}
+
+@Composable
+private fun EmptyConversation() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(40.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "What are we pairing today?",
+            color = InkMuted,
+            fontSize = 25.sp,
+            fontStyle = FontStyle.Italic,
+            lineHeight = 33.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun MessageBubble(
+    message: ChatMessage,
+    onSuggestionClick: (WineSuggestion) -> Unit,
+) {
+    val isUser = message.author == MessageAuthor.User
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = if (isUser) "You said: ${message.text}" else "Assistant said: ${message.text}"
+            },
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+    ) {
+        if (isUser) {
+            Text(
+                text = message.text,
+                modifier = Modifier
+                    .fillMaxWidth(0.84f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(Wine.copy(alpha = 0.08f))
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                color = Wine,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .height(IntrinsicSize.Min),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(Hairline),
+                )
+                Column(modifier = Modifier.padding(start = 18.dp, top = 4.dp, bottom = 4.dp)) {
+                    Text(
+                        text = message.text,
+                        color = Ink,
+                        fontSize = 19.sp,
+                        lineHeight = 28.sp,
+                    )
+                    message.suggestion?.let { suggestion ->
+                        Spacer(Modifier.height(16.dp))
+                        SuggestionLink(
+                            suggestion = suggestion,
+                            onClick = { onSuggestionClick(suggestion) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val LeftRuleShape = RoundedCornerShape(
+    topStart = 1.dp,
+    topEnd = 0.dp,
+    bottomEnd = 0.dp,
+    bottomStart = 1.dp,
+)
+
+@Composable
+private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = suggestion.name,
+                color = Ink,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = suggestion.region,
+                color = InkMuted,
+                fontSize = 13.sp,
+                letterSpacing = 0.3.sp,
+            )
+            if (suggestion.isFavorite) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = suggestion.favoriteRating?.let { "$it / 10" } ?: "Favorited",
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Wine.copy(alpha = 0.10f))
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                    color = Wine,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+        Text(
+            text = "›",
+            color = InkMuted,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Light,
+        )
+    }
+}
+
+@Composable
+private fun ReplyingIndicator() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            color = InkMuted,
+            strokeWidth = 1.dp,
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = "Considering the pairing…",
+            color = InkMuted,
+            fontSize = 14.sp,
+            fontStyle = FontStyle.Italic,
+        )
+    }
+}
+
+@Composable
+private fun ErrorBubble(message: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(0.92f)
+            .height(IntrinsicSize.Min),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+                .background(Hairline),
+        )
+        Text(
+            text = message,
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, bottom = 8.dp),
+            color = Wine,
+            fontSize = 16.sp,
+            lineHeight = 23.sp,
+        )
+    }
+}
+
+@Composable
+private fun MessageComposer(
+    value: String,
+    enabled: Boolean,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+    val canSend = enabled && value.isNotBlank()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .border(2.dp, Hairline, RoundedCornerShape(14.dp))
+            .padding(start = 16.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(focusRequester)
+                .testTag("message-input"),
+            enabled = enabled,
+            textStyle = TextStyle(
+                color = Ink,
+                fontSize = 17.sp,
+                lineHeight = 23.sp,
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = {
+                if (canSend) {
+                    onSend()
+                    focusManager.clearFocus()
+                }
+            }),
+            singleLine = false,
+            maxLines = 4,
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier.padding(vertical = 7.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = "Ask about a pairing…",
+                            color = InkMuted,
+                            fontSize = 17.sp,
+                            fontStyle = FontStyle.Italic,
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+        Text(
+            text = "↑",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(50))
+                .background(if (canSend) Wine else Hairline)
+                .clickable(enabled = canSend, role = Role.Button) {
+                    onSend()
+                    focusManager.clearFocus()
+                }
+                .semantics {
+                    role = Role.Button
+                    contentDescription = "Send message"
+                }
+                .padding(top = 6.dp),
+            color = if (canSend) Parchment else InkMuted,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun BottomNavigation(selected: AppTab) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .height(58.dp)
+            .background(Parchment)
+            .border(width = 1.dp, color = Hairline),
+    ) {
+        AppTab.entries.forEachIndexed { index, tab ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .then(
+                        if (index > 0) Modifier.border(
+                            width = 1.dp,
+                            color = Hairline,
+                            shape = LeftRuleShape,
+                        ) else Modifier,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = tab.label,
+                    color = if (tab == selected) Ink else InkMuted,
+                    fontSize = 11.sp,
+                    fontWeight = if (tab == selected) FontWeight.SemiBold else FontWeight.Normal,
+                    letterSpacing = 0.4.sp,
+                )
+            }
+        }
+    }
+}

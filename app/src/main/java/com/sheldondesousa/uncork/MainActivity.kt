@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
 import com.sheldondesousa.uncork.ui.splash.DemoModelLoader
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
@@ -21,7 +22,7 @@ class MainActivity : ComponentActivity() {
                 var modelReady by remember { mutableStateOf(false) }
 
                 if (modelReady) {
-                    ConversationPlaceholder()
+                    ConversationRoute()
                 } else {
                     SplashRoute(
                         modelLoader = DemoModelLoader(),
@@ -32,4 +33,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
