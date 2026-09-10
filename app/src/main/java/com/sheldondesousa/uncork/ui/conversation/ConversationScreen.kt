@@ -533,25 +533,23 @@ private fun NavigationItem(
             .fillMaxHeight()
             .padding(horizontal = 4.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(if (selected) Parchment else androidx.compose.ui.graphics.Color.Transparent)
+            .background(if (selected) Parchment.copy(alpha = 0.16f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(role = Role.Tab) { }
             .semantics { contentDescription = label },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides if (selected) {
-                Wine
-            } else {
-                Parchment.copy(alpha = 0.68f)
-            },
+            androidx.compose.material3.LocalContentColor provides Parchment.copy(
+                alpha = if (selected) 1f else 0.58f,
+            ),
         ) {
             Box(Modifier.size(27.dp), contentAlignment = Alignment.Center) { icon() }
         }
         Spacer(Modifier.height(3.dp))
         Text(
             text = label,
-            color = if (selected) Wine else Parchment.copy(alpha = 0.68f),
+            color = Parchment.copy(alpha = if (selected) 1f else 0.68f),
             fontSize = if (selected) 13.sp else 12.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             letterSpacing = 0.2.sp,
