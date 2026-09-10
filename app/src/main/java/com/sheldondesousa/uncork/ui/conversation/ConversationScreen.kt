@@ -268,7 +268,7 @@ private fun MessageBubble(
                     .background(Wine.copy(alpha = 0.08f))
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 color = Wine,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 lineHeight = 26.sp,
             )
         } else {
