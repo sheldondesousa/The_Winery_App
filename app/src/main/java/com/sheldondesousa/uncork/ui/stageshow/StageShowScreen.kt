@@ -290,7 +290,7 @@ private fun DetailRow(label: String, value: String) {
             text = value,
             modifier = Modifier.padding(top = 7.dp),
             color = if (unknown) InkMuted else Ink,
-            fontSize = 21.sp,
+            fontSize = 15.sp,
             lineHeight = 28.sp,
             fontStyle = if (unknown) FontStyle.Italic else FontStyle.Normal,
         )
