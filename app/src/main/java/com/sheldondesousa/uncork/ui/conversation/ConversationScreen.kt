@@ -274,7 +274,7 @@ private fun MessageBubble(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(1.dp)
-                        .background(Hairline),
+                        .background(Ink.copy(alpha = 0.50f)),
                 )
                 Column(modifier = Modifier.padding(start = 18.dp, top = 4.dp, bottom = 4.dp)) {
                     Text(
