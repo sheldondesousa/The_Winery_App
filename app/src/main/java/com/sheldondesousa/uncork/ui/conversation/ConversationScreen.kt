@@ -22,11 +22,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -194,7 +201,7 @@ private fun ConversationHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 22.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Bottom,
     ) {
         Text(
             text = "Uncork",
@@ -205,6 +212,7 @@ private fun ConversationHeader() {
         Spacer(Modifier.weight(1f))
         Text(
             text = "AI SOMMELIER",
+            modifier = Modifier.padding(bottom = 5.dp),
             color = Wine,
             fontSize = 9.sp,
             fontWeight = FontWeight.Medium,
@@ -222,7 +230,7 @@ private fun EmptyConversation() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "What are we pairing today?",
+            text = "How can you today?",
             color = InkMuted,
             fontSize = 25.sp,
             fontStyle = FontStyle.Italic,
@@ -471,36 +479,111 @@ private fun MessageComposer(
 
 @Composable
 private fun BottomNavigation(selected: AppTab) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .height(58.dp)
-            .background(Parchment)
-            .border(width = 1.dp, color = Hairline),
+            .height(92.dp),
     ) {
-        AppTab.entries.forEachIndexed { index, tab ->
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .then(
-                        if (index > 0) Modifier.border(
-                            width = 1.dp,
-                            color = Hairline,
-                            shape = LeftRuleShape,
-                        ) else Modifier,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = tab.label,
-                    color = if (tab == selected) Ink else InkMuted,
-                    fontSize = 11.sp,
-                    fontWeight = if (tab == selected) FontWeight.SemiBold else FontWeight.Normal,
-                    letterSpacing = 0.4.sp,
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(68.dp)
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 )
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(Parchment)
+                .border(
+                    width = 1.dp,
+                    color = Hairline,
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                )
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NavigationItem(
+                label = AppTab.History.label,
+                selected = selected == AppTab.History,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Outlined.History, contentDescription = null)
+            }
+            Spacer(Modifier.weight(1f))
+            NavigationItem(
+                label = AppTab.Favorites.label,
+                selected = selected == AppTab.Favorites,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Outlined.FavoriteBorder, contentDescription = null)
             }
         }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .width(120.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Parchment)
+                    .border(1.dp, Hairline, CircleShape)
+                    .clickable(role = Role.Button) { }
+                    .semantics { contentDescription = "New conversation" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = if (selected == AppTab.Conversation) Ink else InkMuted,
+                )
+            }
+            Text(
+                text = AppTab.Conversation.label,
+                modifier = Modifier.padding(top = 3.dp),
+                color = if (selected == AppTab.Conversation) Ink else InkMuted,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.3.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavigationItem(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clickable(role = Role.Tab) { }
+            .semantics { contentDescription = label },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides if (selected) Ink else InkMuted,
+        ) {
+            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { icon() }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = if (selected) Ink else InkMuted,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            letterSpacing = 0.3.sp,
+        )
     }
 }
