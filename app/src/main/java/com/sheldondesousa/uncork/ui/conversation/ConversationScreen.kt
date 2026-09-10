@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
@@ -451,8 +452,7 @@ private fun MessageComposer(
                 }
             },
         )
-        Text(
-            text = "↑",
+        Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(50))
@@ -464,13 +464,16 @@ private fun MessageComposer(
                 .semantics {
                     role = Role.Button
                     contentDescription = "Send message"
-                }
-                .padding(top = 6.dp),
-            color = if (canSend) Parchment else InkMuted,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center,
-        )
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ArrowUpward,
+                contentDescription = null,
+                modifier = Modifier.size(21.dp),
+                tint = if (canSend) Parchment else InkMuted,
+            )
+        }
     }
 }
 
