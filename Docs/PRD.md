@@ -3,7 +3,7 @@
 **Status:** Draft
 **Author:** Sheldon
 **Platform:** Android only, native (Kotlin) — matches your Pixel 10 Pro Fold
-**On-device model:** Bundled Gemma model via Google AI Edge SDK/MediaPipe (not Gemini Nano/AICore — free-form conversational prompting needed AICore's fixed task set doesn't support)
+**On-device model:** Gemma 4 E2B instruction-tuned LiteRT-LM bundle, downloaded from Hugging Face on first launch and stored in private app storage (not Gemini Nano/AICore)
 **User:** Personal use (single user); BYOK model if ever shared
 
 ## 1. Overview
@@ -47,16 +47,17 @@ Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unkn
 
 ## 5. Splash Screen
 
-**Purpose:** App branding, plus a readiness check that the on-device model is loaded before the user can query it.
+**Purpose:** App branding, plus first-launch acquisition and subsequent readiness checks for the on-device model.
 
 ### Navigation & Display
 - **AC1:** Given app cold start, when the splash screen loads, then app branding (name/logo) is displayed centered on screen.
-- **AC2:** Given the on-device model check is in progress, when splash is showing, then a progress bar is displayed alongside the branding, showing load percentage rather than a generic spinner.
-  - **AC2a:** Given the on-device model loader does not expose granular load progress, when this is the case, then the bar falls back to an indeterminate animation rather than showing a static or misleading percentage.
+- **AC2:** Given the model is not installed, when its authenticated Hugging Face download is in progress, then a progress bar displays the percentage calculated from downloaded and expected bytes.
+  - **AC2a:** Given the app is checking or verifying the local model, then the bar uses an indeterminate animation rather than showing a misleading percentage.
 
 ### Data & Content
-- **AC3:** Given the on-device model finishes loading successfully, when the check completes, then the app navigates to the Main Conversation Screen.
-- **AC4:** Given the on-device model fails to load, when the check completes with an error, then an error state is shown with a retry option.
+- **AC3:** Given the verified model already exists in private app storage, when the app starts, then it navigates directly to the Main Conversation Screen without network access.
+- **AC4:** Given the model does not exist, then the user is asked for a Hugging Face read token, which is used for the download and is not persisted.
+- **AC4a:** Given the download or integrity verification fails, then the app retries up to three times before showing the designed error state with a manual retry option.
 
 ### Error Handling
 - **AC5:** Given the on-device model load fails, when the user taps retry, then the model load is re-attempted.
@@ -64,7 +65,7 @@ Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unkn
 
 **Open assumptions:**
 - Maximum acceptable splash duration before showing a "taking longer than usual" message — not yet defined. Suggest 3-5 seconds as a placeholder pending device testing.
-- On-device path is settled (bundled Gemma via AI Edge SDK/MediaPipe), so the remaining question is narrower: whether MediaPipe's model-loading API exposes real byte/percentage progress, or only a load/not-loaded callback. This is checkable directly against the SDK docs rather than a design decision — determines whether AC2 or AC2a is the actual behavior.
+- On-device path is settled on the pinned `gemma-4-E2B-it.litertlm` artifact and LiteRT-LM runtime. Download progress is byte-based; local checking and SHA-256 verification are indeterminate phases.
 
 ---
 
@@ -203,7 +204,7 @@ Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unkn
 Surfaced here for validation before development starts:
 
 1. Splash: maximum acceptable load duration before "taking longer than usual" messaging.
-2. Splash: whether MediaPipe's model-loading API exposes real byte/percentage progress or only load/not-loaded — checkable against SDK docs; determines whether the progress bar (AC2) is determinate or falls back to indeterminate (AC2a).
+2. Splash model progress is resolved: network download uses byte percentage, while local checking and SHA-256 verification use indeterminate progress.
 3. Main Conversation: exact routing heuristic for on-device → cloud escalation.
 4. Main Conversation: cheese pairing assumed to be a dedicated action, not free-text intent parsing.
 5. Main Conversation: whether a tappable suggestion needs a visible affordance (chevron, etc.) or is implicitly tappable.

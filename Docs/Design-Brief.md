@@ -1,6 +1,6 @@
 # Uncork — Design Brief
 
-*Working name — placeholder pending a real one. Personal, single-user Android app (Kotlin native), on-device Gemma model via AI Edge SDK/MediaPipe, escalating to a cloud LLM for complex queries. Reference: `Wine-App.md` PRD.*
+*Working name — placeholder pending a real one. Personal, single-user Android app (Kotlin native), on-device Gemma 4 E2B via LiteRT-LM, escalating to a cloud LLM for complex queries. Reference: `PRD.md`.*
 
 Mockup reference: `wine-app-mockup-minimal.html`
 
@@ -59,7 +59,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 
 ### Splash
 - Centered wordmark "Uncork" with tagline "ai sommelier" directly beneath it in `--accent`, sans-serif, lowercase, letter-spaced.
-- Loading: thin progress bar + percentage (falls back to indeterminate if MediaPipe doesn't expose real progress — PRD §5 AC2a).
+- First launch: masked Hugging Face token entry followed by a thin byte-progress bar and percentage while the 2.58 GB model downloads. Checking and SHA-256 verification use the indeterminate variant.
 - Error (after 3 failed retries): copy states the failure directly ("Model failed to load three times. Check your device storage and try again.") rather than a generic message, with a text-only Retry action.
 
 ### Main Conversation

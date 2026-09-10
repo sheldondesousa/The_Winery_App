@@ -38,7 +38,7 @@ The MVP is intended for personal, single-user use and stores history, favorites,
 - **Platform:** Android only
 - **Language:** Kotlin
 - **UI:** Native Android UI, preferably Jetpack Compose
-- **On-device AI:** Bundled Gemma model through Google AI Edge SDK/MediaPipe
+- **On-device AI:** Gemma 4 E2B through Google LiteRT-LM. The pinned 2.58 GB model is downloaded from Hugging Face on first launch, verified with SHA-256, and then runs from private app storage without a network connection.
 - **Cloud AI:** Used only when routing determines a request is too complex or sensitive for the on-device model
 - **Persistence:** Local on-device storage; no cloud sync in the MVP
 - **Keyboard behavior:** Android IME action sends messages, with proper WindowInsets/resize handling
@@ -74,4 +74,10 @@ The wine-red accent is reserved for user-supplied signals: user chat messages, p
 
 ## Status
 
-The project is currently in the product-definition and design phase. Several implementation decisions—including cloud-routing criteria, history retention, and final navigation behavior—remain open before development begins.
+The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, and initial Chat interface are implemented. Cloud-routing criteria, history retention, and final drill-in navigation remain open.
+
+## First launch
+
+The first time Uncork opens, enter a Hugging Face read token. The token is sent only as an authorization header for the model download and is never persisted by the app. Interrupted downloads are retained as a partial file and resumed automatically. Keep Uncork open until download and verification complete.
+
+After successful verification, later launches skip the download flow and open Chat directly. Prompts and responses are processed by LiteRT-LM on the device, so chat remains available offline.
