@@ -54,9 +54,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,6 +72,8 @@ import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import kotlinx.coroutines.launch
+
+private val AiResponseInk = Color(0xFF27201D)
 
 private enum class AppTab(val label: String) {
     Conversation("Chat"),
@@ -278,8 +285,8 @@ private fun MessageBubble(
                 )
                 Column(modifier = Modifier.padding(start = 18.dp, top = 4.dp, bottom = 4.dp)) {
                     Text(
-                        text = message.text,
-                        color = Ink,
+                        text = parseBoldMarkdown(message.text),
+                        color = AiResponseInk,
                         fontSize = 16.sp,
                         lineHeight = 28.sp,
                     )
@@ -293,6 +300,30 @@ private fun MessageBubble(
                 }
             }
         }
+    }
+}
+
+private fun parseBoldMarkdown(source: String): AnnotatedString = buildAnnotatedString {
+    var cursor = 0
+
+    while (cursor < source.length) {
+        val opening = source.indexOf("**", cursor)
+        if (opening == -1) {
+            append(source.substring(cursor))
+            break
+        }
+
+        val closing = source.indexOf("**", opening + 2)
+        if (closing == -1) {
+            append(source.substring(cursor))
+            break
+        }
+
+        append(source.substring(cursor, opening))
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(source.substring(opening + 2, closing))
+        }
+        cursor = closing + 2
     }
 }
 
