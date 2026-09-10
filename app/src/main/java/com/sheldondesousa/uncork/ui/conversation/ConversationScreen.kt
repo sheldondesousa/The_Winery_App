@@ -530,7 +530,6 @@ private fun NavigationItem(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(if (selected) Ink.copy(alpha = 0.20f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(role = Role.Tab) { }
             .semantics { contentDescription = label },
         horizontalAlignment = Alignment.CenterHorizontally,
