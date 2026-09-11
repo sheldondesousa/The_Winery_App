@@ -12,19 +12,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -107,27 +108,34 @@ fun HistoryRoute(
                     },
                 )
                 if (isSelecting) {
-                    Button(
-                        onClick = {
-                            onDeleteEntries(selectedIds)
-                            selectedIds = emptySet()
-                            isSelecting = false
-                        },
-                        enabled = selectedIds.isNotEmpty(),
+                    val canDelete = selectedIds.isNotEmpty()
+                    val deleteColor = if (canDelete) Color.Black else InkMuted.copy(alpha = 0.45f)
+                    Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 20.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Black,
-                            contentColor = Parchment,
-                            disabledContainerColor = InkMuted.copy(alpha = 0.22f),
-                            disabledContentColor = Parchment.copy(alpha = 0.65f),
-                        ),
+                            .padding(bottom = 12.dp)
+                            .clickable(enabled = canDelete, role = Role.Button) {
+                                onDeleteEntries(selectedIds)
+                                selectedIds = emptySet()
+                                isSelecting = false
+                            }
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Delete selected history"
+                            }
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
+                        Icon(
+                            imageVector = Icons.Outlined.DeleteOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = deleteColor,
+                        )
                         Text(
                             text = "Delete",
-                            fontSize = 14.sp,
+                            color = deleteColor,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
