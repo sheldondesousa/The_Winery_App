@@ -77,7 +77,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 ### Stage Show
 - No persistent nav chrome (PRD §7 AC1). Large typographic wine name + origin, no bottle imagery.
 - Current sizes: wine name 42sp, region 17sp, schema values 15sp, schema micro-labels 10sp, cheese-pairing copy 16sp, and AI-confidence line 12sp.
-- AI/Kaggle toggle is a plain text switch (not a pill), with an agreement indicator ("similar pick") next to it.
+- The planned AI/Kaggle toggle is a plain text switch (not a pill), with an agreement indicator ("similar pick") next to it. This comparison interface has not yet been designed, connected to data, or approved; the current code contains only an unvalidated conditional scaffold.
 - AI is the primary source and should populate the shared schema from Gemma's learned knowledge. Kaggle is optional comparative evidence; its absence must not force the AI fields to `Unknown`.
 - When present, AI confidence is labeled as a model estimate rather than verified accuracy. It must never be presented as a probability that the facts are correct.
 - Schema fields (`body`, `tannin`, `acidity`, `rating`, `flavor notes`) in sans-serif micro-labels; `Unknown` renders as muted italic — visually distinct from a user's own unset rating ("not yet rated"), which is muted but *not* italic. These two null states must never be styled identically (PRD §4).

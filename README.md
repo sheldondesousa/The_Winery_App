@@ -77,9 +77,9 @@ The wine-red accent is reserved for user-supplied signals: user chat messages, p
 
 ## Status
 
-The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, Chat interface, structured Gemma wine-profile extraction, and initial Stage Show are implemented. Stage Show currently includes a full-screen detail layout, 15sp schema values, a 12sp AI-confidence estimate with an accuracy disclaimer, optional comparison states, pairing/favorite actions, and a 10-dot rating control.
+The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, Chat interface, structured Gemma wine-profile extraction, and initial Stage Show are implemented. Stage Show currently includes a full-screen detail layout, 15sp schema values, a 12sp AI-confidence estimate with an accuracy disclaimer, pairing/favorite actions, and a 10-dot rating control.
 
-The final system prompt, Frank Ruhl Libre asset, Kaggle import/matching, cloud routing, web verification, persistent History/Favorites/notes, and real Stage Show pairing generation remain open.
+The final system prompt, Frank Ruhl Libre asset, AI/Kaggle comparison interface and data pipeline, cloud routing, web verification, persistent History/Favorites/notes, and real Stage Show pairing generation remain open. The current conditional comparison code is only an unvalidated scaffold and is not considered an implemented feature.
 
 ## First launch
 

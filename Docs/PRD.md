@@ -233,14 +233,14 @@ Implemented on native Android with Kotlin and Jetpack Compose:
 - Offline LiteRT-LM conversation inference after model installation
 - Chat header, empty state, conversation thread, input composer, dark status-bar treatment, and labeled bottom navigation
 - 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
-- Full-screen Stage Show navigation and layout, structured AI profile parsing, optional AI/Kaggle UI states, pairing action, favorite state, and 10-dot rating interaction
+- Full-screen Stage Show navigation and layout, structured AI profile parsing, pairing action, favorite state, and 10-dot rating interaction
 - AI-confidence display at 12sp with an explicit accuracy disclaimer
 
 Not yet complete:
 
 - Final product-owned system prompt
 - Frank Ruhl Libre font bundling
-- Kaggle dataset import, matching, and comparison pipeline
+- AI/Kaggle comparison interface, dataset import, matching, and comparison pipeline; current conditional UI code is only an unvalidated scaffold
 - Cloud routing and web verification
 - Persistent History, Favorites, ratings, and notes
 - Real model-generated cheese pairing on Stage Show; the current Stage Show result is placeholder copy
