@@ -163,7 +163,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Actions
 - **AC6:** Given a History entry is not yet favorited, when the user favorites it directly from History (without necessarily opening Stage Show first), then it is added to Favorites the same way as favoriting from Stage Show (Section 7, AC10).
-- **AC6a:** Given History contains entries, Clear and Clear All each use a black-at-10%-opacity background. Clear displays empty checkboxes for manual selection; Clear All displays every checkbox selected. The chosen action changes to Cancel and disables the other action until Cancel exits selection. In either selection mode a floating trash-can icon and Delete label appear above the bottom navigation, stay disabled without a selection, and remove the selected entries from local History when tapped.
+- **AC6a:** Given History contains entries, Clear uses a black-at-10%-opacity background and Clear All remains hidden. Clear displays empty checkboxes for manual selection and changes to Cancel until selection is exited. A floating trash-can icon and Delete label appear above the bottom navigation, stay disabled without a selection, and remove the selected entries from local History when tapped.
 
 ### Data Synchronization
 - **AC7:** Given this is a single-device personal MVP, when suggestions are logged, then History persists in local on-device storage only. No cloud sync.

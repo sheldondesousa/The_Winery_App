@@ -57,8 +57,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private enum class ClearMode { Manual, All }
-
 @Composable
 fun HistoryRoute(
     entries: List<HistoryEntry>,
@@ -67,13 +65,12 @@ fun HistoryRoute(
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var clearMode by remember { mutableStateOf<ClearMode?>(null) }
+    var isSelecting by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
-    val isSelecting = clearMode != null
 
     LaunchedEffect(entries) {
         selectedIds = selectedIds.intersect(entries.mapTo(mutableSetOf(), HistoryEntry::id))
-        if (entries.isEmpty()) clearMode = null
+        if (entries.isEmpty()) isSelecting = false
     }
 
     Column(
@@ -97,19 +94,9 @@ fun HistoryRoute(
                     isSelecting = isSelecting,
                     selectedIds = selectedIds,
                     onEntryClick = onEntryClick,
-                    clearMode = clearMode,
                     onClear = {
-                        clearMode = if (clearMode == ClearMode.Manual) null else ClearMode.Manual
+                        isSelecting = !isSelecting
                         selectedIds = emptySet()
-                    },
-                    onClearAll = {
-                        if (clearMode == ClearMode.All) {
-                            clearMode = null
-                            selectedIds = emptySet()
-                        } else {
-                            clearMode = ClearMode.All
-                            selectedIds = entries.mapTo(mutableSetOf(), HistoryEntry::id)
-                        }
                     },
                     onSelectionChange = { entryId, selected ->
                         selectedIds = if (selected) selectedIds + entryId else selectedIds - entryId
@@ -125,7 +112,7 @@ fun HistoryRoute(
                             .clickable(enabled = canDelete, role = Role.Button) {
                                 onDeleteEntries(selectedIds)
                                 selectedIds = emptySet()
-                                clearMode = null
+                                isSelecting = false
                             }
                             .semantics {
                                 role = Role.Button
@@ -160,44 +147,20 @@ fun HistoryRoute(
 
 @Composable
 private fun HistoryActions(
-    clearMode: ClearMode?,
+    isSelecting: Boolean,
     onClear: () -> Unit,
-    onClearAll: () -> Unit,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         TextButton(
             onClick = onClear,
-            enabled = clearMode != ClearMode.All,
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
             colors = ButtonDefaults.textButtonColors(
                 contentColor = Wine,
                 containerColor = Hairline,
-                disabledContentColor = InkMuted.copy(alpha = 0.45f),
-                disabledContainerColor = Hairline.copy(alpha = 0.4f),
             ),
         ) {
             Text(
-                text = if (clearMode == ClearMode.Manual) "Cancel" else "Clear",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        TextButton(
-            onClick = onClearAll,
-            enabled = clearMode != ClearMode.Manual,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = Wine,
-                containerColor = Hairline,
-                disabledContentColor = InkMuted.copy(alpha = 0.45f),
-                disabledContainerColor = Hairline.copy(alpha = 0.4f),
-            ),
-        ) {
-            Text(
-                text = if (clearMode == ClearMode.All) "Cancel" else "Clear All",
+                text = if (isSelecting) "Cancel" else "Clear",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -209,11 +172,9 @@ private fun HistoryActions(
 private fun HistoryList(
     entries: List<HistoryEntry>,
     isSelecting: Boolean,
-    clearMode: ClearMode?,
     selectedIds: Set<Long>,
     onEntryClick: (HistoryEntry) -> Unit,
     onClear: () -> Unit,
-    onClearAll: () -> Unit,
     onSelectionChange: (Long, Boolean) -> Unit,
 ) {
     val groups = remember(entries) { entries.groupByDate() }
@@ -232,9 +193,8 @@ private fun HistoryList(
                 DateHeader(
                     date = date,
                     showActions = index == 0,
-                    clearMode = clearMode,
+                    isSelecting = isSelecting,
                     onClear = onClear,
-                    onClearAll = onClearAll,
                 )
             }
             items(datedEntries, key = HistoryEntry::id) { entry ->
@@ -260,9 +220,8 @@ private fun HistoryList(
 private fun DateHeader(
     date: LocalDate,
     showActions: Boolean,
-    clearMode: ClearMode?,
+    isSelecting: Boolean,
     onClear: () -> Unit,
-    onClearAll: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -280,9 +239,8 @@ private fun DateHeader(
         )
         if (showActions) {
             HistoryActions(
-                clearMode = clearMode,
+                isSelecting = isSelecting,
                 onClear = onClear,
-                onClearAll = onClearAll,
             )
         }
     }
