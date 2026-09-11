@@ -69,6 +69,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Shared header places the page icon and 24sp title ("Chat") on the left and the right-aligned "Uncork" wordmark with "AI SOMMELIER" beneath it on the same horizontal line.
 - The conversation content area is intentionally blank before the first message; no invitation text or empty-state artwork is currently shown. The input placeholder reads "Ask me about wine" at 17sp italic.
 - States: empty (centered italic invitation, no fabricated example results), active (thread), error (inline error bubble, casual tone maintained per PRD §6 AC7).
+- Structured wine-profile JSON is internal UI data. Whether Gemma wraps it in the requested profile markers, a fenced JSON block, or emits only the profile, it is parsed for Stage Show and never rendered in the visible conversation.
 - The in-progress state reads "Thinking…" at 14sp italic. "Researching…" is reserved for a future route that actually performs external or dataset retrieval.
 - AI suggestion bubbles carry a trailing chevron (›) as a tap affordance — resolves PRD open assumption #5 in favor of a visible cue over silent tappability.
 - Favorited wines get an inline annotation (rating or "Favorited") with tap-through, per PRD §6 AC6a.

@@ -42,15 +42,14 @@ class GemmaConversationResponder(
 
         if (response.isBlank()) error("The on-device model returned an empty response.")
         val suggestion = extractSuggestion(response)
-        val visibleResponse = response
-            .replace(WINE_PROFILE_MARKER, "")
-            .replace(LEGACY_WINE_MARKER, "")
-            .trim()
+        val visibleResponse = response.toVisibleResponse()
 
         ChatMessage(
             id = System.nanoTime(),
             author = MessageAuthor.Assistant,
-            text = visibleResponse.ifBlank { response },
+            text = visibleResponse.ifBlank {
+                if (suggestion != null) "I found a wine suggestion for you." else response
+            },
             suggestion = suggestion,
         )
     }
@@ -115,26 +114,23 @@ class GemmaConversationResponder(
             pattern = "\\[WINE]\\s*(.+?)\\s*\\|\\s*(.+?)\\s*\\[/WINE]",
             options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
+        private val FENCED_JSON_BLOCK = Regex(
+            pattern = "```(?:\\.?json)?\\s*(\\{.+?})\\s*```",
+            options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
+        private val JSON_OBJECT = Regex(
+            pattern = "\\{.+?}",
+            options = setOf(RegexOption.DOT_MATCHES_ALL),
+        )
 
         private fun extractSuggestion(response: String): WineSuggestion? {
-            WINE_PROFILE_MARKER.find(response)?.groupValues?.getOrNull(1)?.let { payload ->
-                runCatching {
-                    val json = JSONObject(payload.trim())
-                    val name = json.requiredString("name")
-                    val region = json.requiredString("region")
-                    WineSuggestion(
-                        name = name,
-                        region = region,
-                        winery = json.knownString("winery", name),
-                        variety = json.knownString("variety", name),
-                        body = json.level("body"),
-                        tannin = json.level("tannin"),
-                        acidity = json.level("acidity"),
-                        flavorNotes = json.knownString("flavor_notes"),
-                        sourceRating = json.knownString("rating"),
-                        confidencePercent = json.optInt("confidence", -1).takeIf { it in 0..100 },
-                    )
-                }.getOrNull()?.let { return it }
+            val profilePayloads = buildList {
+                WINE_PROFILE_MARKER.findAll(response).forEach { add(it.groupValues[1]) }
+                FENCED_JSON_BLOCK.findAll(response).forEach { add(it.groupValues[1]) }
+                JSON_OBJECT.findAll(response).forEach { add(it.value) }
+            }
+            profilePayloads.forEach { payload ->
+                payload.toWineSuggestionOrNull()?.let { return it }
             }
 
             val match = LEGACY_WINE_MARKER.find(response) ?: return null
@@ -143,6 +139,37 @@ class GemmaConversationResponder(
             if (name.isBlank() || region.isBlank()) return null
             return WineSuggestion(name = name, region = region)
         }
+
+        private fun String.toVisibleResponse(): String {
+            var visible = replace(WINE_PROFILE_MARKER, "")
+                .replace(LEGACY_WINE_MARKER, "")
+
+            visible = FENCED_JSON_BLOCK.replace(visible) { match ->
+                if (match.groupValues[1].toWineSuggestionOrNull() != null) "" else match.value
+            }
+            visible = JSON_OBJECT.replace(visible) { match ->
+                if (match.value.toWineSuggestionOrNull() != null) "" else match.value
+            }
+            return visible.trim()
+        }
+
+        private fun String.toWineSuggestionOrNull(): WineSuggestion? = runCatching {
+            val json = JSONObject(trim())
+            val name = json.requiredString("name")
+            val region = json.requiredString("region")
+            WineSuggestion(
+                name = name,
+                region = region,
+                winery = json.knownString("winery", name),
+                variety = json.knownString("variety", name),
+                body = json.level("body"),
+                tannin = json.level("tannin"),
+                acidity = json.level("acidity"),
+                flavorNotes = json.knownString("flavor_notes"),
+                sourceRating = json.knownString("rating"),
+                confidencePercent = json.optInt("confidence", -1).takeIf { it in 0..100 },
+            )
+        }.getOrNull()
 
         private fun JSONObject.requiredString(key: String): String =
             optString(key).trim().takeIf { it.isNotEmpty() } ?: error("Missing $key")
