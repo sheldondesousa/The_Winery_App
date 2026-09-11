@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -29,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -78,21 +81,6 @@ fun HistoryRoute(
             title = "History",
             icon = Icons.Outlined.History,
         )
-        HistoryActions(
-            hasEntries = entries.isNotEmpty(),
-            isSelecting = isSelecting,
-            hasSelection = selectedIds.isNotEmpty(),
-            onToggleSelect = {
-                isSelecting = !isSelecting
-                selectedIds = emptySet()
-            },
-            onDelete = {
-                onDeleteEntries(selectedIds)
-                selectedIds = emptySet()
-                isSelecting = false
-            },
-        )
-
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -104,6 +92,15 @@ fun HistoryRoute(
                     isSelecting = isSelecting,
                     selectedIds = selectedIds,
                     onEntryClick = onEntryClick,
+                    onToggleSelect = {
+                        isSelecting = !isSelecting
+                        selectedIds = emptySet()
+                    },
+                    onDelete = {
+                        onDeleteEntries(selectedIds)
+                        selectedIds = emptySet()
+                        isSelecting = false
+                    },
                     onSelectionChange = { entryId, selected ->
                         selectedIds = if (selected) selectedIds + entryId else selectedIds - entryId
                     },
@@ -120,37 +117,40 @@ fun HistoryRoute(
 
 @Composable
 private fun HistoryActions(
-    hasEntries: Boolean,
     isSelecting: Boolean,
     hasSelection: Boolean,
     onToggleSelect: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         TextButton(
             onClick = onToggleSelect,
-            enabled = hasEntries,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = InkMuted,
+                containerColor = Color.Transparent,
+            ),
         ) {
             Text(
                 text = if (isSelecting) "Cancel" else "Select",
-                color = if (hasEntries) Wine else InkMuted.copy(alpha = 0.45f),
+                color = InkMuted,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Normal,
             )
         }
         TextButton(
             onClick = onDelete,
             enabled = isSelecting && hasSelection,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.textButtonColors(
+                containerColor = if (isSelecting && hasSelection) Wine else Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+            ),
         ) {
             Text(
                 text = "Delete",
-                color = if (isSelecting && hasSelection) Wine else InkMuted.copy(alpha = 0.45f),
+                color = if (isSelecting && hasSelection) Parchment else InkMuted.copy(alpha = 0.45f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -164,6 +164,8 @@ private fun HistoryList(
     isSelecting: Boolean,
     selectedIds: Set<Long>,
     onEntryClick: (HistoryEntry) -> Unit,
+    onToggleSelect: () -> Unit,
+    onDelete: () -> Unit,
     onSelectionChange: (Long, Boolean) -> Unit,
 ) {
     val groups = remember(entries) { entries.groupByDate() }
@@ -172,8 +174,17 @@ private fun HistoryList(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 22.dp, top = 12.dp, end = 22.dp, bottom = 24.dp),
     ) {
-        groups.forEach { (date, datedEntries) ->
-            item(key = "date-$date") { DateHeader(date) }
+        groups.forEachIndexed { index, (date, datedEntries) ->
+            item(key = "date-$date") {
+                DateHeader(
+                    date = date,
+                    showActions = index == 0,
+                    isSelecting = isSelecting,
+                    hasSelection = selectedIds.isNotEmpty(),
+                    onToggleSelect = onToggleSelect,
+                    onDelete = onDelete,
+                )
+            }
             items(datedEntries, key = HistoryEntry::id) { entry ->
                 HistoryRow(
                     entry = entry,
@@ -194,15 +205,37 @@ private fun HistoryList(
 }
 
 @Composable
-private fun DateHeader(date: LocalDate) {
-    Text(
-        text = date.displayLabel(),
-        modifier = Modifier.padding(top = 22.dp, bottom = 8.dp),
-        color = Wine,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.8.sp,
-    )
+private fun DateHeader(
+    date: LocalDate,
+    showActions: Boolean,
+    isSelecting: Boolean,
+    hasSelection: Boolean,
+    onToggleSelect: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 14.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = date.displayLabel(),
+            color = Wine,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.8.sp,
+        )
+        if (showActions) {
+            HistoryActions(
+                isSelecting = isSelecting,
+                hasSelection = hasSelection,
+                onToggleSelect = onToggleSelect,
+                onDelete = onDelete,
+            )
+        }
+    }
 }
 
 @Composable
@@ -213,7 +246,7 @@ private fun HistoryRow(
     onClick: () -> Unit,
     onSelectionChange: (Boolean) -> Unit,
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
@@ -226,7 +259,21 @@ private fun HistoryRow(
                 }
             }
             .padding(vertical = 16.dp),
+        verticalAlignment = Alignment.Top,
     ) {
+        if (isSelecting) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = onSelectionChange,
+                modifier = Modifier.padding(top = 2.dp, end = 12.dp),
+                colors = CheckboxDefaults.colors(
+                    checkedColor = Wine,
+                    uncheckedColor = InkMuted,
+                    checkmarkColor = Parchment,
+                ),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -249,18 +296,7 @@ private fun HistoryRow(
                     letterSpacing = 0.2.sp,
                 )
             }
-            if (isSelecting) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = onSelectionChange,
-                    modifier = Modifier.padding(start = 12.dp),
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = Wine,
-                        uncheckedColor = InkMuted,
-                        checkmarkColor = Parchment,
-                    ),
-                )
-            } else {
+            if (!isSelecting) {
                 Text(
                     text = "›",
                     modifier = Modifier.padding(start = 16.dp),
@@ -297,6 +333,7 @@ private fun HistoryRow(
                 .height(1.dp)
                 .background(Hairline),
         )
+        }
     }
 }
 
