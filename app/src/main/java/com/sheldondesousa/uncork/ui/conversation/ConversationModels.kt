@@ -23,6 +23,7 @@ data class WineSuggestion(
     val tannin: String = "Unknown",
     val acidity: String = "Unknown",
     val flavorNotes: String = "Unknown",
+    val suggestedPairing: String = "Unknown",
     val sourceRating: String = "Unknown",
     val confidencePercent: Int? = null,
     val favoriteRating: Int? = null,

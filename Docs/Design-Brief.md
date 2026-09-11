@@ -131,7 +131,7 @@ These resolve open assumptions from the PRD or were made unprompted while buildi
 
 ## 6. Still open (not yet decided)
 
-- Whether "Suggest a pairing" needs a distinct visual state for *before* a pairing exists vs. the already-suggested state shown in the mockup.
+- Wine Profile shows `Suggested pairing` as an upfront detail field. Its former pairing and favorites action buttons are removed; a right-aligned heart beside AI Confidence fills when tapped and saves the wine locally to Favorites.
 - Navigation model: whether the bottom nav's Conversation/History/Favorites tabs are the sole way to move between those three, or whether Stage Show and other drill-ins should also get an explicit back control beyond the current back chevron.
 - The PRD's own flagged scope question: whether location/price lookup (Google Places) is intentionally deferred from this MVP or was dropped by oversight (PRD §10, item 11).
 - Final Frank Ruhl Libre font bundling and device-level visual validation.

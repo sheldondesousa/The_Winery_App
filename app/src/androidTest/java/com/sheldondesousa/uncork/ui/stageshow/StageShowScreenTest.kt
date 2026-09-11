@@ -56,7 +56,8 @@ class StageShowScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Add to favorites").performClick()
+        composeRule.onNodeWithContentDescription("Add to favorites").performClick()
+        composeRule.onNodeWithContentDescription("Saved to favorites").assertExists()
         composeRule.onNodeWithText("YOUR RATING · not yet rated").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Rate 8 out of 10").performClick()
         composeRule.onNodeWithText("YOUR RATING · 8 / 10").assertIsDisplayed()

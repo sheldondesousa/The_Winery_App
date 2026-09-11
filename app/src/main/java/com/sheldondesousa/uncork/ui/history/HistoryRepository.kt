@@ -72,6 +72,7 @@ class HistoryRepository(context: Context) {
         put("tannin", tannin)
         put("acidity", acidity)
         put("flavorNotes", flavorNotes)
+        put("suggestedPairing", suggestedPairing)
         put("sourceRating", sourceRating)
         put("confidencePercent", confidencePercent ?: JSONObject.NULL)
         put("favoriteRating", favoriteRating ?: JSONObject.NULL)
@@ -98,6 +99,7 @@ class HistoryRepository(context: Context) {
         tannin = optString("tannin", "Unknown"),
         acidity = optString("acidity", "Unknown"),
         flavorNotes = optString("flavorNotes", "Unknown"),
+        suggestedPairing = optString("suggestedPairing", "Unknown"),
         sourceRating = optString("sourceRating", "Unknown"),
         confidencePercent = optIntOrNull("confidencePercent"),
         favoriteRating = optIntOrNull("favoriteRating"),

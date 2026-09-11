@@ -166,6 +166,7 @@ class GemmaConversationResponder(
                 tannin = json.level("tannin"),
                 acidity = json.level("acidity"),
                 flavorNotes = json.knownString("flavor_notes"),
+                suggestedPairing = json.knownString("suggested_pairing"),
                 sourceRating = json.knownString("rating"),
                 confidencePercent = json.optInt("confidence", -1).takeIf { it in 0..100 },
             )
@@ -191,7 +192,8 @@ class GemmaConversationResponder(
                 "invent unavailable facts; say when information is uncertain. Whenever you " +
                 "recommend a specific wine, finish with exactly one compact JSON object between " +
                 "[WINE_PROFILE] and [/WINE_PROFILE]. Use keys name, winery, variety, region, body, " +
-                "tannin, acidity, flavor_notes, rating, and confidence. Body, tannin, and acidity " +
+                "tannin, acidity, flavor_notes, suggested_pairing, rating, and confidence. " +
+                "Suggested_pairing must be one concise food pairing. Body, tannin, and acidity " +
                 "must be low, medium, high, or Unknown. Rating must be a known critic or source " +
                 "rating or Unknown; never invent one. Confidence is a conservative integer from " +
                 "0 to 100 representing certainty in the profile, not verified accuracy. Use " +

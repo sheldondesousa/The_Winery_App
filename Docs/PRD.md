@@ -139,8 +139,8 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 - **AC8:** Given the wine has a cheese pairing attached, when Stage Show renders, then the pairing displays as a secondary section below the wine details, not as the primary focus, and independent of which toggle position is active.
 
 ### Actions
-- **AC9:** Given Stage Show is open, when the user taps "Suggest a pairing," then a cheese-pairing request is sent using this wine as context, and the result is appended to the screen.
-- **AC10:** Given Stage Show is open and the wine is not yet favorited, when the user taps "Add to favorites," then the wine is saved to Favorites (Section 9), with rating and notes optional at that point.
+- **AC9:** Given Wine Profile is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
+- **AC10:** Given Wine Profile is open and the wine is not yet favorited, when the user taps the outlined heart beside AI Confidence, then the heart fills and the wine is saved to Favorites (Section 9), with rating and notes optional at that point. No separate favorites action button is shown.
   - **AC10a:** Given the wine is already favorited when Stage Show opens (e.g. reached via History for something previously favorited), when this is the case, then the "Add to favorites" action is replaced by the existing rating/notes controls, editing that same record directly.
   - **AC10b:** Given a rating or note is set or edited on this screen, when saved, then it updates the same persisted record shown on Favorites.
 

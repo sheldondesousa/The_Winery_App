@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Favorite
@@ -64,6 +63,7 @@ data class WineProfile(
     val tannin: String = "Unknown",
     val acidity: String = "Unknown",
     val flavorNotes: String = "Unknown",
+    val suggestedPairing: String = "Unknown",
     val rating: String = "Unknown",
     val cheesePairing: String? = null,
     val verified: Boolean = false,
@@ -85,6 +85,7 @@ fun WineSuggestion.toStageWine(): StageWine = StageWine(
         tannin = tannin,
         acidity = acidity,
         flavorNotes = flavorNotes,
+        suggestedPairing = suggestedPairing,
         rating = sourceRating,
         confidencePercent = confidencePercent,
     ),
@@ -119,14 +120,15 @@ private val ShortBackArrow: ImageVector = ImageVector.Builder(
 fun StageShowRoute(
     wine: StageWine,
     onBack: () -> Unit,
+    initiallyFavorite: Boolean = false,
+    onFavorite: (WineSuggestion) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = onBack)
 
     var source by remember { mutableStateOf(WineSource.AI) }
-    var isFavorite by remember { mutableStateOf(false) }
+    var isFavorite by remember(wine, initiallyFavorite) { mutableStateOf(initiallyFavorite) }
     var rating by remember { mutableIntStateOf(0) }
-    var pairing by remember(wine) { mutableStateOf(wine.ai.cheesePairing) }
     val profile = if (source == WineSource.Kaggle) wine.kaggle ?: wine.ai else wine.ai
 
     Column(
@@ -182,15 +184,30 @@ fun StageShowRoute(
             )
         }
 
-        if (source == WineSource.AI && profile.confidencePercent != null) {
+        if (source == WineSource.AI) {
             Spacer(Modifier.height(20.dp))
-            Text(
-                text = "AI CONFIDENCE · ${profile.confidencePercent}%",
-                color = Wine,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.4.sp,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "AI CONFIDENCE · ${profile.confidencePercent?.let { "$it%" } ?: "UNKNOWN"}",
+                    color = Wine,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.4.sp,
+                )
+                FavoriteHeart(
+                    selected = isFavorite,
+                    onClick = {
+                        if (!isFavorite) {
+                            isFavorite = true
+                            onFavorite(wine.toWineSuggestion())
+                        }
+                    },
+                )
+            }
             Text(
                 text = "Model estimate, not verified accuracy",
                 modifier = Modifier.padding(top = 4.dp),
@@ -212,36 +229,7 @@ fun StageShowRoute(
         )
         LongDetail("FLAVOR NOTES", profile.flavorNotes)
 
-        if (pairing != null) {
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = "CHEESE PAIRING",
-                color = Wine,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.8.sp,
-            )
-            Text(
-                text = pairing.orEmpty(),
-                modifier = Modifier.padding(top = 8.dp),
-                color = InkMuted,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
-            )
-        }
-
-        Spacer(Modifier.height(34.dp))
-        StageAction(
-            label = if (pairing == null) "Suggest a pairing" else "Change pairing",
-            showsFavoriteIcon = false,
-            onClick = { pairing = "A creamy Brie would soften the acidity while preserving the wine’s bright fruit." },
-        )
-        Spacer(Modifier.height(12.dp))
-        StageAction(
-            label = if (isFavorite) "Saved to favorites" else "Add to favorites",
-            selected = isFavorite,
-            onClick = { isFavorite = true },
-        )
+        LongDetail("SUGGESTED PAIRING", profile.suggestedPairing)
 
         if (isFavorite) {
             Spacer(Modifier.height(28.dp))
@@ -257,6 +245,35 @@ fun StageShowRoute(
 
         Spacer(Modifier.height(24.dp))
     }
+}
+
+fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
+    name = ai.winery,
+    region = ai.region,
+    winery = ai.winery,
+    variety = ai.variety,
+    body = ai.body,
+    tannin = ai.tannin,
+    acidity = ai.acidity,
+    flavorNotes = ai.flavorNotes,
+    suggestedPairing = ai.suggestedPairing,
+    sourceRating = ai.rating,
+    confidencePercent = ai.confidencePercent,
+    isFavorite = true,
+)
+
+@Composable
+private fun FavoriteHeart(selected: Boolean, onClick: () -> Unit) {
+    Icon(
+        imageVector = if (selected) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+        contentDescription = if (selected) "Saved to favorites" else "Add to favorites",
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, enabled = !selected, onClick = onClick)
+            .padding(7.dp),
+        tint = Wine,
+    )
 }
 
 @Composable
@@ -346,42 +363,6 @@ private fun LongDetail(label: String, value: String) {
         value = value,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun StageAction(
-    label: String,
-    selected: Boolean = false,
-    showsFavoriteIcon: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) Wine else Hairline)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 15.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = if (selected) Parchment else Ink,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (showsFavoriteIcon) {
-            Icon(
-                imageVector = if (selected) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = if (selected) Parchment else Wine,
-            )
-        } else {
-            Text(text = "›", color = Wine, fontSize = 24.sp)
-        }
-    }
 }
 
 @Composable

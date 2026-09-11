@@ -17,10 +17,12 @@ import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionStat
 import com.sheldondesousa.uncork.ui.history.HistoryRepository
 import com.sheldondesousa.uncork.ui.history.HistoryRoute
 import com.sheldondesousa.uncork.ui.favorites.FavoritesRoute
+import com.sheldondesousa.uncork.ui.favorites.FavoritesRepository
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
 import com.sheldondesousa.uncork.ui.stageshow.toStageWine
+import com.sheldondesousa.uncork.ui.stageshow.toWineSuggestion
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 
 class MainActivity : ComponentActivity() {
@@ -36,6 +38,7 @@ class MainActivity : ComponentActivity() {
         )
         val modelFileManager = ModelFileManager(applicationContext)
         val historyRepository = HistoryRepository(applicationContext)
+        val favoritesRepository = FavoritesRepository(applicationContext)
         gemmaResponder = GemmaConversationResponder(applicationContext, modelFileManager.modelFile)
         setContent {
             UncorkTheme {
@@ -43,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 var stageWine by remember { mutableStateOf<StageWine?>(null) }
                 var selectedTab by remember { mutableStateOf(AppTab.Conversation) }
                 var historyEntries by remember { mutableStateOf(historyRepository.load()) }
+                var favorites by remember { mutableStateOf(favoritesRepository.load()) }
                 val conversationState = rememberConversationSessionState()
                 val onTabSelected: (AppTab) -> Unit = { tab ->
                     selectedTab = tab
@@ -67,12 +71,18 @@ class MainActivity : ComponentActivity() {
                             },
                             onTabSelected = onTabSelected,
                         )
-                        AppTab.Favorites -> FavoritesRoute(onTabSelected = onTabSelected)
+                        AppTab.Favorites -> FavoritesRoute(
+                            favorites = favorites,
+                            onFavoriteClick = { stageWine = it.toStageWine() },
+                            onTabSelected = onTabSelected,
+                        )
                     }
                     stageWine?.let { wine ->
                         StageShowRoute(
                             wine = wine,
                             onBack = { stageWine = null },
+                            initiallyFavorite = favoritesRepository.contains(wine.toWineSuggestion()),
+                            onFavorite = { favorites = favoritesRepository.add(it) },
                         )
                     }
                 } else {
