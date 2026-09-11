@@ -67,7 +67,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 ### Main Conversation
 - Persistent bordered input at the bottom, bottom nav below it (covered by the keyboard sheet when active).
 - Header is left aligned: "Uncork" at 30sp with "AI SOMMELIER" directly beneath at 9sp, letter-spaced.
-- Empty-state invitation reads "How can I help you today?" at 25sp italic, layered over a softly faded transparent wine-glass illustration. The input placeholder reads "Ask me about wine" at 17sp italic.
+- The empty state uses a transparent wine-glass illustration centered inside a borderless, softly filled wine-tinted circle; no invitation text is shown. The input placeholder reads "Ask me about wine" at 17sp italic.
 - States: empty (centered italic invitation, no fabricated example results), active (thread), error (inline error bubble, casual tone maintained per PRD §6 AC7).
 - The in-progress state reads "Thinking…" at 14sp italic. "Researching…" is reserved for a future route that actually performs external or dataset retrieval.
 - AI suggestion bubbles carry a trailing chevron (›) as a tap affordance — resolves PRD open assumption #5 in favor of a visible cue over silent tappability.

@@ -67,7 +67,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.R
@@ -239,22 +238,22 @@ private fun EmptyConversation() {
             .padding(40.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.wine_glass),
-            contentDescription = null,
+        Box(
             modifier = Modifier
                 .size(240.dp)
-                .alpha(0.14f),
-            contentScale = ContentScale.Fit,
-        )
-        Text(
-            text = "How can I help you today?",
-            color = InkMuted,
-            fontSize = 25.sp,
-            fontStyle = FontStyle.Italic,
-            lineHeight = 33.sp,
-            textAlign = TextAlign.Center,
-        )
+                .clip(RoundedCornerShape(50))
+                .background(Wine.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.wine_glass),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize(0.82f)
+                    .alpha(0.62f),
+                contentScale = ContentScale.Fit,
+            )
+        }
     }
 }
 
