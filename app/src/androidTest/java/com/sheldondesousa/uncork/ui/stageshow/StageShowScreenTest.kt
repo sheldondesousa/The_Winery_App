@@ -1,12 +1,15 @@
 package com.sheldondesousa.uncork.ui.stageshow
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 import org.junit.Rule
 import org.junit.Test
@@ -56,7 +59,10 @@ class StageShowScreenTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Save favorite, off").performClick()
+        composeRule.onNodeWithContentDescription("Save favorite, off")
+            .assertWidthIsEqualTo(88.dp)
+            .assertHeightIsEqualTo(88.dp)
+            .performClick()
         composeRule.onNodeWithContentDescription("Save favorite, on").assertExists()
         composeRule.onNodeWithText("Saved").assertIsDisplayed()
         composeRule.onNodeWithText("YOU HAVE NOT TRIED THIS WINE").assertIsDisplayed()

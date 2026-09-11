@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -271,7 +271,7 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
 private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(88.dp)
+            .requiredSize(88.dp)
             .offset(y = (-24).dp)
             .clip(CircleShape)
             .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
