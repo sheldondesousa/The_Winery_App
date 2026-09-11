@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -97,15 +98,40 @@ fun HistoryRoute(
                         isSelecting = !isSelecting
                         selectedIds = emptySet()
                     },
-                    onDelete = {
-                        onDeleteEntries(selectedIds)
-                        selectedIds = emptySet()
-                        isSelecting = false
+                    onClearAll = {
+                        isSelecting = true
+                        selectedIds = entries.mapTo(mutableSetOf(), HistoryEntry::id)
                     },
                     onSelectionChange = { entryId, selected ->
                         selectedIds = if (selected) selectedIds + entryId else selectedIds - entryId
                     },
                 )
+                if (isSelecting) {
+                    Button(
+                        onClick = {
+                            onDeleteEntries(selectedIds)
+                            selectedIds = emptySet()
+                            isSelecting = false
+                        },
+                        enabled = selectedIds.isNotEmpty(),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 20.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Wine,
+                            contentColor = Parchment,
+                            disabledContainerColor = InkMuted.copy(alpha = 0.22f),
+                            disabledContentColor = Parchment.copy(alpha = 0.65f),
+                        ),
+                    ) {
+                        Text(
+                            text = "Delete",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
             }
         }
 
@@ -119,9 +145,8 @@ fun HistoryRoute(
 @Composable
 private fun HistoryActions(
     isSelecting: Boolean,
-    hasSelection: Boolean,
     onToggleSelect: () -> Unit,
-    onDelete: () -> Unit,
+    onClearAll: () -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         TextButton(
@@ -133,7 +158,7 @@ private fun HistoryActions(
             ),
         ) {
             Text(
-                text = if (isSelecting) "Cancel" else "Select",
+                text = if (isSelecting) "Cancel" else "Clear",
                 color = Wine,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -147,18 +172,16 @@ private fun HistoryActions(
                 .background(Hairline),
         )
         TextButton(
-            onClick = onDelete,
-            enabled = isSelecting && hasSelection,
+            onClick = onClearAll,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-            shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.textButtonColors(
-                containerColor = if (isSelecting && hasSelection) Wine else Color.Transparent,
-                disabledContainerColor = Color.Transparent,
+                contentColor = Wine,
+                containerColor = Color.Transparent,
             ),
         ) {
             Text(
-                text = "Delete",
-                color = if (isSelecting && hasSelection) Parchment else InkMuted.copy(alpha = 0.45f),
+                text = "Clear All",
+                color = Wine,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -173,14 +196,19 @@ private fun HistoryList(
     selectedIds: Set<Long>,
     onEntryClick: (HistoryEntry) -> Unit,
     onToggleSelect: () -> Unit,
-    onDelete: () -> Unit,
+    onClearAll: () -> Unit,
     onSelectionChange: (Long, Boolean) -> Unit,
 ) {
     val groups = remember(entries) { entries.groupByDate() }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 22.dp, top = 12.dp, end = 22.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(
+            start = 22.dp,
+            top = 12.dp,
+            end = 22.dp,
+            bottom = if (isSelecting) 88.dp else 24.dp,
+        ),
     ) {
         groups.forEachIndexed { index, (date, datedEntries) ->
             item(key = "date-$date") {
@@ -188,9 +216,8 @@ private fun HistoryList(
                     date = date,
                     showActions = index == 0,
                     isSelecting = isSelecting,
-                    hasSelection = selectedIds.isNotEmpty(),
                     onToggleSelect = onToggleSelect,
-                    onDelete = onDelete,
+                    onClearAll = onClearAll,
                 )
             }
             items(datedEntries, key = HistoryEntry::id) { entry ->
@@ -217,9 +244,8 @@ private fun DateHeader(
     date: LocalDate,
     showActions: Boolean,
     isSelecting: Boolean,
-    hasSelection: Boolean,
     onToggleSelect: () -> Unit,
-    onDelete: () -> Unit,
+    onClearAll: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -238,9 +264,8 @@ private fun DateHeader(
         if (showActions) {
             HistoryActions(
                 isSelecting = isSelecting,
-                hasSelection = hasSelection,
                 onToggleSelect = onToggleSelect,
-                onDelete = onDelete,
+                onClearAll = onClearAll,
             )
         }
     }

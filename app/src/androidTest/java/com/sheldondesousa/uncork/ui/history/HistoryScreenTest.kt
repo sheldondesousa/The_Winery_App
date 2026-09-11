@@ -87,11 +87,40 @@ class HistoryScreenTest {
             }
         }
 
+        composeRule.onNodeWithText("Clear").performClick()
         composeRule.onNodeWithText("Delete").assertIsNotEnabled()
-        composeRule.onNodeWithText("Select").performClick()
         composeRule.onNodeWithContentDescription("Select Barolo").performClick()
         composeRule.onNodeWithText("Delete").assertIsEnabled().performClick()
 
         org.junit.Assert.assertEquals(setOf(42L), deletedIds)
+    }
+
+    @Test
+    fun clearAllSelectsEveryHistoryEntryForDeletion() {
+        var deletedIds = emptySet<Long>()
+        val entries = listOf(1L, 2L).map { id ->
+            HistoryEntry(
+                id = id,
+                createdAtEpochMillis = System.currentTimeMillis(),
+                suggestion = WineSuggestion(name = "Wine $id", region = "Region"),
+                requestKeywords = listOf("Wine"),
+            )
+        }
+
+        composeRule.setContent {
+            UncorkTheme {
+                HistoryRoute(
+                    entries = entries,
+                    onEntryClick = {},
+                    onDeleteEntries = { deletedIds = it },
+                    onTabSelected = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Clear All").performClick()
+        composeRule.onNodeWithText("Delete").assertIsEnabled().performClick()
+
+        org.junit.Assert.assertEquals(setOf(1L, 2L), deletedIds)
     }
 }

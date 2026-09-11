@@ -91,7 +91,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Grouped by date header (sans-serif micro-label: "today," "yesterday"). Each entry: wine name, concise user request, and favorited annotation if applicable.
 - The shared header places the History icon and 24sp title on the left and the right-aligned Uncork/AI SOMMELIER brand lockup on the same line. Entries use the wine name as the primary serif line, followed by region, `Your Request:` plus locally extracted user-request keywords (for example country, region, variety, color, body, acidity, tannin, and flavor), and a trailing chevron. AI conversation text is not shown in History, and suggestion attributes not present in the user's request are not added as request keywords.
 - The empty History content area is intentionally blank for now.
-- Select and Delete sit on the same line as the most recent date heading (for example, TODAY), separated by a short vertical hairline. Select—and Cancel while selection mode is open—uses active wine-colored semibold text without a filled background. Select reveals an empty checkbox to the left of every History entry. Delete stays muted and disabled until at least one item is selected, then receives the filled wine-red highlight and removes all selected local records when tapped.
+- Clear and Clear All sit on the same line as the most recent date heading (for example, TODAY), separated by a short vertical hairline. Clear reveals an empty checkbox to the left of every History entry for manual selection and changes to Cancel while selection mode is open. Clear All reveals the checkboxes with every entry selected. A floating Delete button appears above the bottom navigation during selection, remains disabled without a selection, and removes the selected local records when tapped.
 - Sits above the shared bottom nav.
 
 ### Favorites
@@ -131,7 +131,7 @@ These resolve open assumptions from the PRD or were made unprompted while buildi
 
 ## 6. Still open (not yet decided)
 
-- Wine Profile shows `Suggested pairing` as an upfront detail field. Its former pairing and favorites action buttons are removed; a right-aligned `Save` tag beside AI Confidence contains an outlined heart when off and a filled heart when on. On saves the wine locally to Favorites and off removes it. Favorites list tiles do not show heart icons. Personal rating is read-only on Wine Profile; without a prior rating, the page says `You have not tried this wine`.
+- Wine Profile shows `Suggested pairing` as an upfront detail field. Its former pairing and favorites action buttons are removed; a right-aligned text-only `Save` tag beside AI Confidence toggles on and off through its color treatment. On saves the wine locally to Favorites and off removes it. Favorites list tiles do not show heart icons. Personal rating is read-only on Wine Profile; without a prior rating, the page says `You have not tried this wine`.
 - Navigation model: whether the bottom nav's Conversation/History/Favorites tabs are the sole way to move between those three, or whether Stage Show and other drill-ins should also get an explicit back control beyond the current back chevron.
 - The PRD's own flagged scope question: whether location/price lookup (Google Places) is intentionally deferred from this MVP or was dropped by oversight (PRD §10, item 11).
 - Final Frank Ruhl Libre font bundling and device-level visual validation.

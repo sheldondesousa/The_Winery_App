@@ -140,7 +140,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Actions
 - **AC9:** Given Wine Profile is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
-- **AC10:** Given Wine Profile is open, when the user taps the `Save` tag beside AI Confidence, then its heart changes from outlined to filled and the state toggles. On saves the wine to Favorites (Section 9); off removes it. Favorites list tiles do not display heart icons.
+- **AC10:** Given Wine Profile is open, when the user taps the text-only `Save` tag beside AI Confidence, then its color treatment and state toggle. On saves the wine to Favorites (Section 9); off removes it. The Save tag and Favorites list tiles do not display heart icons.
   - **AC10a:** Personal rating is display-only on Wine Profile. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
 
 **Open assumptions:**
@@ -163,7 +163,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Actions
 - **AC6:** Given a History entry is not yet favorited, when the user favorites it directly from History (without necessarily opening Stage Show first), then it is added to Favorites the same way as favoriting from Stage Show (Section 7, AC10).
-- **AC6a:** Given History contains entries, when the user taps Select, then every entry displays an empty checkbox and the user can select one or multiple entries. Delete remains disabled with no selection and removes all selected entries from local History when enabled and tapped.
+- **AC6a:** Given History contains entries, when the user taps Clear, then every entry displays an empty checkbox and the user can manually select one or multiple entries. When the user taps Clear All, every entry displays a selected checkbox. In either mode a floating Delete button appears above the bottom navigation, stays disabled without a selection, and removes the selected entries from local History when tapped.
 
 ### Data Synchronization
 - **AC7:** Given this is a single-device personal MVP, when suggestions are logged, then History persists in local on-device storage only. No cloud sync.
