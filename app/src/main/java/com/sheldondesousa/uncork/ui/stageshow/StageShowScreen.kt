@@ -19,6 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -256,22 +259,33 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
 
 @Composable
 private fun FavoriteTag(selected: Boolean, onClick: () -> Unit) {
-    Text(
-        text = "ADD TO FAVORITE",
-        color = if (selected) Parchment else Wine,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.sp,
+    Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(if (selected) Wine else Wine.copy(alpha = 0.10f))
             .clickable(role = Role.Switch, onClick = onClick)
             .semantics {
                 role = Role.Switch
-                contentDescription = "Add to Favorite, ${if (selected) "on" else "off"}"
+                contentDescription = "Save with favorite, ${if (selected) "on" else "off"}"
             }
             .padding(horizontal = 12.dp, vertical = 8.dp),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "SAVE WITH",
+            color = if (selected) Parchment else Wine,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.sp,
+        )
+        Icon(
+            imageVector = if (selected) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = if (selected) Parchment else Wine,
+        )
+    }
 }
 
 @Composable

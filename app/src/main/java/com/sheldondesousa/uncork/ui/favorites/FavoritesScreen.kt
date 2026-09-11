@@ -3,7 +3,6 @@ package com.sheldondesousa.uncork.ui.favorites
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,7 +27,6 @@ import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
-import com.sheldondesousa.uncork.ui.theme.Wine
 
 @Composable
 fun FavoritesRoute(
@@ -71,7 +69,6 @@ fun FavoritesRoute(
                             fontSize = 12.sp,
                         )
                     }
-                    Text(text = "♥", color = Wine, fontSize = 20.sp)
                 }
             }
         }

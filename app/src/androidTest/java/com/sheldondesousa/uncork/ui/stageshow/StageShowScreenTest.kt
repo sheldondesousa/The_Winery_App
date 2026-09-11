@@ -56,10 +56,10 @@ class StageShowScreenTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Add to Favorite, off").performClick()
-        composeRule.onNodeWithContentDescription("Add to Favorite, on").assertExists()
+        composeRule.onNodeWithContentDescription("Save with favorite, off").performClick()
+        composeRule.onNodeWithContentDescription("Save with favorite, on").assertExists()
         composeRule.onNodeWithText("YOU HAVE NOT TRIED THIS WINE").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Add to Favorite, on").performClick()
-        composeRule.onNodeWithContentDescription("Add to Favorite, off").assertExists()
+        composeRule.onNodeWithContentDescription("Save with favorite, on").performClick()
+        composeRule.onNodeWithContentDescription("Save with favorite, off").assertExists()
     }
 }
