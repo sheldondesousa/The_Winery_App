@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,8 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
@@ -181,26 +183,13 @@ fun StageShowRoute(
 
         if (source == WineSource.AI) {
             Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "AI CONFIDENCE · ${profile.confidencePercent?.let { "$it%" } ?: "UNKNOWN"}",
-                    color = Wine,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.4.sp,
-                )
-                FavoriteTag(
-                    selected = isFavorite,
-                    onClick = {
-                        isFavorite = !isFavorite
-                        onFavoriteChange(wine.toWineSuggestion(), isFavorite)
-                    },
-                )
-            }
+            Text(
+                text = "AI CONFIDENCE · ${profile.confidencePercent?.let { "$it%" } ?: "UNKNOWN"}",
+                color = Wine,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.4.sp,
+            )
             Text(
                 text = "Model estimate, not verified accuracy",
                 modifier = Modifier.padding(top = 4.dp),
@@ -233,7 +222,21 @@ fun StageShowRoute(
             letterSpacing = 1.4.sp,
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(32.dp))
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            SaveButton(
+                selected = isFavorite,
+                onClick = {
+                    isFavorite = !isFavorite
+                    onFavoriteChange(wine.toWineSuggestion(), isFavorite)
+                },
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -254,26 +257,24 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
 )
 
 @Composable
-private fun FavoriteTag(selected: Boolean, onClick: () -> Unit) {
-    Row(
+private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(if (selected) Wine else Wine.copy(alpha = 0.10f))
+            .size(88.dp)
+            .clip(CircleShape)
+            .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
             .clickable(role = Role.Switch, onClick = onClick)
             .semantics {
                 role = Role.Switch
                 contentDescription = "Save favorite, ${if (selected) "on" else "off"}"
-            }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            },
+        contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "SAVE",
-            color = if (selected) Parchment else Wine,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.sp,
+            text = if (selected) "Saved" else "Save",
+            color = if (selected) Wine else Parchment,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
         )
     }
 }

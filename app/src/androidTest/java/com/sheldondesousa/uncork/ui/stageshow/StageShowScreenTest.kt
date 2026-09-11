@@ -58,8 +58,10 @@ class StageShowScreenTest {
 
         composeRule.onNodeWithContentDescription("Save favorite, off").performClick()
         composeRule.onNodeWithContentDescription("Save favorite, on").assertExists()
+        composeRule.onNodeWithText("Saved").assertIsDisplayed()
         composeRule.onNodeWithText("YOU HAVE NOT TRIED THIS WINE").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Save favorite, on").performClick()
         composeRule.onNodeWithContentDescription("Save favorite, off").assertExists()
+        composeRule.onNodeWithText("Save").assertIsDisplayed()
     }
 }
