@@ -78,7 +78,7 @@ private val AiResponseInk = Color(0xFF27201D)
 enum class AppTab(val label: String) {
     Conversation("Chat"),
     History("History"),
-    Favorites("Saved"),
+    Favorites("Saved Wines"),
 }
 
 class ConversationSessionState {

@@ -19,7 +19,7 @@ The MVP is intended for personal, single-user use and stores history, favorites,
 2. **Conversation** — accepts natural-language requests and returns personable wine suggestions.
 3. **Stage Show** — presents one wine in a full-screen, typography-led detail view and supports AI/Kaggle comparison.
 4. **History** — groups previous suggestions by date and provides access to their detail views.
-5. **Saved** — stores selected wines with an optional personal rating and notes.
+5. **Saved Wines** — stores selected wines with an optional personal rating and notes.
 
 ## Core capabilities
 
