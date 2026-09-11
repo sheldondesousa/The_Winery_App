@@ -1,6 +1,5 @@
 package com.sheldondesousa.uncork.ui.conversation
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -57,8 +55,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -70,7 +66,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sheldondesousa.uncork.R
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -234,31 +229,7 @@ private fun ConversationHeader() {
 
 @Composable
 private fun EmptyConversation() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(40.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(modifier = Modifier.size(240.dp)) {
-            Image(
-                painter = painterResource(R.drawable.conversation_empty_state),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-            Text(
-                text = "Uncork",
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = 85.dp, y = 140.dp),
-                color = Ink,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
+    Spacer(modifier = Modifier.fillMaxSize())
 }
 
 @Composable
