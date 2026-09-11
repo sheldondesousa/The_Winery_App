@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.conversation
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +56,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -234,6 +237,87 @@ private fun EmptyConversation() {
             .padding(40.dp),
         contentAlignment = Alignment.Center,
     ) {
+        Canvas(modifier = Modifier.size(width = 230.dp, height = 190.dp)) {
+            val lineColor = Wine.copy(alpha = 0.09f)
+            val lineWidth = 2.dp.toPx()
+            val bottle = Path().apply {
+                moveTo(size.width * 0.31f, size.height * 0.12f)
+                lineTo(size.width * 0.43f, size.height * 0.12f)
+                lineTo(size.width * 0.43f, size.height * 0.34f)
+                cubicTo(
+                    size.width * 0.43f,
+                    size.height * 0.40f,
+                    size.width * 0.51f,
+                    size.height * 0.42f,
+                    size.width * 0.51f,
+                    size.height * 0.52f,
+                )
+                lineTo(size.width * 0.51f, size.height * 0.88f)
+                lineTo(size.width * 0.23f, size.height * 0.88f)
+                lineTo(size.width * 0.23f, size.height * 0.52f)
+                cubicTo(
+                    size.width * 0.23f,
+                    size.height * 0.42f,
+                    size.width * 0.31f,
+                    size.height * 0.40f,
+                    size.width * 0.31f,
+                    size.height * 0.34f,
+                )
+                close()
+            }
+            drawPath(bottle, color = lineColor, style = Stroke(width = lineWidth))
+            drawLine(
+                color = lineColor,
+                start = androidx.compose.ui.geometry.Offset(size.width * 0.30f, size.height * 0.20f),
+                end = androidx.compose.ui.geometry.Offset(size.width * 0.44f, size.height * 0.20f),
+                strokeWidth = lineWidth,
+            )
+            drawLine(
+                color = lineColor,
+                start = androidx.compose.ui.geometry.Offset(size.width * 0.23f, size.height * 0.63f),
+                end = androidx.compose.ui.geometry.Offset(size.width * 0.51f, size.height * 0.63f),
+                strokeWidth = lineWidth,
+            )
+
+            val glass = Path().apply {
+                moveTo(size.width * 0.60f, size.height * 0.36f)
+                cubicTo(
+                    size.width * 0.61f,
+                    size.height * 0.61f,
+                    size.width * 0.67f,
+                    size.height * 0.68f,
+                    size.width * 0.73f,
+                    size.height * 0.68f,
+                )
+                cubicTo(
+                    size.width * 0.79f,
+                    size.height * 0.68f,
+                    size.width * 0.85f,
+                    size.height * 0.61f,
+                    size.width * 0.86f,
+                    size.height * 0.36f,
+                )
+            }
+            drawPath(glass, color = lineColor, style = Stroke(width = lineWidth))
+            drawLine(
+                color = lineColor,
+                start = androidx.compose.ui.geometry.Offset(size.width * 0.60f, size.height * 0.36f),
+                end = androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height * 0.36f),
+                strokeWidth = lineWidth,
+            )
+            drawLine(
+                color = lineColor,
+                start = androidx.compose.ui.geometry.Offset(size.width * 0.73f, size.height * 0.68f),
+                end = androidx.compose.ui.geometry.Offset(size.width * 0.73f, size.height * 0.84f),
+                strokeWidth = lineWidth,
+            )
+            drawLine(
+                color = lineColor,
+                start = androidx.compose.ui.geometry.Offset(size.width * 0.65f, size.height * 0.84f),
+                end = androidx.compose.ui.geometry.Offset(size.width * 0.81f, size.height * 0.84f),
+                strokeWidth = lineWidth,
+            )
+        }
         Text(
             text = "How can I help you today?",
             color = InkMuted,
@@ -479,7 +563,7 @@ private fun MessageComposer(
                 ) {
                     if (value.isEmpty()) {
                         Text(
-                            text = "Ask about a pairing…",
+                            text = "Ask me about wine",
                             color = InkMuted,
                             fontSize = 17.sp,
                             fontStyle = FontStyle.Italic,
