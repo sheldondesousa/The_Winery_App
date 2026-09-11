@@ -164,6 +164,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Actions
 - **AC6:** Given a History entry is not yet favorited, when the user favorites it directly from History (without necessarily opening Stage Show first), then it is added to Favorites the same way as favoriting from Stage Show (Section 7, AC10).
+- **AC6a:** Given History contains entries, when the user taps Select, then every entry displays an empty checkbox and the user can select one or multiple entries. Delete remains disabled with no selection and removes all selected entries from local History when enabled and tapped.
 
 ### Data Synchronization
 - **AC7:** Given this is a single-device personal MVP, when suggestions are logged, then History persists in local on-device storage only. No cloud sync.

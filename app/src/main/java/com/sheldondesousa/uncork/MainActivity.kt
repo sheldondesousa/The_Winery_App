@@ -62,6 +62,9 @@ class MainActivity : ComponentActivity() {
                         AppTab.History -> HistoryRoute(
                             entries = historyEntries,
                             onEntryClick = { stageWine = it.suggestion.toStageWine() },
+                            onDeleteEntries = { entryIds ->
+                                historyEntries = historyRepository.delete(entryIds)
+                            },
                             onTabSelected = onTabSelected,
                         )
                         AppTab.Favorites -> FavoritesRoute(onTabSelected = onTabSelected)

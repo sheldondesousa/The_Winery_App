@@ -43,6 +43,13 @@ class HistoryRepository(context: Context) {
         return updated
     }
 
+    fun delete(entryIds: Set<Long>): List<HistoryEntry> {
+        if (entryIds.isEmpty()) return load()
+        val updated = load().filterNot { it.id in entryIds }
+        save(updated)
+        return updated
+    }
+
     private fun save(entries: List<HistoryEntry>) {
         val array = JSONArray()
         entries.forEach { array.put(it.toJson()) }

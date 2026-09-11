@@ -89,6 +89,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Grouped by date header (sans-serif micro-label: "today," "yesterday"). Each entry: wine name, concise user request, and favorited annotation if applicable.
 - The shared header places the History icon and 24sp title on the left and the right-aligned Uncork/AI SOMMELIER brand lockup on the same line. Entries use the wine name as the primary serif line, followed by region, `Request:` plus a maximum six-word form of the user's prompt, and a trailing chevron. AI conversation text is not shown in History.
 - The empty History content area is intentionally blank for now.
+- A top action row provides Select and Delete. Select reveals an empty checkbox on every History entry and permits one or multiple selections; Delete remains disabled until at least one entry is selected, then permanently removes the selected local records.
 - Sits above the shared bottom nav.
 
 ### Favorites

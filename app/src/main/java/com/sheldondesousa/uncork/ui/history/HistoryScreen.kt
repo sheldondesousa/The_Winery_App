@@ -16,10 +16,17 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -49,9 +56,18 @@ import java.util.Locale
 fun HistoryRoute(
     entries: List<HistoryEntry>,
     onEntryClick: (HistoryEntry) -> Unit,
+    onDeleteEntries: (Set<Long>) -> Unit = {},
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isSelecting by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
+
+    LaunchedEffect(entries) {
+        selectedIds = selectedIds.intersect(entries.mapTo(mutableSetOf(), HistoryEntry::id))
+        if (entries.isEmpty()) isSelecting = false
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -62,6 +78,20 @@ fun HistoryRoute(
             title = "History",
             icon = Icons.Outlined.History,
         )
+        HistoryActions(
+            hasEntries = entries.isNotEmpty(),
+            isSelecting = isSelecting,
+            hasSelection = selectedIds.isNotEmpty(),
+            onToggleSelect = {
+                isSelecting = !isSelecting
+                selectedIds = emptySet()
+            },
+            onDelete = {
+                onDeleteEntries(selectedIds)
+                selectedIds = emptySet()
+                isSelecting = false
+            },
+        )
 
         Box(
             modifier = Modifier
@@ -69,7 +99,15 @@ fun HistoryRoute(
                 .fillMaxWidth(),
         ) {
             if (entries.isNotEmpty()) {
-                HistoryList(entries = entries, onEntryClick = onEntryClick)
+                HistoryList(
+                    entries = entries,
+                    isSelecting = isSelecting,
+                    selectedIds = selectedIds,
+                    onEntryClick = onEntryClick,
+                    onSelectionChange = { entryId, selected ->
+                        selectedIds = if (selected) selectedIds + entryId else selectedIds - entryId
+                    },
+                )
             }
         }
 
@@ -81,9 +119,52 @@ fun HistoryRoute(
 }
 
 @Composable
+private fun HistoryActions(
+    hasEntries: Boolean,
+    isSelecting: Boolean,
+    hasSelection: Boolean,
+    onToggleSelect: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(
+            onClick = onToggleSelect,
+            enabled = hasEntries,
+        ) {
+            Text(
+                text = if (isSelecting) "Cancel" else "Select",
+                color = if (hasEntries) Wine else InkMuted.copy(alpha = 0.45f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        TextButton(
+            onClick = onDelete,
+            enabled = isSelecting && hasSelection,
+        ) {
+            Text(
+                text = "Delete",
+                color = if (isSelecting && hasSelection) Wine else InkMuted.copy(alpha = 0.45f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
 private fun HistoryList(
     entries: List<HistoryEntry>,
+    isSelecting: Boolean,
+    selectedIds: Set<Long>,
     onEntryClick: (HistoryEntry) -> Unit,
+    onSelectionChange: (Long, Boolean) -> Unit,
 ) {
     val groups = remember(entries) { entries.groupByDate() }
 
@@ -94,7 +175,19 @@ private fun HistoryList(
         groups.forEach { (date, datedEntries) ->
             item(key = "date-$date") { DateHeader(date) }
             items(datedEntries, key = HistoryEntry::id) { entry ->
-                HistoryRow(entry = entry, onClick = { onEntryClick(entry) })
+                HistoryRow(
+                    entry = entry,
+                    isSelecting = isSelecting,
+                    isSelected = entry.id in selectedIds,
+                    onClick = {
+                        if (isSelecting) {
+                            onSelectionChange(entry.id, entry.id !in selectedIds)
+                        } else {
+                            onEntryClick(entry)
+                        }
+                    },
+                    onSelectionChange = { onSelectionChange(entry.id, it) },
+                )
             }
         }
     }
@@ -113,14 +206,24 @@ private fun DateHeader(date: LocalDate) {
 }
 
 @Composable
-private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
+private fun HistoryRow(
+    entry: HistoryEntry,
+    isSelecting: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onSelectionChange: (Boolean) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
             .semantics {
                 role = Role.Button
-                contentDescription = "Open ${entry.suggestion.name} details"
+                contentDescription = if (isSelecting) {
+                    "${if (isSelected) "Deselect" else "Select"} ${entry.suggestion.name}"
+                } else {
+                    "Open ${entry.suggestion.name} details"
+                }
             }
             .padding(vertical = 16.dp),
     ) {
@@ -146,13 +249,26 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
                     letterSpacing = 0.2.sp,
                 )
             }
-            Text(
-                text = "›",
-                modifier = Modifier.padding(start = 16.dp),
-                color = InkMuted,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Light,
-            )
+            if (isSelecting) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange,
+                    modifier = Modifier.padding(start = 12.dp),
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Wine,
+                        uncheckedColor = InkMuted,
+                        checkmarkColor = Parchment,
+                    ),
+                )
+            } else {
+                Text(
+                    text = "›",
+                    modifier = Modifier.padding(start = 16.dp),
+                    color = InkMuted,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Light,
+                )
+            }
         }
         Text(
             text = "Request: ${entry.request}",
