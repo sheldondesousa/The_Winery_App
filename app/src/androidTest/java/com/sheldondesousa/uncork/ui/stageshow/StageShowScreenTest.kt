@@ -40,7 +40,7 @@ class StageShowScreenTest {
     }
 
     @Test
-    fun favoritingRevealsRatingControls() {
+    fun favoriteTagTogglesAndRatingIsReadOnly() {
         composeRule.setContent {
             UncorkTheme {
                 StageShowRoute(
@@ -56,10 +56,10 @@ class StageShowScreenTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Add to favorites").performClick()
-        composeRule.onNodeWithContentDescription("Saved to favorites").assertExists()
-        composeRule.onNodeWithText("YOUR RATING · not yet rated").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Rate 8 out of 10").performClick()
-        composeRule.onNodeWithText("YOUR RATING · 8 / 10").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Add to Favorite, off").performClick()
+        composeRule.onNodeWithContentDescription("Add to Favorite, on").assertExists()
+        composeRule.onNodeWithText("YOU HAVE NOT TRIED THIS WINE").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Add to Favorite, on").performClick()
+        composeRule.onNodeWithContentDescription("Add to Favorite, off").assertExists()
     }
 }

@@ -82,7 +82,13 @@ class MainActivity : ComponentActivity() {
                             wine = wine,
                             onBack = { stageWine = null },
                             initiallyFavorite = favoritesRepository.contains(wine.toWineSuggestion()),
-                            onFavorite = { favorites = favoritesRepository.add(it) },
+                            onFavoriteChange = { suggestion, selected ->
+                                favorites = if (selected) {
+                                    favoritesRepository.add(suggestion)
+                                } else {
+                                    favoritesRepository.remove(suggestion)
+                                }
+                            },
                         )
                     }
                 } else {

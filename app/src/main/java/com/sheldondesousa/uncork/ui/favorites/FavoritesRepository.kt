@@ -26,6 +26,14 @@ class FavoritesRepository(context: Context) {
         return updated
     }
 
+    fun remove(suggestion: WineSuggestion): List<WineSuggestion> {
+        val updated = load().filterNot { it.favoriteKey == suggestion.favoriteKey }
+        val array = JSONArray()
+        updated.forEach { array.put(it.toJson()) }
+        preferences.edit().putString(KEY_FAVORITES, array.toString()).apply()
+        return updated
+    }
+
     fun contains(wine: WineSuggestion): Boolean = load().any { it.favoriteKey == wine.favoriteKey }
 
     private val WineSuggestion.favoriteKey: String

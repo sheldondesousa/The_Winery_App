@@ -140,9 +140,8 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Actions
 - **AC9:** Given Wine Profile is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
-- **AC10:** Given Wine Profile is open and the wine is not yet favorited, when the user taps the outlined heart beside AI Confidence, then the heart fills and the wine is saved to Favorites (Section 9), with rating and notes optional at that point. No separate favorites action button is shown.
-  - **AC10a:** Given the wine is already favorited when Stage Show opens (e.g. reached via History for something previously favorited), when this is the case, then the "Add to favorites" action is replaced by the existing rating/notes controls, editing that same record directly.
-  - **AC10b:** Given a rating or note is set or edited on this screen, when saved, then it updates the same persisted record shown on Favorites.
+- **AC10:** Given Wine Profile is open, when the user taps the `Add to Favorite` tag beside AI Confidence, then its state toggles. On saves the wine to Favorites (Section 9); off removes it. No heart or separate favorites action button is shown.
+  - **AC10a:** Personal rating is display-only on Wine Profile. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
 
 **Open assumptions:**
 - Whether the agreement indicator (AC6) should influence which toggle position is shown by default (e.g. default to Kaggle when it agrees, since it's the more "verifiable" source) — currently unassumed; suggest defaulting to whichever the user tapped from (always AI, since that's the suggestion tapped in the thread).

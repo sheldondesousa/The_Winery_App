@@ -16,16 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.components.AppHeader
-import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
@@ -74,6 +69,7 @@ data class StageWine(
     val ai: WineProfile,
     val kaggle: WineProfile? = null,
     val sourcesAgree: Boolean = false,
+    val userRating: Int? = null,
 )
 
 fun WineSuggestion.toStageWine(): StageWine = StageWine(
@@ -89,6 +85,7 @@ fun WineSuggestion.toStageWine(): StageWine = StageWine(
         rating = sourceRating,
         confidencePercent = confidencePercent,
     ),
+    userRating = favoriteRating,
 )
 
 private enum class WineSource { AI, Kaggle }
@@ -121,14 +118,13 @@ fun StageShowRoute(
     wine: StageWine,
     onBack: () -> Unit,
     initiallyFavorite: Boolean = false,
-    onFavorite: (WineSuggestion) -> Unit = {},
+    onFavoriteChange: (WineSuggestion, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = onBack)
 
     var source by remember { mutableStateOf(WineSource.AI) }
     var isFavorite by remember(wine, initiallyFavorite) { mutableStateOf(initiallyFavorite) }
-    var rating by remember { mutableIntStateOf(0) }
     val profile = if (source == WineSource.Kaggle) wine.kaggle ?: wine.ai else wine.ai
 
     Column(
@@ -198,13 +194,11 @@ fun StageShowRoute(
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.4.sp,
                 )
-                FavoriteHeart(
+                FavoriteTag(
                     selected = isFavorite,
                     onClick = {
-                        if (!isFavorite) {
-                            isFavorite = true
-                            onFavorite(wine.toWineSuggestion())
-                        }
+                        isFavorite = !isFavorite
+                        onFavoriteChange(wine.toWineSuggestion(), isFavorite)
                     },
                 )
             }
@@ -231,17 +225,14 @@ fun StageShowRoute(
 
         LongDetail("SUGGESTED PAIRING", profile.suggestedPairing)
 
-        if (isFavorite) {
-            Spacer(Modifier.height(28.dp))
-            Text(
-                text = if (rating == 0) "YOUR RATING · not yet rated" else "YOUR RATING · $rating / 10",
-                color = if (rating == 0) InkMuted else Ink,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.4.sp,
-            )
-            RatingDots(rating = rating, onRatingChange = { rating = it })
-        }
+        Spacer(Modifier.height(28.dp))
+        Text(
+            text = wine.userRating?.let { "YOUR RATING · $it / 10" } ?: "YOU HAVE NOT TRIED THIS WINE",
+            color = if (wine.userRating == null) InkMuted else Ink,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 1.4.sp,
+        )
 
         Spacer(Modifier.height(24.dp))
     }
@@ -259,20 +250,27 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
     suggestedPairing = ai.suggestedPairing,
     sourceRating = ai.rating,
     confidencePercent = ai.confidencePercent,
+    favoriteRating = userRating,
     isFavorite = true,
 )
 
 @Composable
-private fun FavoriteHeart(selected: Boolean, onClick: () -> Unit) {
-    Icon(
-        imageVector = if (selected) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-        contentDescription = if (selected) "Saved to favorites" else "Add to favorites",
+private fun FavoriteTag(selected: Boolean, onClick: () -> Unit) {
+    Text(
+        text = "ADD TO FAVORITE",
+        color = if (selected) Parchment else Wine,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.sp,
         modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .clickable(role = Role.Button, enabled = !selected, onClick = onClick)
-            .padding(7.dp),
-        tint = Wine,
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) Wine else Wine.copy(alpha = 0.10f))
+            .clickable(role = Role.Switch, onClick = onClick)
+            .semantics {
+                role = Role.Switch
+                contentDescription = "Add to Favorite, ${if (selected) "on" else "off"}"
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     )
 }
 
@@ -363,29 +361,4 @@ private fun LongDetail(label: String, value: String) {
         value = value,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun RatingDots(rating: Int, onRatingChange: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        repeat(10) { index ->
-            val value = index + 1
-            Spacer(
-                modifier = Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(if (value <= rating) Wine else Hairline)
-                    .clickable(role = Role.RadioButton) { onRatingChange(value) }
-                    .semantics {
-                        role = Role.RadioButton
-                        contentDescription = "Rate $value out of 10"
-                    },
-            )
-        }
-    }
 }
