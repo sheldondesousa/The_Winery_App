@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -237,12 +238,23 @@ private fun EmptyConversation() {
             .padding(40.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.wine_glass),
-            contentDescription = null,
-            modifier = Modifier.size(240.dp),
-            contentScale = ContentScale.Fit,
-        )
+        Box(modifier = Modifier.size(240.dp)) {
+            Image(
+                painter = painterResource(R.drawable.wine_glass),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+            Text(
+                text = "Uncork",
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = 89.dp, y = 139.dp),
+                color = Ink,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
     }
 }
 
