@@ -88,6 +88,8 @@ class HistoryScreenTest {
         }
 
         composeRule.onNodeWithText("Clear").performClick()
+        composeRule.onNodeWithText("Cancel").assertIsEnabled()
+        composeRule.onNodeWithText("Clear All").assertIsNotEnabled()
         composeRule.onNodeWithText("Delete").assertIsNotEnabled()
         composeRule.onNodeWithContentDescription("Select Barolo").performClick()
         composeRule.onNodeWithText("Delete").assertIsEnabled().performClick()
@@ -119,6 +121,8 @@ class HistoryScreenTest {
         }
 
         composeRule.onNodeWithText("Clear All").performClick()
+        composeRule.onNodeWithText("Cancel").assertIsEnabled()
+        composeRule.onNodeWithText("Clear").assertIsNotEnabled()
         composeRule.onNodeWithText("Delete").assertIsEnabled().performClick()
 
         org.junit.Assert.assertEquals(setOf(1L, 2L), deletedIds)

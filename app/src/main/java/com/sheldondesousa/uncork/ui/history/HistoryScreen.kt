@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ButtonDefaults
@@ -58,6 +57,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private enum class ClearMode { Manual, All }
+
 @Composable
 fun HistoryRoute(
     entries: List<HistoryEntry>,
@@ -66,12 +67,13 @@ fun HistoryRoute(
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isSelecting by remember { mutableStateOf(false) }
+    var clearMode by remember { mutableStateOf<ClearMode?>(null) }
     var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
+    val isSelecting = clearMode != null
 
     LaunchedEffect(entries) {
         selectedIds = selectedIds.intersect(entries.mapTo(mutableSetOf(), HistoryEntry::id))
-        if (entries.isEmpty()) isSelecting = false
+        if (entries.isEmpty()) clearMode = null
     }
 
     Column(
@@ -95,13 +97,19 @@ fun HistoryRoute(
                     isSelecting = isSelecting,
                     selectedIds = selectedIds,
                     onEntryClick = onEntryClick,
-                    onToggleSelect = {
-                        isSelecting = !isSelecting
+                    clearMode = clearMode,
+                    onClear = {
+                        clearMode = if (clearMode == ClearMode.Manual) null else ClearMode.Manual
                         selectedIds = emptySet()
                     },
                     onClearAll = {
-                        isSelecting = true
-                        selectedIds = entries.mapTo(mutableSetOf(), HistoryEntry::id)
+                        if (clearMode == ClearMode.All) {
+                            clearMode = null
+                            selectedIds = emptySet()
+                        } else {
+                            clearMode = ClearMode.All
+                            selectedIds = entries.mapTo(mutableSetOf(), HistoryEntry::id)
+                        }
                     },
                     onSelectionChange = { entryId, selected ->
                         selectedIds = if (selected) selectedIds + entryId else selectedIds - entryId
@@ -117,7 +125,7 @@ fun HistoryRoute(
                             .clickable(enabled = canDelete, role = Role.Button) {
                                 onDeleteEntries(selectedIds)
                                 selectedIds = emptySet()
-                                isSelecting = false
+                                clearMode = null
                             }
                             .semantics {
                                 role = Role.Button
@@ -152,44 +160,44 @@ fun HistoryRoute(
 
 @Composable
 private fun HistoryActions(
-    isSelecting: Boolean,
-    onToggleSelect: () -> Unit,
+    clearMode: ClearMode?,
+    onClear: () -> Unit,
     onClearAll: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         TextButton(
-            onClick = onToggleSelect,
+            onClick = onClear,
+            enabled = clearMode != ClearMode.All,
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
             colors = ButtonDefaults.textButtonColors(
                 contentColor = Wine,
-                containerColor = Color.Transparent,
+                containerColor = Hairline,
+                disabledContentColor = InkMuted.copy(alpha = 0.45f),
+                disabledContainerColor = Hairline.copy(alpha = 0.4f),
             ),
         ) {
             Text(
-                text = if (isSelecting) "Cancel" else "Clear",
-                color = Wine,
+                text = if (clearMode == ClearMode.Manual) "Cancel" else "Clear",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 2.dp)
-                .width(1.dp)
-                .height(16.dp)
-                .background(Hairline),
-        )
         TextButton(
             onClick = onClearAll,
+            enabled = clearMode != ClearMode.Manual,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             colors = ButtonDefaults.textButtonColors(
                 contentColor = Wine,
-                containerColor = Color.Transparent,
+                containerColor = Hairline,
+                disabledContentColor = InkMuted.copy(alpha = 0.45f),
+                disabledContainerColor = Hairline.copy(alpha = 0.4f),
             ),
         ) {
             Text(
-                text = "Clear All",
-                color = Wine,
+                text = if (clearMode == ClearMode.All) "Cancel" else "Clear All",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -201,9 +209,10 @@ private fun HistoryActions(
 private fun HistoryList(
     entries: List<HistoryEntry>,
     isSelecting: Boolean,
+    clearMode: ClearMode?,
     selectedIds: Set<Long>,
     onEntryClick: (HistoryEntry) -> Unit,
-    onToggleSelect: () -> Unit,
+    onClear: () -> Unit,
     onClearAll: () -> Unit,
     onSelectionChange: (Long, Boolean) -> Unit,
 ) {
@@ -223,8 +232,8 @@ private fun HistoryList(
                 DateHeader(
                     date = date,
                     showActions = index == 0,
-                    isSelecting = isSelecting,
-                    onToggleSelect = onToggleSelect,
+                    clearMode = clearMode,
+                    onClear = onClear,
                     onClearAll = onClearAll,
                 )
             }
@@ -251,8 +260,8 @@ private fun HistoryList(
 private fun DateHeader(
     date: LocalDate,
     showActions: Boolean,
-    isSelecting: Boolean,
-    onToggleSelect: () -> Unit,
+    clearMode: ClearMode?,
+    onClear: () -> Unit,
     onClearAll: () -> Unit,
 ) {
     Row(
@@ -271,8 +280,8 @@ private fun DateHeader(
         )
         if (showActions) {
             HistoryActions(
-                isSelecting = isSelecting,
-                onToggleSelect = onToggleSelect,
+                clearMode = clearMode,
+                onClear = onClear,
                 onClearAll = onClearAll,
             )
         }
