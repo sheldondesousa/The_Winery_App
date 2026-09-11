@@ -240,6 +240,13 @@ fun StageShowRoute(
                 .height(72.dp),
             contentAlignment = Alignment.Center,
         ) {
+            Spacer(
+                modifier = Modifier
+                    .requiredSize(104.dp)
+                    .offset(y = (-24).dp)
+                    .clip(CircleShape)
+                    .background(Parchment),
+            )
             SaveButton(
                 selected = isFavorite,
                 onClick = {
