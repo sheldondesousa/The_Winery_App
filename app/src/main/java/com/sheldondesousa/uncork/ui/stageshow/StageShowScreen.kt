@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBackIos
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
@@ -34,6 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -87,6 +92,29 @@ fun WineSuggestion.toStageWine(): StageWine = StageWine(
 
 private enum class WineSource { AI, Kaggle }
 
+private val ShortBackArrow: ImageVector = ImageVector.Builder(
+    name = "ShortBackArrow",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+    autoMirror = true,
+).apply {
+    path(
+        fill = null,
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        moveTo(13f, 6f)
+        lineTo(7f, 12f)
+        lineTo(13f, 18f)
+        moveTo(7f, 12f)
+        lineTo(17f, 12f)
+    }
+}.build()
+
 @Composable
 fun StageShowRoute(
     wine: StageWine,
@@ -112,7 +140,7 @@ fun StageShowRoute(
     ) {
         AppHeader(
             title = "Wine Profile",
-            icon = Icons.AutoMirrored.Outlined.ArrowBackIos,
+            icon = ShortBackArrow,
             onIconClick = onBack,
             iconContentDescription = "Back",
             contentPadding = PaddingValues(0.dp),
