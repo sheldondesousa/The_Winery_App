@@ -136,14 +136,14 @@ fun StageShowRoute(
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 22.dp, vertical = 16.dp),
+            .padding(horizontal = 22.dp),
     ) {
         AppHeader(
             title = "Wine Profile",
             icon = ShortBackArrow,
             onIconClick = onBack,
             iconContentDescription = "Back",
-            contentPadding = PaddingValues(0.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
             dividerInset = 0.dp,
         )
 

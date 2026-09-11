@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.theme.Ink
-import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Wine
 
 @Composable
@@ -108,7 +107,7 @@ fun AppHeader(
                 .fillMaxWidth()
                 .padding(horizontal = dividerInset)
                 .height(1.dp)
-                .background(Hairline),
+                .background(Wine.copy(alpha = 0.45f)),
         )
     }
 }
