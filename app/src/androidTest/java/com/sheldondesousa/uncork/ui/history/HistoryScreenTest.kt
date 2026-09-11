@@ -61,7 +61,7 @@ class HistoryScreenTest {
         composeRule.onNodeWithText("TODAY").assertIsDisplayed()
         composeRule.onNodeWithText("Catena Malbec").assertIsDisplayed()
         composeRule.onNodeWithText("Mendoza, Argentina").assertIsDisplayed()
-        composeRule.onNodeWithText("Request: Malbec").assertIsDisplayed()
+        composeRule.onNodeWithText("Your Request: Malbec").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Open Catena Malbec details").performClick()
         org.junit.Assert.assertTrue(opened)
     }
