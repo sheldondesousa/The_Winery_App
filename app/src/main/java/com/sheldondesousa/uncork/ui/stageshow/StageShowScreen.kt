@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.components.AppHeader
+import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
@@ -227,13 +228,13 @@ fun StageShowRoute(
             letterSpacing = 1.4.sp,
         )
 
-            Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(32.dp))
         }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Parchment)
+                .background(Hairline)
                 .navigationBarsPadding()
                 .height(112.dp),
             contentAlignment = Alignment.Center,
