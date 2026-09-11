@@ -81,7 +81,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - The planned AI/Kaggle toggle is a plain text switch (not a pill), with an agreement indicator ("similar pick") next to it. This comparison interface has not yet been designed, connected to data, or approved; the current code contains only an unvalidated conditional scaffold.
 - AI is the primary source and should populate the shared schema from Gemma's learned knowledge. Kaggle is optional comparative evidence; its absence must not force the AI fields to `Unknown`.
 - When present, AI confidence is labeled as a model estimate rather than verified accuracy. It must never be presented as a probability that the facts are correct.
-- Schema fields (`body`, `tannin`, `acidity`, `rating`, `flavor notes`) in sans-serif micro-labels; `Unknown` renders as muted italic — visually distinct from a user's own unset rating ("not yet rated"), which is muted but *not* italic. These two null states must never be styled identically (PRD §4).
+- Short, single-answer schema fields (`variety`, `body`, `tannin`, `acidity`, and `rating`) use a two-column grid with sans-serif micro-labels. Longer content such as `flavor notes` and pairing guidance remains full-width and left-aligned. `Unknown` renders as muted italic — visually distinct from a user's own unset rating ("not yet rated"), which is muted but *not* italic. These two null states must never be styled identically (PRD §4).
 - Cheese pairing is a secondary, quieter block below the main schema — never the primary focus (PRD §7 AC8).
 - Rating uses a 10-dot strip rather than numeric stepper or stars, matching the integer 1–10 scale without implying half-points.
 

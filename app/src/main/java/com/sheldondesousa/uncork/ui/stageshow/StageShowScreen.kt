@@ -184,12 +184,16 @@ fun StageShowRoute(
         }
 
         Spacer(Modifier.height(36.dp))
-        DetailRow("VARIETY", profile.variety)
-        DetailRow("BODY", profile.body)
-        DetailRow("TANNIN", profile.tannin)
-        DetailRow("ACIDITY", profile.acidity)
-        DetailRow("RATING", profile.rating)
-        DetailRow("FLAVOR NOTES", profile.flavorNotes)
+        ShortDetailsGrid(
+            details = listOf(
+                "VARIETY" to profile.variety,
+                "BODY" to profile.body,
+                "TANNIN" to profile.tannin,
+                "ACIDITY" to profile.acidity,
+                "RATING" to profile.rating,
+            ),
+        )
+        LongDetail("FLAVOR NOTES", profile.flavorNotes)
 
         if (pairing != null) {
             Spacer(Modifier.height(14.dp))
@@ -272,12 +276,33 @@ private fun SourceOption(label: String, selected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun ShortDetailsGrid(details: List<Pair<String, String>>) {
+    details.chunked(2).forEach { rowDetails ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(28.dp),
+        ) {
+            rowDetails.forEach { (label, value) ->
+                DetailCell(
+                    label = label,
+                    value = value,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (rowDetails.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun DetailCell(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
     val unknown = value.equals("Unknown", ignoreCase = true)
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp),
+        modifier = modifier.padding(bottom = 24.dp),
     ) {
         Text(
             text = label,
@@ -295,6 +320,15 @@ private fun DetailRow(label: String, value: String) {
             fontStyle = if (unknown) FontStyle.Italic else FontStyle.Normal,
         )
     }
+}
+
+@Composable
+private fun LongDetail(label: String, value: String) {
+    DetailCell(
+        label = label,
+        value = value,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
