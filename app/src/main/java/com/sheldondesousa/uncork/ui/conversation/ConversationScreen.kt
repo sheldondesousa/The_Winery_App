@@ -63,6 +63,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -217,6 +218,7 @@ private fun ConversationHeader() {
             text = "Uncork",
             color = Ink,
             fontSize = 30.sp,
+            fontFamily = FontFamily.Serif,
             fontWeight = FontWeight.Medium,
         )
         Text(
@@ -240,7 +242,7 @@ private fun EmptyConversation() {
     ) {
         Box(modifier = Modifier.size(240.dp)) {
             Image(
-                painter = painterResource(R.drawable.wine_glass),
+                painter = painterResource(R.drawable.conversation_empty_state),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
@@ -249,9 +251,10 @@ private fun EmptyConversation() {
                 text = "Uncork",
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = 89.dp, y = 139.dp),
+                    .offset(x = 85.dp, y = 140.dp),
                 color = Ink,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.Medium,
             )
         }
