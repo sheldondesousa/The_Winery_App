@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
@@ -271,6 +272,7 @@ private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(88.dp)
+            .offset(y = (-24).dp)
             .clip(CircleShape)
             .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
             .clickable(role = Role.Switch, onClick = onClick)
