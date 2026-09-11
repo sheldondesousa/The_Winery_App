@@ -236,7 +236,7 @@ fun StageShowRoute(
                 .fillMaxWidth()
                 .background(Hairline)
                 .navigationBarsPadding()
-                .height(112.dp),
+                .height(72.dp),
             contentAlignment = Alignment.Center,
         ) {
             SaveButton(
@@ -270,7 +270,7 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
 private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(88.dp)
+            .size(56.dp)
             .clip(CircleShape)
             .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
             .clickable(role = Role.Switch, onClick = onClick)
