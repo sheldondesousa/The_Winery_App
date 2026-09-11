@@ -54,8 +54,8 @@ class MainActivity : ComponentActivity() {
                             responder = gemmaResponder,
                             state = conversationState,
                             onSuggestionClick = { stageWine = it.toStageWine() },
-                            onSuggestionRecorded = { suggestion, response ->
-                                historyEntries = historyRepository.record(suggestion, response)
+                            onSuggestionRecorded = { suggestion, request ->
+                                historyEntries = historyRepository.record(suggestion, request)
                             },
                             onTabSelected = onTabSelected,
                         )

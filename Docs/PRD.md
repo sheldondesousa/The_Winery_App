@@ -158,7 +158,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 - **AC2:** Given the current session has active suggestions, when History is opened mid-session, then those suggestions also appear, grouped under today's date — consistent with the in-session persistence in Section 6, AC2b.
 
 ### Data & Content
-- **AC3:** Given a suggestion entry in History, when displayed, then it shows the wine name and a short excerpt of the conversational suggestion — not the full factual schema, which stays on Stage Show.
+- **AC3:** Given a suggestion entry in History, when displayed, then it shows the wine name and `Request:` followed by a concise form of the user's original prompt containing fewer than seven words. AI conversation text and the full factual schema are not shown; the schema stays on Stage Show.
 - **AC4:** Given a suggestion in History matches a wine already in Favorites, when displayed, then an annotation (rating, or a "Favorited" mark if unrated) is shown with a tap-through link to that favorite's full record and notes — the same behavior as Section 6, AC6a.
 - **AC5:** Given the user taps a History entry, when tapped, then the app navigates to Stage Show with that wine's data, identical to tapping a live suggestion.
 

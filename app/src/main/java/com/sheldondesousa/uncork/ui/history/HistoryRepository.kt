@@ -9,7 +9,7 @@ data class HistoryEntry(
     val id: Long,
     val createdAtEpochMillis: Long,
     val suggestion: WineSuggestion,
-    val excerpt: String,
+    val request: String,
 )
 
 class HistoryRepository(context: Context) {
@@ -27,14 +27,14 @@ class HistoryRepository(context: Context) {
         }.getOrDefault(emptyList())
     }
 
-    fun record(suggestion: WineSuggestion, responseText: String): List<HistoryEntry> {
+    fun record(suggestion: WineSuggestion, userRequest: String): List<HistoryEntry> {
         val updated = buildList {
             add(
                 HistoryEntry(
                     id = System.nanoTime(),
                     createdAtEpochMillis = System.currentTimeMillis(),
                     suggestion = suggestion,
-                    excerpt = responseText.trim().take(MAX_EXCERPT_LENGTH),
+                    request = userRequest.toConciseRequest(),
                 ),
             )
             addAll(load())
@@ -52,7 +52,7 @@ class HistoryRepository(context: Context) {
     private fun HistoryEntry.toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("createdAt", createdAtEpochMillis)
-        put("excerpt", excerpt)
+        put("request", request)
         put("suggestion", suggestion.toJson())
     }
 
@@ -75,7 +75,7 @@ class HistoryRepository(context: Context) {
         HistoryEntry(
             id = getLong("id"),
             createdAtEpochMillis = getLong("createdAt"),
-            excerpt = optString("excerpt"),
+            request = optString("request").ifBlank { LEGACY_REQUEST_LABEL },
             suggestion = getJSONObject("suggestion").toSuggestion(),
         )
     }.getOrNull()
@@ -98,10 +98,19 @@ class HistoryRepository(context: Context) {
     private fun JSONObject.optIntOrNull(key: String): Int? =
         if (isNull(key) || !has(key)) null else optInt(key)
 
+    private fun String.toConciseRequest(): String {
+        val words = trim().split(Regex("\\s+")).filter(String::isNotBlank)
+        if (words.isEmpty()) return DEFAULT_REQUEST_LABEL
+        val summary = words.take(MAX_REQUEST_WORDS).joinToString(" ")
+        return if (words.size > MAX_REQUEST_WORDS) "$summary…" else summary
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "uncork_history"
         const val KEY_ENTRIES = "entries"
-        const val MAX_EXCERPT_LENGTH = 280
+        const val MAX_REQUEST_WORDS = 6
         const val MAX_HISTORY_ENTRIES = 500
+        const val DEFAULT_REQUEST_LABEL = "Wine suggestion"
+        const val LEGACY_REQUEST_LABEL = "Previous wine suggestion"
     }
 }

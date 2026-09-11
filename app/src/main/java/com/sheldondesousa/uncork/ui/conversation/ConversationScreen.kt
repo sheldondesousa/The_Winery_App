@@ -120,7 +120,7 @@ fun ConversationRoute(
             runCatching { responder.replyTo(query) }
                 .onSuccess { response ->
                     state.messages += response
-                    response.suggestion?.let { onSuggestionRecorded(it, response.text) }
+                    response.suggestion?.let { onSuggestionRecorded(it, query) }
                 }
                 .onFailure {
                     state.errorMessage =

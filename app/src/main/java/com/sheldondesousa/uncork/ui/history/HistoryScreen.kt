@@ -155,13 +155,13 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
             )
         }
         Text(
-            text = entry.excerpt,
+            text = "Request: ${entry.request}",
             modifier = Modifier.padding(top = 10.dp, end = 24.dp),
             color = Ink,
             fontSize = 15.sp,
             lineHeight = 22.sp,
             fontFamily = FontFamily.Serif,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         if (entry.suggestion.isFavorite) {

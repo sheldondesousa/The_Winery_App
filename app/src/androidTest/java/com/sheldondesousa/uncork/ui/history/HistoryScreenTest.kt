@@ -43,7 +43,7 @@ class HistoryScreenTest {
                 region = "Mendoza, Argentina",
                 variety = "Malbec",
             ),
-            excerpt = "Dark fruit and gentle spice make this a generous pairing.",
+            request = "Suggest a Malbec for steak",
         )
 
         composeRule.setContent {
@@ -59,6 +59,7 @@ class HistoryScreenTest {
         composeRule.onNodeWithText("TODAY").assertIsDisplayed()
         composeRule.onNodeWithText("Catena Malbec").assertIsDisplayed()
         composeRule.onNodeWithText("Mendoza, Argentina").assertIsDisplayed()
+        composeRule.onNodeWithText("Request: Suggest a Malbec for steak").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Open Catena Malbec details").performClick()
         org.junit.Assert.assertTrue(opened)
     }
