@@ -41,7 +41,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,55 +74,70 @@ import kotlinx.coroutines.launch
 
 private val AiResponseInk = Color(0xFF27201D)
 
-private enum class AppTab(val label: String) {
+enum class AppTab(val label: String) {
     Conversation("Chat"),
     History("History"),
     Favorites("Favorites"),
 }
 
+class ConversationSessionState {
+    val messages = mutableStateListOf<ChatMessage>()
+    var draft by mutableStateOf("")
+    var isReplying by mutableStateOf(false)
+    var errorMessage by mutableStateOf<String?>(null)
+}
+
+@Composable
+fun rememberConversationSessionState(): ConversationSessionState =
+    remember { ConversationSessionState() }
+
 @Composable
 fun ConversationRoute(
     responder: ConversationResponder = remember { DemoConversationResponder() },
+    state: ConversationSessionState = rememberConversationSessionState(),
     onSuggestionClick: (WineSuggestion) -> Unit = {},
+    onSuggestionRecorded: (WineSuggestion, String) -> Unit = { _, _ -> },
+    onTabSelected: (AppTab) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val messages = remember { mutableStateListOf<ChatMessage>() }
-    var draft by rememberSaveable { mutableStateOf("") }
-    var isReplying by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     fun submit() {
-        val query = draft.trim()
-        if (query.isEmpty() || isReplying) return
+        val query = state.draft.trim()
+        if (query.isEmpty() || state.isReplying) return
 
-        messages += ChatMessage(
+        state.messages += ChatMessage(
             id = System.nanoTime(),
             author = MessageAuthor.User,
             text = query,
         )
-        draft = ""
-        isReplying = true
-        errorMessage = null
+        state.draft = ""
+        state.isReplying = true
+        state.errorMessage = null
 
         scope.launch {
             runCatching { responder.replyTo(query) }
-                .onSuccess { messages += it }
-                .onFailure {
-                    errorMessage = "I couldn’t finish that suggestion. Check your connection and try again."
+                .onSuccess { response ->
+                    state.messages += response
+                    response.suggestion?.let { onSuggestionRecorded(it, response.text) }
                 }
-            isReplying = false
+                .onFailure {
+                    state.errorMessage =
+                        "I couldn’t finish that suggestion. Check your connection and try again."
+                }
+            state.isReplying = false
         }
     }
 
     ConversationScreen(
-        messages = messages,
-        draft = draft,
-        isReplying = isReplying,
-        errorMessage = errorMessage,
-        onDraftChange = { draft = it },
+        messages = state.messages,
+        draft = state.draft,
+        isReplying = state.isReplying,
+        errorMessage = state.errorMessage,
+        onDraftChange = { state.draft = it },
         onSend = ::submit,
         onSuggestionClick = onSuggestionClick,
+        onTabSelected = onTabSelected,
         modifier = modifier,
     )
 }
@@ -137,6 +151,7 @@ private fun ConversationScreen(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onSuggestionClick: (WineSuggestion) -> Unit,
+    onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -197,7 +212,10 @@ private fun ConversationScreen(
             onValueChange = onDraftChange,
             onSend = onSend,
         )
-        BottomNavigation(selected = AppTab.Conversation)
+        BottomNavigation(
+            selected = AppTab.Conversation,
+            onTabSelected = onTabSelected,
+        )
     }
 }
 
@@ -502,7 +520,10 @@ private fun MessageComposer(
 }
 
 @Composable
-private fun BottomNavigation(selected: AppTab) {
+fun BottomNavigation(
+    selected: AppTab,
+    onTabSelected: (AppTab) -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -515,6 +536,7 @@ private fun BottomNavigation(selected: AppTab) {
             label = AppTab.Conversation.label,
             selected = selected == AppTab.Conversation,
             modifier = Modifier.weight(1f),
+            onClick = { onTabSelected(AppTab.Conversation) },
         ) {
             Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null)
         }
@@ -523,6 +545,7 @@ private fun BottomNavigation(selected: AppTab) {
             label = AppTab.History.label,
             selected = selected == AppTab.History,
             modifier = Modifier.weight(1f),
+            onClick = { onTabSelected(AppTab.History) },
         ) {
             Icon(Icons.Outlined.History, contentDescription = null)
         }
@@ -531,6 +554,7 @@ private fun BottomNavigation(selected: AppTab) {
             label = AppTab.Favorites.label,
             selected = selected == AppTab.Favorites,
             modifier = Modifier.weight(1f),
+            onClick = { onTabSelected(AppTab.Favorites) },
         ) {
             Icon(Icons.Outlined.FavoriteBorder, contentDescription = null)
         }
@@ -552,12 +576,13 @@ private fun NavigationItem(
     label: String,
     selected: Boolean,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
     icon: @Composable () -> Unit,
 ) {
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .clickable(role = Role.Tab) { }
+            .clickable(role = Role.Tab, onClick = onClick)
             .semantics { contentDescription = label },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

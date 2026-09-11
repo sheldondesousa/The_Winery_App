@@ -11,7 +11,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.ModelFileManager
+import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
+import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionState
+import com.sheldondesousa.uncork.ui.history.HistoryRepository
+import com.sheldondesousa.uncork.ui.history.HistoryRoute
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
@@ -30,17 +34,37 @@ class MainActivity : ComponentActivity() {
             ),
         )
         val modelFileManager = ModelFileManager(applicationContext)
+        val historyRepository = HistoryRepository(applicationContext)
         gemmaResponder = GemmaConversationResponder(applicationContext, modelFileManager.modelFile)
         setContent {
             UncorkTheme {
                 var modelReady by remember { mutableStateOf(false) }
                 var stageWine by remember { mutableStateOf<StageWine?>(null) }
+                var selectedTab by remember { mutableStateOf(AppTab.Conversation) }
+                var historyEntries by remember { mutableStateOf(historyRepository.load()) }
+                val conversationState = rememberConversationSessionState()
+                val onTabSelected: (AppTab) -> Unit = { tab ->
+                    if (tab != AppTab.Favorites) selectedTab = tab
+                }
 
                 if (modelReady) {
-                    ConversationRoute(
-                        responder = gemmaResponder,
-                        onSuggestionClick = { stageWine = it.toStageWine() },
-                    )
+                    when (selectedTab) {
+                        AppTab.Conversation -> ConversationRoute(
+                            responder = gemmaResponder,
+                            state = conversationState,
+                            onSuggestionClick = { stageWine = it.toStageWine() },
+                            onSuggestionRecorded = { suggestion, response ->
+                                historyEntries = historyRepository.record(suggestion, response)
+                            },
+                            onTabSelected = onTabSelected,
+                        )
+                        AppTab.History -> HistoryRoute(
+                            entries = historyEntries,
+                            onEntryClick = { stageWine = it.suggestion.toStageWine() },
+                            onTabSelected = onTabSelected,
+                        )
+                        AppTab.Favorites -> Unit
+                    }
                     stageWine?.let { wine ->
                         StageShowRoute(
                             wine = wine,

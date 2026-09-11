@@ -235,6 +235,7 @@ Implemented on native Android with Kotlin and Jetpack Compose:
 - 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
 - Full-screen Stage Show navigation and layout, structured AI profile parsing, pairing action, favorite state, and 10-dot rating interaction
 - AI-confidence display at 12sp with an explicit accuracy disclaimer
+- Persistent on-device History storage, date-grouped History list, Chat/History tab navigation, preserved in-session Chat state, and Stage Show entry navigation
 
 Not yet complete:
 
@@ -242,6 +243,6 @@ Not yet complete:
 - Frank Ruhl Libre font bundling
 - AI/Kaggle comparison interface, dataset import, matching, and comparison pipeline; current conditional UI code is only an unvalidated scaffold
 - Cloud routing and web verification
-- Persistent History, Favorites, ratings, and notes
+- Persistent Favorites, ratings, and notes
 - Real model-generated cheese pairing on Stage Show; the current Stage Show result is placeholder copy
 - Physical-device execution of the Stage Show instrumentation tests and final responsive visual QA

@@ -86,6 +86,8 @@ Two alternate demarcation modes were explored and are available in the mockup if
 
 ### History
 - Grouped by date header (sans-serif micro-label: "today," "yesterday"). Each entry: wine name, short excerpt, favorited annotation if applicable.
+- The header repeats the left-aligned Uncork wordmark with "HISTORY" beneath it. Entries use the wine name as the primary serif line, followed by region, a two-line conversational excerpt, and a trailing chevron.
+- Empty state reads "Your wine suggestions will appear here" with a "Start a conversation" action that returns to Chat.
 - Sits above the shared bottom nav.
 
 ### Favorites
