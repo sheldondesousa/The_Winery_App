@@ -119,7 +119,7 @@ fun HistoryRoute(
                             .padding(bottom = 20.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Wine,
+                            containerColor = Color.Black,
                             contentColor = Parchment,
                             disabledContainerColor = InkMuted.copy(alpha = 0.22f),
                             disabledContentColor = Parchment.copy(alpha = 0.65f),
