@@ -282,65 +282,59 @@ private fun HistoryRow(
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = entry.suggestion.name,
-                    color = Ink,
-                    fontSize = 21.sp,
-                    lineHeight = 27.sp,
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = entry.suggestion.region,
-                    modifier = Modifier.padding(top = 3.dp),
-                    color = InkMuted,
-                    fontSize = 12.sp,
-                    letterSpacing = 0.2.sp,
-                )
-            }
-            if (!isSelecting) {
-                Text(
-                    text = "›",
-                    modifier = Modifier.padding(start = 16.dp),
-                    color = InkMuted,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Light,
-                )
-            }
-        }
-        Text(
-            text = "Your Request: ${entry.requestKeywords.joinToString(" · ")}",
-            modifier = Modifier.padding(top = 10.dp, end = 24.dp),
-            color = Ink,
-            fontSize = 15.sp,
-            lineHeight = 22.sp,
-            fontFamily = FontFamily.Serif,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (entry.suggestion.isFavorite) {
             Text(
-                text = entry.suggestion.favoriteRating?.let { "$it / 10" } ?: "FAVORITED",
-                modifier = Modifier.padding(top = 10.dp),
-                color = Wine,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp,
+                text = entry.suggestion.name,
+                color = Ink,
+                fontSize = 21.sp,
+                lineHeight = 27.sp,
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = entry.suggestion.region,
+                modifier = Modifier.padding(top = 3.dp),
+                color = InkMuted,
+                fontSize = 12.sp,
+                letterSpacing = 0.2.sp,
+            )
+            Text(
+                text = "Your Request: ${entry.requestKeywords.joinToString(" · ")}",
+                modifier = Modifier.padding(top = 10.dp, end = 24.dp),
+                color = Ink,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                fontFamily = FontFamily.Serif,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (entry.suggestion.isFavorite) {
+                Text(
+                    text = entry.suggestion.favoriteRating?.let { "$it / 10" } ?: "FAVORITED",
+                    modifier = Modifier.padding(top = 10.dp),
+                    color = Wine,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp,
+                )
+            }
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .height(1.dp)
+                    .background(Hairline),
             )
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp)
-                .height(1.dp)
-                .background(Hairline),
-        )
+        if (!isSelecting) {
+            Text(
+                text = "›",
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .padding(start = 16.dp),
+                color = InkMuted,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Light,
+            )
         }
     }
 }
