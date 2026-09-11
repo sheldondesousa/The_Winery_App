@@ -132,22 +132,27 @@ fun StageShowRoute(
         modifier = modifier
             .fillMaxSize()
             .background(Parchment)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 22.dp),
+            .statusBarsPadding(),
     ) {
         AppHeader(
             title = "Wine Profile",
             icon = ShortBackArrow,
             onIconClick = onBack,
             iconContentDescription = "Back",
+            modifier = Modifier.padding(horizontal = 22.dp),
             contentPadding = PaddingValues(vertical = 16.dp),
             dividerInset = 0.dp,
         )
 
-        Spacer(Modifier.height(36.dp))
-        Text(
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp),
+        ) {
+            Spacer(Modifier.height(36.dp))
+            Text(
             text = profile.winery,
             color = Ink,
             fontSize = 42.sp,
@@ -222,9 +227,15 @@ fun StageShowRoute(
             letterSpacing = 1.4.sp,
         )
 
-        Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(32.dp))
+        }
+
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Parchment)
+                .navigationBarsPadding()
+                .height(112.dp),
             contentAlignment = Alignment.Center,
         ) {
             SaveButton(
@@ -235,8 +246,6 @@ fun StageShowRoute(
                 },
             )
         }
-
-        Spacer(Modifier.height(32.dp))
     }
 }
 
