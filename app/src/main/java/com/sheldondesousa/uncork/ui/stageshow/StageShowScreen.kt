@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
+import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -108,29 +110,15 @@ fun StageShowRoute(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .clip(CircleShape)
-                .clickable(role = Role.Button, onClick = onBack)
-                .semantics { contentDescription = "Back to chat" }
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = Ink,
-            )
-            Text(
-                text = "Back",
-                modifier = Modifier.padding(start = 8.dp),
-                color = Ink,
-                fontSize = 14.sp,
-            )
-        }
+        AppHeader(
+            title = "Wine Selection",
+            icon = Icons.AutoMirrored.Outlined.ArrowBack,
+            onIconClick = onBack,
+            iconContentDescription = "Back",
+            contentPadding = PaddingValues(0.dp),
+        )
 
-        Spacer(Modifier.height(42.dp))
+        Spacer(Modifier.height(36.dp))
         Text(
             text = profile.winery,
             color = Ink,
