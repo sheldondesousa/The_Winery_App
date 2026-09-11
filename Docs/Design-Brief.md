@@ -40,7 +40,7 @@ Do not introduce a second accent color. If something new needs to stand out, it 
 
 **Status bar** — persistent across every screen (part of the frame, not any individual screen): time left, signal/wifi/battery right. It is transparent over parchment and uses dark system icons/text for contrast.
 
-**Page header** — Chat, History, Favorites, and Wine Profile share a burgundy horizontal hairline at the same vertical position beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
+**Page header** — Chat, History, Favorites, and Attributes share a burgundy horizontal hairline at the same vertical position beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
 
 **Bottom nav** — three tabs: Chat, History, Favorites. It is flush with the physical bottom of the screen, uses a wine-red background, and has equal-width columns separated by hairline dividers. All icons have visible labels. The selected label is 13sp/700 and unselected labels are 12sp/400; selection uses opacity and weight without a background highlight. Appears on those three screens only.
 - **Not** on Splash (nothing to navigate to yet).
@@ -78,7 +78,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Sending a message (via the simulated keyboard's Send key) appends it to the thread as a new user bubble.
 
 ### Stage Show
-- No persistent bottom nav chrome (PRD §7 AC1). The top header uses a compact left chevron with a short horizontal back stem beside the page title "Wine Profile", plus the shared right-aligned Uncork / AI SOMMELIER lockup. Its compact 32dp-wide, 40dp-high control begins on the same 22dp horizontal grid as the Chat, History, and Favorites icons, while the title shares their text alignment. Large typographic wine name + origin, no bottle imagery.
+- No persistent bottom nav chrome (PRD §7 AC1). The top header uses a compact left chevron with a short horizontal back stem beside the page title "Attributes", plus the shared right-aligned Uncork / AI SOMMELIER lockup. Its compact 32dp-wide, 40dp-high control begins on the same 22dp horizontal grid as the Chat, History, and Favorites icons, while the title shares their text alignment. Large typographic wine name + origin, no bottle imagery.
 - Current sizes: wine name 42sp, region 17sp, schema values 15sp, schema micro-labels 10sp, cheese-pairing copy 16sp, and AI-confidence line 12sp.
 - The planned AI/Kaggle toggle is a plain text switch (not a pill), with an agreement indicator ("similar pick") next to it. This comparison interface has not yet been designed, connected to data, or approved; the current code contains only an unvalidated conditional scaffold.
 - AI is the primary source and should populate the shared schema from Gemma's learned knowledge. Kaggle is optional comparative evidence; its absence must not force the AI fields to `Unknown`.
@@ -131,7 +131,7 @@ These resolve open assumptions from the PRD or were made unprompted while buildi
 
 ## 6. Still open (not yet decided)
 
-- Wine Profile shows `Suggested pairing` as an upfront detail field. The profile content scrolls independently while a circular, center-aligned control remains fixed in the bottom navigation area, which uses the same black-at-10%-opacity background as the inactive chat send control. Its off state is burgundy with the label `Save`; tapping it saves the wine locally to Favorites and changes it to a lighter muted treatment labeled `Saved`. Tapping again removes the wine and restores `Save`. Favorites list tiles do not show heart icons. Personal rating is read-only on Wine Profile; without a prior rating, the page says `You have not tried this wine`.
+- Attributes shows `Suggested pairing` as an upfront detail field. The profile content scrolls independently while a circular, center-aligned control remains fixed in the bottom navigation area, which uses the same black-at-10%-opacity background as the inactive chat send control. Its off state is burgundy with the label `Save`; tapping it saves the wine locally to Favorites and changes it to a lighter muted treatment labeled `Saved`. Tapping again removes the wine and restores `Save`. Favorites list tiles do not show heart icons. Personal rating is read-only on Attributes; without a prior rating, the page says `You have not tried this wine`.
 - Navigation model: whether the bottom nav's Conversation/History/Favorites tabs are the sole way to move between those three, or whether Stage Show and other drill-ins should also get an explicit back control beyond the current back chevron.
 - The PRD's own flagged scope question: whether location/price lookup (Google Places) is intentionally deferred from this MVP or was dropped by oversight (PRD §10, item 11).
 - Final Frank Ruhl Libre font bundling and device-level visual validation.

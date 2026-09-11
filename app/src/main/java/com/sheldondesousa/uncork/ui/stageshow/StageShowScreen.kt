@@ -136,7 +136,7 @@ fun StageShowRoute(
             .statusBarsPadding(),
     ) {
         AppHeader(
-            title = "Wine Profile",
+            title = "Attributes",
             icon = ShortBackArrow,
             onIconClick = onBack,
             iconContentDescription = "Back",

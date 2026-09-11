@@ -139,9 +139,9 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 - **AC8:** Given the wine has a cheese pairing attached, when Stage Show renders, then the pairing displays as a secondary section below the wine details, not as the primary focus, and independent of which toggle position is active.
 
 ### Actions
-- **AC9:** Given Wine Profile is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
-- **AC10:** Given Wine Profile is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to Favorites (Section 9) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and Favorites list tiles do not display heart icons.
-  - **AC10a:** Personal rating is display-only on Wine Profile. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
+- **AC9:** Given Attributes is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
+- **AC10:** Given Attributes is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to Favorites (Section 9) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and Favorites list tiles do not display heart icons.
+  - **AC10a:** Personal rating is display-only on Attributes. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
 
 **Open assumptions:**
 - Whether the agreement indicator (AC6) should influence which toggle position is shown by default (e.g. default to Kaggle when it agrees, since it's the more "verifiable" source) — currently unassumed; suggest defaulting to whichever the user tapped from (always AI, since that's the suggestion tapped in the thread).
