@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBackIos
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
@@ -112,7 +112,7 @@ fun StageShowRoute(
     ) {
         AppHeader(
             title = "Wine Selection",
-            icon = Icons.AutoMirrored.Outlined.ArrowBack,
+            icon = Icons.AutoMirrored.Outlined.ArrowBackIos,
             onIconClick = onBack,
             iconContentDescription = "Back",
             contentPadding = PaddingValues(0.dp),
