@@ -111,7 +111,7 @@ fun StageShowRoute(
             .padding(horizontal = 22.dp, vertical = 16.dp),
     ) {
         AppHeader(
-            title = "Wine Selection",
+            title = "Wine Profile",
             icon = Icons.AutoMirrored.Outlined.ArrowBackIos,
             onIconClick = onBack,
             iconContentDescription = "Back",
