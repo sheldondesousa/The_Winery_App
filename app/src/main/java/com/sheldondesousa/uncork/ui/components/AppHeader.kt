@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,7 +57,8 @@ fun AppHeader(
             } else {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .width(32.dp)
+                        .height(40.dp)
                         .clip(CircleShape)
                         .clickable(role = Role.Button, onClick = onIconClick)
                         .semantics { contentDescription = iconContentDescription.orEmpty() },
@@ -70,7 +72,7 @@ fun AppHeader(
                     )
                 }
             }
-            Spacer(Modifier.width(if (onIconClick == null) 9.dp else 2.dp))
+            Spacer(Modifier.width(if (onIconClick == null) 9.dp else 1.dp))
             Text(
                 text = title,
                 color = Ink,

@@ -76,7 +76,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Sending a message (via the simulated keyboard's Send key) appends it to the thread as a new user bubble.
 
 ### Stage Show
-- No persistent bottom nav chrome (PRD §7 AC1). The top header uses a simple left chevron with the page title "Wine Selection" on the left and the shared right-aligned Uncork / AI SOMMELIER lockup. The chevron retains a 40dp touch target while its visible spacing to the title matches the 9dp icon-to-title spacing on Chat, History, and Favorites. Large typographic wine name + origin, no bottle imagery.
+- No persistent bottom nav chrome (PRD §7 AC1). The top header uses a simple left chevron with the page title "Wine Selection" on the left and the shared right-aligned Uncork / AI SOMMELIER lockup. Its compact 32dp-wide, 40dp-high control removes excess horizontal space before the title. Large typographic wine name + origin, no bottle imagery.
 - Current sizes: wine name 42sp, region 17sp, schema values 15sp, schema micro-labels 10sp, cheese-pairing copy 16sp, and AI-confidence line 12sp.
 - The planned AI/Kaggle toggle is a plain text switch (not a pill), with an agreement indicator ("similar pick") next to it. This comparison interface has not yet been designed, connected to data, or approved; the current code contains only an unvalidated conditional scaffold.
 - AI is the primary source and should populate the shared schema from Gemma's learned knowledge. Kaggle is optional comparative evidence; its absence must not force the AI fields to `Unknown`.
