@@ -9,7 +9,7 @@ data class HistoryEntry(
     val id: Long,
     val createdAtEpochMillis: Long,
     val suggestion: WineSuggestion,
-    val request: String,
+    val requestKeywords: List<String>,
 )
 
 class HistoryRepository(context: Context) {
@@ -34,7 +34,7 @@ class HistoryRepository(context: Context) {
                     id = System.nanoTime(),
                     createdAtEpochMillis = System.currentTimeMillis(),
                     suggestion = suggestion,
-                    request = userRequest.toConciseRequest(),
+                    requestKeywords = RequestKeywordExtractor.extract(userRequest, suggestion),
                 ),
             )
             addAll(load())
@@ -59,7 +59,7 @@ class HistoryRepository(context: Context) {
     private fun HistoryEntry.toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("createdAt", createdAtEpochMillis)
-        put("request", request)
+        put("requestKeywords", JSONArray(requestKeywords))
         put("suggestion", suggestion.toJson())
     }
 
@@ -82,7 +82,9 @@ class HistoryRepository(context: Context) {
         HistoryEntry(
             id = getLong("id"),
             createdAtEpochMillis = getLong("createdAt"),
-            request = optString("request").ifBlank { LEGACY_REQUEST_LABEL },
+            requestKeywords = optJSONArray("requestKeywords")?.toStringList()
+                ?.takeIf(List<String>::isNotEmpty)
+                ?: listOf(LEGACY_REQUEST_LABEL),
             suggestion = getJSONObject("suggestion").toSuggestion(),
         )
     }.getOrNull()
@@ -105,19 +107,16 @@ class HistoryRepository(context: Context) {
     private fun JSONObject.optIntOrNull(key: String): Int? =
         if (isNull(key) || !has(key)) null else optInt(key)
 
-    private fun String.toConciseRequest(): String {
-        val words = trim().split(Regex("\\s+")).filter(String::isNotBlank)
-        if (words.isEmpty()) return DEFAULT_REQUEST_LABEL
-        val summary = words.take(MAX_REQUEST_WORDS).joinToString(" ")
-        return if (words.size > MAX_REQUEST_WORDS) "$summary…" else summary
+    private fun JSONArray.toStringList(): List<String> = buildList {
+        for (index in 0 until length()) {
+            optString(index).trim().takeIf(String::isNotBlank)?.let(::add)
+        }
     }
 
     private companion object {
         const val PREFERENCES_NAME = "uncork_history"
         const val KEY_ENTRIES = "entries"
-        const val MAX_REQUEST_WORDS = 6
         const val MAX_HISTORY_ENTRIES = 500
-        const val DEFAULT_REQUEST_LABEL = "Wine suggestion"
         const val LEGACY_REQUEST_LABEL = "Previous wine suggestion"
     }
 }

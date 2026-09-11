@@ -45,7 +45,7 @@ class HistoryScreenTest {
                 region = "Mendoza, Argentina",
                 variety = "Malbec",
             ),
-            request = "Suggest a Malbec for steak",
+            requestKeywords = listOf("Malbec"),
         )
 
         composeRule.setContent {
@@ -61,7 +61,7 @@ class HistoryScreenTest {
         composeRule.onNodeWithText("TODAY").assertIsDisplayed()
         composeRule.onNodeWithText("Catena Malbec").assertIsDisplayed()
         composeRule.onNodeWithText("Mendoza, Argentina").assertIsDisplayed()
-        composeRule.onNodeWithText("Request: Suggest a Malbec for steak").assertIsDisplayed()
+        composeRule.onNodeWithText("Request: Malbec").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Open Catena Malbec details").performClick()
         org.junit.Assert.assertTrue(opened)
     }
@@ -73,7 +73,7 @@ class HistoryScreenTest {
             id = 42L,
             createdAtEpochMillis = System.currentTimeMillis(),
             suggestion = WineSuggestion(name = "Barolo", region = "Piedmont, Italy"),
-            request = "Barolo for braised beef",
+            requestKeywords = listOf("Barolo"),
         )
 
         composeRule.setContent {

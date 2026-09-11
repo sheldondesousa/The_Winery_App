@@ -271,7 +271,7 @@ private fun HistoryRow(
             }
         }
         Text(
-            text = "Request: ${entry.request}",
+            text = "Request: ${entry.requestKeywords.joinToString(" · ")}",
             modifier = Modifier.padding(top = 10.dp, end = 24.dp),
             color = Ink,
             fontSize = 15.sp,
