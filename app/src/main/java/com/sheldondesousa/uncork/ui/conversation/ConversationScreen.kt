@@ -70,6 +70,7 @@ import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
+import com.sheldondesousa.uncork.ui.components.AppHeader
 import kotlinx.coroutines.launch
 
 private val AiResponseInk = Color(0xFF27201D)
@@ -169,7 +170,7 @@ private fun ConversationScreen(
             .statusBarsPadding()
             .imePadding(),
     ) {
-        ConversationHeader()
+        AppHeader(title = "Chat")
 
         Box(
             modifier = Modifier
@@ -215,32 +216,6 @@ private fun ConversationScreen(
         BottomNavigation(
             selected = AppTab.Conversation,
             onTabSelected = onTabSelected,
-        )
-    }
-}
-
-@Composable
-private fun ConversationHeader() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 22.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.Start,
-    ) {
-        Text(
-            text = "Uncork",
-            color = Ink,
-            fontSize = 30.sp,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = "AI SOMMELIER",
-            modifier = Modifier.padding(top = 1.dp),
-            color = Wine,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 2.sp,
         )
     }
 }

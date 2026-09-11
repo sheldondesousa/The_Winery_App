@@ -169,7 +169,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 - **AC7:** Given this is a single-device personal MVP, when suggestions are logged, then History persists in local on-device storage only. No cloud sync.
 
 ### Empty States
-- **AC8:** Given no suggestions have been made yet, when History is opened, then an empty state invites starting a conversation.
+- **AC8:** Given no suggestions have been made yet, when History is opened, then its content area remains blank beneath the shared header.
 
 **Open assumptions:**
 - How far back History retains suggestions — indefinitely, or with a rolling cutoff (e.g. 90 days)? Not yet defined, and matters for on-device storage growth since there's no server-side cap in this MVP.
@@ -231,7 +231,7 @@ Implemented on native Android with Kotlin and Jetpack Compose:
 
 - Splash branding, authenticated resumable Gemma E2B download, byte progress, SHA-256 verification, three automatic retries, and manual retry state
 - Offline LiteRT-LM conversation inference after model installation
-- Chat header, empty state, conversation thread, input composer, dark status-bar treatment, and labeled bottom navigation
+- Shared Chat/History/Favorites header with left-side page title and right-aligned Uncork branding, Chat empty state, conversation thread, input composer, dark status-bar treatment, and labeled bottom navigation
 - 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
 - Full-screen Stage Show navigation and layout, structured AI profile parsing, pairing action, favorite state, and 10-dot rating interaction
 - AI-confidence display at 12sp with an explicit accuracy disclaimer

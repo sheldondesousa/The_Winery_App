@@ -16,6 +16,7 @@ import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
 import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionState
 import com.sheldondesousa.uncork.ui.history.HistoryRepository
 import com.sheldondesousa.uncork.ui.history.HistoryRoute
+import com.sheldondesousa.uncork.ui.favorites.FavoritesRoute
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
                 var historyEntries by remember { mutableStateOf(historyRepository.load()) }
                 val conversationState = rememberConversationSessionState()
                 val onTabSelected: (AppTab) -> Unit = { tab ->
-                    if (tab != AppTab.Favorites) selectedTab = tab
+                    selectedTab = tab
                 }
 
                 if (modelReady) {
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
                             onEntryClick = { stageWine = it.suggestion.toStageWine() },
                             onTabSelected = onTabSelected,
                         )
-                        AppTab.Favorites -> Unit
+                        AppTab.Favorites -> FavoritesRoute(onTabSelected = onTabSelected)
                     }
                     stageWine?.let { wine ->
                         StageShowRoute(

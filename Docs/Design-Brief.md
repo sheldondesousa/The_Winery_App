@@ -66,7 +66,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 
 ### Main Conversation
 - Persistent bordered input at the bottom, bottom nav below it (covered by the keyboard sheet when active).
-- Header is left aligned: "Uncork" at 30sp with "AI SOMMELIER" directly beneath at 9sp, letter-spaced.
+- Shared header places the page title ("Chat") on the left and the right-aligned "Uncork" wordmark with "AI SOMMELIER" beneath it on the same horizontal line.
 - The conversation content area is intentionally blank before the first message; no invitation text or empty-state artwork is currently shown. The input placeholder reads "Ask me about wine" at 17sp italic.
 - States: empty (centered italic invitation, no fabricated example results), active (thread), error (inline error bubble, casual tone maintained per PRD §6 AC7).
 - The in-progress state reads "Thinking…" at 14sp italic. "Researching…" is reserved for a future route that actually performs external or dataset retrieval.
@@ -86,8 +86,8 @@ Two alternate demarcation modes were explored and are available in the mockup if
 
 ### History
 - Grouped by date header (sans-serif micro-label: "today," "yesterday"). Each entry: wine name, short excerpt, favorited annotation if applicable.
-- The header repeats the left-aligned Uncork wordmark with "HISTORY" beneath it. Entries use the wine name as the primary serif line, followed by region, a two-line conversational excerpt, and a trailing chevron.
-- Empty state reads "Your wine suggestions will appear here" with a "Start a conversation" action that returns to Chat.
+- The shared header places "History" on the left and the right-aligned Uncork/AI SOMMELIER brand lockup on the same line. Entries use the wine name as the primary serif line, followed by region, a two-line conversational excerpt, and a trailing chevron.
+- The empty History content area is intentionally blank for now.
 - Sits above the shared bottom nav.
 
 ### Favorites

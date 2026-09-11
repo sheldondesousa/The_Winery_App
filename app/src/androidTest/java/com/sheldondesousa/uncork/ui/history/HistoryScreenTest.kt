@@ -1,13 +1,14 @@
 package com.sheldondesousa.uncork.ui.history
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -16,22 +17,19 @@ class HistoryScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun emptyHistoryInvitesAConversation() {
-        var chatSelected = false
-
+    fun emptyHistoryLeavesTheContentAreaBlank() {
         composeRule.setContent {
             UncorkTheme {
                 HistoryRoute(
                     entries = emptyList(),
                     onEntryClick = {},
-                    onTabSelected = { chatSelected = true },
+                    onTabSelected = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("Your wine suggestions will appear here.").assertIsDisplayed()
-        composeRule.onNodeWithText("Start a conversation").performClick()
-        assertTrue(chatSelected)
+        composeRule.onNodeWithText("History").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Your wine suggestions will appear here.").assertCountEquals(0)
     }
 
     @Test
@@ -62,6 +60,6 @@ class HistoryScreenTest {
         composeRule.onNodeWithText("Catena Malbec").assertIsDisplayed()
         composeRule.onNodeWithText("Mendoza, Argentina").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Open Catena Malbec details").performClick()
-        assertTrue(opened)
+        org.junit.Assert.assertTrue(opened)
     }
 }

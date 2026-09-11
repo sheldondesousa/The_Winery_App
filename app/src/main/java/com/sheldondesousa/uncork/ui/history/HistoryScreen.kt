@@ -25,13 +25,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.BottomNavigation
+import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -56,16 +56,14 @@ fun HistoryRoute(
             .background(Parchment)
             .statusBarsPadding(),
     ) {
-        HistoryHeader()
+        AppHeader(title = "History")
 
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
         ) {
-            if (entries.isEmpty()) {
-                EmptyHistory(onStartConversation = { onTabSelected(AppTab.Conversation) })
-            } else {
+            if (entries.isNotEmpty()) {
                 HistoryList(entries = entries, onEntryClick = onEntryClick)
             }
         }
@@ -73,61 +71,6 @@ fun HistoryRoute(
         BottomNavigation(
             selected = AppTab.History,
             onTabSelected = onTabSelected,
-        )
-    }
-}
-
-@Composable
-private fun HistoryHeader() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 22.dp, vertical = 16.dp),
-    ) {
-        Text(
-            text = "Uncork",
-            color = Ink,
-            fontSize = 30.sp,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = "HISTORY",
-            modifier = Modifier.padding(top = 1.dp),
-            color = Wine,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 2.sp,
-        )
-    }
-}
-
-@Composable
-private fun EmptyHistory(onStartConversation: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = "Your wine suggestions will appear here.",
-            color = InkMuted,
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            fontFamily = FontFamily.Serif,
-            fontStyle = FontStyle.Italic,
-        )
-        Text(
-            text = "Start a conversation",
-            modifier = Modifier
-                .padding(top = 18.dp)
-                .clickable(role = Role.Button, onClick = onStartConversation)
-                .padding(8.dp),
-            color = Wine,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
         )
     }
 }
