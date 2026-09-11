@@ -11,8 +11,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.ModelFileManager
+import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
+import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionState
+import com.sheldondesousa.uncork.ui.history.HistoryRepository
+import com.sheldondesousa.uncork.ui.history.HistoryRoute
+import com.sheldondesousa.uncork.ui.favorites.FavoritesRoute
+import com.sheldondesousa.uncork.ui.favorites.FavoritesRepository
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
+import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
+import com.sheldondesousa.uncork.ui.stageshow.StageWine
+import com.sheldondesousa.uncork.ui.stageshow.toStageWine
+import com.sheldondesousa.uncork.ui.stageshow.toWineSuggestion
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,13 +37,60 @@ class MainActivity : ComponentActivity() {
             ),
         )
         val modelFileManager = ModelFileManager(applicationContext)
+        val historyRepository = HistoryRepository(applicationContext)
+        val favoritesRepository = FavoritesRepository(applicationContext)
         gemmaResponder = GemmaConversationResponder(applicationContext, modelFileManager.modelFile)
         setContent {
             UncorkTheme {
                 var modelReady by remember { mutableStateOf(false) }
+                var stageWine by remember { mutableStateOf<StageWine?>(null) }
+                var selectedTab by remember { mutableStateOf(AppTab.Conversation) }
+                var historyEntries by remember { mutableStateOf(historyRepository.load()) }
+                var favorites by remember { mutableStateOf(favoritesRepository.load()) }
+                val conversationState = rememberConversationSessionState()
+                val onTabSelected: (AppTab) -> Unit = { tab ->
+                    selectedTab = tab
+                }
 
                 if (modelReady) {
-                    ConversationRoute(responder = gemmaResponder)
+                    when (selectedTab) {
+                        AppTab.Conversation -> ConversationRoute(
+                            responder = gemmaResponder,
+                            state = conversationState,
+                            onSuggestionClick = { stageWine = it.toStageWine() },
+                            onSuggestionRecorded = { suggestion, request ->
+                                historyEntries = historyRepository.record(suggestion, request)
+                            },
+                            onTabSelected = onTabSelected,
+                        )
+                        AppTab.History -> HistoryRoute(
+                            entries = historyEntries,
+                            onEntryClick = { stageWine = it.suggestion.toStageWine() },
+                            onDeleteEntries = { entryIds ->
+                                historyEntries = historyRepository.delete(entryIds)
+                            },
+                            onTabSelected = onTabSelected,
+                        )
+                        AppTab.Favorites -> FavoritesRoute(
+                            favorites = favorites,
+                            onFavoriteClick = { stageWine = it.toStageWine() },
+                            onTabSelected = onTabSelected,
+                        )
+                    }
+                    stageWine?.let { wine ->
+                        StageShowRoute(
+                            wine = wine,
+                            onBack = { stageWine = null },
+                            initiallyFavorite = favoritesRepository.contains(wine.toWineSuggestion()),
+                            onFavoriteChange = { suggestion, selected ->
+                                favorites = if (selected) {
+                                    favoritesRepository.add(suggestion)
+                                } else {
+                                    favoritesRepository.remove(suggestion)
+                                }
+                            },
+                        )
+                    }
                 } else {
                     SplashRoute(
                         modelFileManager = modelFileManager,

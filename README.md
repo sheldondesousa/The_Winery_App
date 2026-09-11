@@ -9,7 +9,7 @@ Uncork is a personal AI sommelier for discovering wine and optional cheese pairi
 
 The app recommends wines in a casual conversational tone, then presents each recommendation in a focused detail view with structured information such as variety, region, body, tannin, acidity, flavor notes, and rating.
 
-AI recommendations can be compared with matching entries from a static wine-review dataset. Where available, winery information may also be corroborated through web search. Missing or unverified data is displayed as unknown rather than inferred.
+AI recommendations can be compared with matching entries from a static, user-selected Kaggle wine-review dataset. Gemma produces the AI profile from its learned knowledge; Kaggle is an optional independent comparison rather than a dependency. Where available, winery information may also be corroborated through web search. Missing or unverified bottle-specific data is displayed as unknown rather than invented.
 
 The MVP is intended for personal, single-user use and stores history, favorites, ratings, notes, and event logs locally on the device.
 
@@ -19,7 +19,7 @@ The MVP is intended for personal, single-user use and stores history, favorites,
 2. **Conversation** — accepts natural-language requests and returns personable wine suggestions.
 3. **Stage Show** — presents one wine in a full-screen, typography-led detail view and supports AI/Kaggle comparison.
 4. **History** — groups previous suggestions by date and provides access to their detail views.
-5. **Favorites** — stores selected wines with an optional personal rating and notes.
+5. **Saved Wines** — stores selected wines with an optional personal rating and notes.
 
 ## Core capabilities
 
@@ -39,6 +39,7 @@ The MVP is intended for personal, single-user use and stores history, favorites,
 - **Language:** Kotlin
 - **UI:** Native Android UI, preferably Jetpack Compose
 - **On-device AI:** Gemma 4 E2B through Google LiteRT-LM. The pinned 2.58 GB model is downloaded from Hugging Face on first launch, verified with SHA-256, and then runs from private app storage without a network connection.
+- **Structured output:** Gemma currently returns visible conversational prose plus a hidden JSON wine profile used by Stage Show. The system instruction that enforces this format is provisional and will be replaced by the product owner's final prompt.
 - **Cloud AI:** Used only when routing determines a request is too complex or sensitive for the on-device model
 - **Persistence:** Local on-device storage; no cloud sync in the MVP
 - **Keyboard behavior:** Android IME action sends messages, with proper WindowInsets/resize handling
@@ -55,6 +56,8 @@ Uncork uses a restrained, editorial visual system led by typography:
 - Frank Ruhl Libre for content and system sans-serif for UI micro-labels
 - Hairline dividers and whitespace instead of cards and shadows
 - No bottle imagery in the MVP
+
+Current implementation details include 16sp user and AI chat text, a 5% black background wash and 1dp/50%-opacity rule for AI responses, dark status-bar content over parchment, and a flush three-part bottom navigation with labeled tabs and no active-tab background.
 
 The wine-red accent is reserved for user-supplied signals: user chat messages, personal rating dots, and favorite annotations.
 
@@ -74,7 +77,9 @@ The wine-red accent is reserved for user-supplied signals: user chat messages, p
 
 ## Status
 
-The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, and initial Chat interface are implemented. Cloud-routing criteria, history retention, and final drill-in navigation remain open.
+The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, Chat interface, structured Gemma wine-profile extraction, initial Stage Show, and History are implemented. History saves structured suggestions on-device, groups them by date, preserves the active Chat session when switching tabs, and opens the corresponding Stage Show detail.
+
+The final system prompt, Frank Ruhl Libre asset, AI/Kaggle comparison interface and data pipeline, cloud routing, web verification, persistent History/Favorites/notes, and real Stage Show pairing generation remain open. The current conditional comparison code is only an unvalidated scaffold and is not considered an implemented feature.
 
 ## First launch
 
