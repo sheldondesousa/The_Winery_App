@@ -115,11 +115,11 @@ class GemmaConversationResponder(
             options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
         private val FENCED_JSON_BLOCK = Regex(
-            pattern = "```(?:\\.?json)?\\s*(\\{.+?})\\s*```",
+            pattern = "```(?:\\.?json)?\\s*([{].+?[}])\\s*```",
             options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
         private val JSON_OBJECT = Regex(
-            pattern = "\\{.+?}",
+            pattern = "[{].+?[}]",
             options = setOf(RegexOption.DOT_MATCHES_ALL),
         )
 
