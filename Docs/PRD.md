@@ -17,7 +17,7 @@ Five screens:
 2. Main Conversation Screen
 3. Stage Show
 4. History
-5. Favorites
+5. Saved Wines
 
 ## 3. Out of Scope (this MVP)
 
@@ -177,7 +177,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ---
 
-## 9. Favorites
+## 9. Saved Wines
 
 **Purpose:** Saved wines with an optional personal rating and notes.
 

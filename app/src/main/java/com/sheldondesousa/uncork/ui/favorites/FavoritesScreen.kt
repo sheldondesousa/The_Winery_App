@@ -42,7 +42,7 @@ fun FavoritesRoute(
             .statusBarsPadding(),
     ) {
         AppHeader(
-            title = "Favorites",
+            title = "Saved Wines",
             icon = Icons.Outlined.FavoriteBorder,
         )
         LazyColumn(modifier = Modifier.weight(1f)) {
