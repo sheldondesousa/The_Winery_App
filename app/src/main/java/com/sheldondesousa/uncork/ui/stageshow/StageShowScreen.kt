@@ -270,7 +270,7 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
 private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(88.dp)
             .clip(CircleShape)
             .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
             .clickable(role = Role.Switch, onClick = onClick)
