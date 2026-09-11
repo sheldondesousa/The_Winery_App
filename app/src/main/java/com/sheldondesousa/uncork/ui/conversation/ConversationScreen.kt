@@ -46,7 +46,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -238,22 +237,12 @@ private fun EmptyConversation() {
             .padding(40.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(240.dp)
-                .clip(RoundedCornerShape(50))
-                .background(Wine.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.wine_glass),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize(0.82f)
-                    .alpha(0.62f),
-                contentScale = ContentScale.Fit,
-            )
-        }
+        Image(
+            painter = painterResource(R.drawable.wine_glass),
+            contentDescription = null,
+            modifier = Modifier.size(240.dp),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
