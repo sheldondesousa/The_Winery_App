@@ -131,7 +131,7 @@ These resolve open assumptions from the PRD or were made unprompted while buildi
 
 ## 6. Still open (not yet decided)
 
-- Wine Profile shows `Suggested pairing` as an upfront detail field. Its former pairing and favorites action buttons are removed; a right-aligned `Save with` tag beside AI Confidence contains an outlined heart when off and a filled heart when on. On saves the wine locally to Favorites and off removes it. Favorites list tiles do not show heart icons. Personal rating is read-only on Wine Profile; without a prior rating, the page says `You have not tried this wine`.
+- Wine Profile shows `Suggested pairing` as an upfront detail field. Its former pairing and favorites action buttons are removed; a right-aligned `Save` tag beside AI Confidence contains an outlined heart when off and a filled heart when on. On saves the wine locally to Favorites and off removes it. Favorites list tiles do not show heart icons. Personal rating is read-only on Wine Profile; without a prior rating, the page says `You have not tried this wine`.
 - Navigation model: whether the bottom nav's Conversation/History/Favorites tabs are the sole way to move between those three, or whether Stage Show and other drill-ins should also get an explicit back control beyond the current back chevron.
 - The PRD's own flagged scope question: whether location/price lookup (Google Places) is intentionally deferred from this MVP or was dropped by oversight (PRD §10, item 11).
 - Final Frank Ruhl Libre font bundling and device-level visual validation.

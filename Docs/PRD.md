@@ -140,7 +140,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Actions
 - **AC9:** Given Wine Profile is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
-- **AC10:** Given Wine Profile is open, when the user taps the `Save with` tag beside AI Confidence, then its heart changes from outlined to filled and the state toggles. On saves the wine to Favorites (Section 9); off removes it. Favorites list tiles do not display heart icons.
+- **AC10:** Given Wine Profile is open, when the user taps the `Save` tag beside AI Confidence, then its heart changes from outlined to filled and the state toggles. On saves the wine to Favorites (Section 9); off removes it. Favorites list tiles do not display heart icons.
   - **AC10a:** Personal rating is display-only on Wine Profile. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
 
 **Open assumptions:**

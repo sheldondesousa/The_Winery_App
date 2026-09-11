@@ -266,14 +266,14 @@ private fun FavoriteTag(selected: Boolean, onClick: () -> Unit) {
             .clickable(role = Role.Switch, onClick = onClick)
             .semantics {
                 role = Role.Switch
-                contentDescription = "Save with favorite, ${if (selected) "on" else "off"}"
+                contentDescription = "Save favorite, ${if (selected) "on" else "off"}"
             }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "SAVE WITH",
+            text = "SAVE",
             color = if (selected) Parchment else Wine,
             fontSize = 10.sp,
             fontWeight = FontWeight.SemiBold,
