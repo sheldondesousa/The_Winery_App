@@ -108,7 +108,7 @@ fun StageShowRoute(
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 22.dp, vertical = 16.dp),
     ) {
         AppHeader(
             title = "Wine Selection",

@@ -72,7 +72,7 @@ fun AppHeader(
                     )
                 }
             }
-            Spacer(Modifier.width(if (onIconClick == null) 9.dp else 1.dp))
+            Spacer(Modifier.width(if (onIconClick == null) 9.dp else 3.dp))
             Text(
                 text = title,
                 color = Ink,
