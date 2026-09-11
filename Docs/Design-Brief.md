@@ -40,9 +40,9 @@ Do not introduce a second accent color. If something new needs to stand out, it 
 
 **Status bar** — persistent across every screen (part of the frame, not any individual screen): time left, signal/wifi/battery right. It is transparent over parchment and uses dark system icons/text for contrast.
 
-**Page header** — Chat, History, Saved Wines, and Attributes share a burgundy horizontal hairline at the same vertical position beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
+**Page header** — Chat, History, Saved, and Attributes share a burgundy horizontal hairline at the same vertical position beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
 
-**Bottom nav** — three tabs: Chat, History, Saved Wines. It is flush with the physical bottom of the screen, uses a wine-red background, and has equal-width columns separated by hairline dividers. All icons have visible labels. The selected label is 13sp/700 and unselected labels are 12sp/400; selection uses opacity and weight without a background highlight. Appears on those three screens only.
+**Bottom nav** — three tabs: Chat, History, Saved. It is flush with the physical bottom of the screen, uses a wine-red background, and has equal-width columns separated by hairline dividers. All icons have visible labels. The selected label is 13sp/700 and unselected labels are 12sp/400; selection uses opacity and weight without a background highlight. Appears on those three screens only.
 - **Not** on Splash (nothing to navigate to yet).
 - **Not** on Stage Show, per PRD §7 AC1 — that screen is explicitly full-screen with no persistent nav chrome.
 
@@ -94,7 +94,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Clear sits on the same line as the most recent date heading (for example, TODAY) with a black-at-10%-opacity background for emphasis. Clear All is hidden for now. Clear reveals an empty checkbox to the left of every History entry for manual selection and changes its label to Cancel. Tapping Cancel exits selection. A floating trash-can icon with a `Delete` label appears above the bottom navigation during selection, uses black when active, remains muted and disabled without a selection, and removes the selected local records when tapped.
 - Sits above the shared bottom nav.
 
-### Saved Wines
+### Saved
 - Sorted most-recently-saved first (resolves PRD open assumption #9).
 - Rating badge in `--accent`; unrated entries read "not yet rated" in muted italic — same distinction rule as Stage Show's `Unknown`.
 - Sits above the shared bottom nav.
