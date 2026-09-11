@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.ui.Modifier
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.conversation.AppTab
@@ -23,7 +25,10 @@ fun FavoritesRoute(
             .background(Parchment)
             .statusBarsPadding(),
     ) {
-        AppHeader(title = "Favorites")
+        AppHeader(
+            title = "Favorites",
+            icon = Icons.Outlined.FavoriteBorder,
+        )
         Spacer(modifier = Modifier.weight(1f))
         BottomNavigation(
             selected = AppTab.Favorites,

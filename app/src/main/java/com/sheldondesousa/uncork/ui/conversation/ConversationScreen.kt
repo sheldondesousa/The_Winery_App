@@ -170,7 +170,10 @@ private fun ConversationScreen(
             .statusBarsPadding()
             .imePadding(),
     ) {
-        AppHeader(title = "Chat")
+        AppHeader(
+            title = "Chat",
+            icon = Icons.Outlined.ChatBubbleOutline,
+        )
 
         Box(
             modifier = Modifier
