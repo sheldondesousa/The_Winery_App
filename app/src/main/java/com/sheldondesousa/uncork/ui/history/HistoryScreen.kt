@@ -127,15 +127,15 @@ private fun HistoryActions(
             onClick = onToggleSelect,
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
             colors = ButtonDefaults.textButtonColors(
-                contentColor = InkMuted,
+                contentColor = Wine,
                 containerColor = Color.Transparent,
             ),
         ) {
             Text(
                 text = if (isSelecting) "Cancel" else "Select",
-                color = InkMuted,
+                color = Wine,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.SemiBold,
             )
         }
         TextButton(
