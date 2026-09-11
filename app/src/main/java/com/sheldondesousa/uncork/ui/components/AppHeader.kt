@@ -1,6 +1,7 @@
 package com.sheldondesousa.uncork.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,8 +27,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.theme.Ink
+import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Wine
 
 @Composable
@@ -38,9 +41,11 @@ fun AppHeader(
     iconContentDescription: String? = null,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 22.dp, vertical = 16.dp),
+    dividerInset: Dp = 22.dp,
 ) {
-    Row(
-        modifier = modifier
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(contentPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -97,5 +102,13 @@ fun AppHeader(
                 letterSpacing = 2.sp,
             )
         }
+    }
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = dividerInset)
+                .height(1.dp)
+                .background(Hairline),
+        )
     }
 }

@@ -40,6 +40,8 @@ Do not introduce a second accent color. If something new needs to stand out, it 
 
 **Status bar** — persistent across every screen (part of the frame, not any individual screen): time left, signal/wifi/battery right. It is transparent over parchment and uses dark system icons/text for contrast.
 
+**Page header** — Chat, History, Favorites, and Wine Profile share a subtle horizontal hairline beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
+
 **Bottom nav** — three tabs: Chat, History, Favorites. It is flush with the physical bottom of the screen, uses a wine-red background, and has equal-width columns separated by hairline dividers. All icons have visible labels. The selected label is 13sp/700 and unselected labels are 12sp/400; selection uses opacity and weight without a background highlight. Appears on those three screens only.
 - **Not** on Splash (nothing to navigate to yet).
 - **Not** on Stage Show, per PRD §7 AC1 — that screen is explicitly full-screen with no persistent nav chrome.

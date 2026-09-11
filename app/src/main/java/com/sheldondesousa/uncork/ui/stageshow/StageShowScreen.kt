@@ -144,6 +144,7 @@ fun StageShowRoute(
             onIconClick = onBack,
             iconContentDescription = "Back",
             contentPadding = PaddingValues(0.dp),
+            dividerInset = 0.dp,
         )
 
         Spacer(Modifier.height(36.dp))
