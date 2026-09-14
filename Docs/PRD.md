@@ -57,14 +57,16 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Variety-region profile storage
 
-The app has a growing on-device Room table named `VarietyRegionProfile`, keyed by the combination of `variety` and `province`. Each row stores nullable body, tannin, and acidity values; a list of flavor notes; generation metadata; and a source value of either `kaggle_derived` or `web_search`.
+The app has a growing on-device Room table named `VarietyRegionProfile`, keyed by the combination of `variety`, `country`, and `province`. Each row stores those key values; nullable body, tannin, and acidity values; a list of flavor notes; generation metadata; and a source value of either `kaggle_derived` or `web_search`.
 
-- On first launch, if the table is empty, the app reads `variety_region_profiles.json` from packaged assets and inserts all profiles in one Room batch operation.
+- On first launch, if the table is empty, the app reads `variety_country_region_profiles.json` from packaged assets and inserts all profiles in one Room batch operation.
 - Asset parsing and database writes run on an IO dispatcher so startup work does not block the interface.
 - Later launches skip asset seeding when the table already contains rows.
-- Replace-on-conflict inserts allow a live web-search result to add or refresh one variety/province combination.
-- A standalone repository supports exact variety/province lookup. The live chat fallback writes the resolved fields supported by this profile table through the Room pipeline under source `web_search`; option-level winery data is not part of this entity. Whether the new country field maps onto the existing key or requires its own Room column remains an implementation decision.
+- Replace-on-conflict inserts allow a live web-search result to add or refresh one variety/country/province combination.
+- The repository supports exact variety/country/province lookup. The live chat fallback writes the resolved fields supported by this profile table through the Room pipeline under source `web_search`; option-level winery data is not part of this entity.
 - The profile table does not provide critic ratings. Those come only from a matched genuine Kaggle `points` value.
+
+The Room entity continues to call its region-equivalent column `province`, while the shared app schema uses `region`. Whether to rename that Room column remains unresolved and must not be silently decided during implementation.
 
 ### Response-source rules
 
@@ -89,7 +91,7 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
 - **AC3:** Given the verified model already exists in private app storage, when the app starts, then it navigates directly to the Main Conversation Screen without network access.
 - **AC4:** Given the model does not exist, then the user is asked for a Hugging Face read token, which is used for the download and is not persisted.
 - **AC4a:** Given the download or integrity verification fails, then the app retries up to three times before showing the designed error state with a manual retry option.
-- **AC4b:** Given the variety-region Room table is empty when the app starts, then its packaged JSON asset is parsed and inserted off the main thread. Given the table already contains rows, seeding is skipped without replacing runtime additions.
+- **AC4b:** Given the variety-country-region Room table is empty when the app starts, then `variety_country_region_profiles.json` is parsed from packaged assets and inserted off the main thread. Given the table already contains rows, seeding is skipped without replacing runtime additions.
 
 ### Error Handling
 - **AC5:** Given the on-device model load fails, when the user taps retry, then the model load is re-attempted.
@@ -145,7 +147,7 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
   - **AC10e:** Given the AC10a query returns zero matches, then the app proceeds directly to the live web search in AC10g. It does not retry Kaggle with keywords because Gemma's resolved fields were the best available Kaggle input.
   - **AC10f:** Given the AC10b query returns zero matches, then the app proceeds to the same live web search in AC10g.
   - **AC10g:** Given the web search runs after AC10e or AC10f, then it resolves variety, country, region, and any other resolvable attributes and produces up to three options displayed under AC6. When Gemma supplied no usable variety-country-region, the search uses the original user-query keywords. Web options show `Unknown` for rating and review summary because both are reserved for a real Kaggle match. This fallback is part of the MVP.
-  - **AC10h:** Given AC10g resolves new field-level data for a variety-country-region combination, then the app writes that data to the `VarietyRegionProfile` Room table with source `web_search`, using its existing replace-on-conflict behavior. The Room key or column treatment for country must be resolved before implementation.
+  - **AC10h:** Given AC10g resolves new field-level data for a variety-country-region combination, then the app writes that data to the `VarietyRegionProfile` Room table with source `web_search`, using its existing replace-on-conflict behavior and the expanded `variety` + `country` + `province` composite key.
   - **AC10i:** Given the web search fails or returns nothing usable, then AC7 applies: the app shows an inline retry error in a casual tone and presents no fabricated content.
 
 **Open assumptions:**
@@ -262,7 +264,7 @@ Surfaced here for validation before development starts:
 5. Main Conversation: exact styling and visual treatment of the wine option-card section.
 6. Main Conversation: whether structured query extraction and History's `Your Request:` extraction should share one mechanism or remain separate.
 7. Main Conversation: selection and ranking criteria for choosing up to three web-search-sourced options, which have no Kaggle points.
-8. Data storage: whether the new `country` field maps onto the existing `variety` + `province` Room key or requires a distinct Room column.
+8. Data naming: whether the Room entity's existing `province` column should be renamed to match the shared schema's `region` field.
 9. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
 10. History: date-grouping granularity — assumed per-day.
 11. My List: sort order for the list.
@@ -282,17 +284,17 @@ Implemented on native Android with Kotlin and Jetpack Compose:
 - 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
 - Full-screen Profile Page navigation and layout, structured AI profile parsing, pairing action, saved state, and 10-dot rating interaction
 - Persistent on-device History storage, date-grouped History list, Chat/History tab navigation, preserved in-session Chat state, and Profile Page entry navigation
-- Room-backed `VarietyRegionProfile` storage with a variety/province composite key, JSON flavor-note conversion, batch and single-row inserts, exact lookup repository, and off-main-thread seed-on-empty startup logic
+- Current Room-backed `VarietyRegionProfile` storage with the original variety/province composite key, JSON flavor-note conversion, batch and single-row inserts, exact lookup repository, and off-main-thread seed-on-empty startup logic
 
 Not yet complete:
 
 - Final product-owned system prompt
 - Frank Ruhl Libre font bundling
-- Inclusion and device-level verification of the `variety_region_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
+- Inclusion and device-level verification of the renamed `variety_country_region_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
 - Gemma's three-part conversational response with distinct variety, country, and region values in its recommendation and hidden attribute profile
 - Automatic Kaggle variety-country-region or original-query keyword matching, top-three-by-points selection, reviewer summaries, and per-card Profile Page navigation
 - In-scope web fallback after either Kaggle query misses, including up to three web options, country resolution, and runtime `web_search` profile write-back to Room
-- Room schema decision and implementation for persisting the distinct country field
+- Expansion of the Room entity, DAO lookup, and composite key from variety/province to variety/country/province, plus the related migration and tests
 - Static, single-source Profile Page behavior described in Section 7, including `Unknown` placeholders and removal of the current comparison-toggle scaffold
 - Cloud routing, category-data web search, web-option selection rules, and the separate winery-verification search path
 - Personal ratings and notes in My List
