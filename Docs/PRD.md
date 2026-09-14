@@ -128,6 +128,7 @@ The Room entity continues to call its region-equivalent column `province`, while
   - **AC6a:** Given the user taps an option card, when tapped, then the app navigates to the Profile Page with that option's full field set. Opening a card does not save it.
   - **AC6b:** Given an option matches a wine already in My List, when it appears in the thread, then it shows the existing personal rating or a `Saved` annotation if unrated, with tap-through access to the saved record and notes.
   - **AC6c:** Given more than three Kaggle matches exist, then the app displays the first three from `ORDER BY points DESC, winery ASC`. Winery alphabetical order is the deterministic tiebreak for tied or null points.
+  - **AC-KaggleRanking-Nulls:** Given Kaggle matches for a variety-country-region are ranked for display, then every match with a real `points` score ranks above every match with a null score, regardless of winery name. Null is always the lowest tier and is never mixed among scored matches alphabetically. Winery ascending breaks ties only among matches with the same points value or among matches whose points are all null. Raw SQLite implements this correctly with `ORDER BY points DESC, winery ASC` because null values sort last for a descending column. If ranking occurs after retrieval in Kotlin or another layer, the comparator must implement nulls-last explicitly.
   - **AC6d:** Given web search returns options, then the app displays up to the first three usable results in the search engine's existing order without applying custom ranking. If fewer than three usable results exist, only those results render.
 
 ### Error Handling
@@ -300,7 +301,7 @@ Not yet complete:
 - Frank Ruhl Libre font bundling
 - Inclusion and device-level verification of the renamed `variety_country_region_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
 - Gemma's three-part conversational response with distinct variety, country, and region values in its recommendation and hidden attribute profile
-- Automatic Kaggle variety-country-region or original-query keyword matching, cascade-on-error behavior, deterministic `points DESC, winery ASC` selection, reviewer summaries, and per-card Profile Page navigation
+- Automatic Kaggle variety-country-region or original-query keyword matching, cascade-on-error behavior, deterministic `points DESC, winery ASC` selection with explicit nulls-last handling outside SQLite, reviewer summaries, and per-card Profile Page navigation
 - In-scope web fallback after either Kaggle query misses or fails, including first-result ordering, cached-first behavior, supplementary search degradation, and the distinct no-connection path
 - Expansion of the Room entity, DAO lookup, and composite key from variety/province to variety/country/province; storage of one cached web option; runtime `web_search` write-back; and the related migration and tests
 - Static, single-source Profile Page behavior described in Section 7, including `Unknown` placeholders and removal of the current comparison-toggle scaffold
