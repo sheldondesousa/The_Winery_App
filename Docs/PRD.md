@@ -131,6 +131,7 @@ The Room entity continues to call its region-equivalent column `province`, while
 
 ### Error Handling
 - **AC7:** Given a cloud LLM call, Kaggle search, or live web search fails, when this occurs, then an inline error is shown in the thread with a retry option in the same casual tone. No fabricated content is displayed in place of the failed operation.
+  - **Exception:** AC10j does not use this retry pattern when the web search cannot be reached because the device has no internet connection. A retry control is not shown because the same action cannot succeed until connectivity returns.
 
 ### Empty States
 - **AC8:** Given no query has been submitted yet, when the screen first loads, then an empty state invites the first query via input placeholder text. No fabricated example results are shown.
@@ -149,6 +150,7 @@ The Room entity continues to call its region-equivalent column `province`, while
   - **AC10g:** Given the web search runs after AC10e or AC10f, then it resolves variety, country, region, and any other resolvable attributes and produces up to three options displayed under AC6. When Gemma supplied no usable variety-country-region, the search uses the original user-query keywords. Web options show `Unknown` for rating and review summary because both are reserved for a real Kaggle match. This fallback is part of the MVP.
   - **AC10h:** Given AC10g resolves new field-level data for a variety-country-region combination, then the app writes that data to the `VarietyRegionProfile` Room table with source `web_search`, using its existing replace-on-conflict behavior and the expanded `variety` + `country` + `province` composite key.
   - **AC10i:** Given the web search fails or returns nothing usable, then AC7 applies: the app shows an inline retry error in a casual tone and presents no fabricated content.
+  - **AC10j:** Given the web search in AC10g cannot run because the device has no internet connection, then the response plainly explains that web search could not run without a connection and that Gemma's knowledge and the on-device Kaggle data do not contain enough information to answer accurately. The message uses the same casual tone as the rest of the thread and does not show a retry control. This differs from AC10i, which covers a reachable web search that runs but fails or returns nothing usable.
 
 **Open assumptions:**
 - Exact routing heuristic for cloud escalation (word count? explicit constraint count?) is not yet defined — needed before this can be built.
@@ -293,7 +295,7 @@ Not yet complete:
 - Inclusion and device-level verification of the renamed `variety_country_region_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
 - Gemma's three-part conversational response with distinct variety, country, and region values in its recommendation and hidden attribute profile
 - Automatic Kaggle variety-country-region or original-query keyword matching, top-three-by-points selection, reviewer summaries, and per-card Profile Page navigation
-- In-scope web fallback after either Kaggle query misses, including up to three web options, country resolution, and runtime `web_search` profile write-back to Room
+- In-scope web fallback after either Kaggle query misses, including up to three web options, country resolution, runtime `web_search` profile write-back to Room, and a distinct no-connection message without a retry control
 - Expansion of the Room entity, DAO lookup, and composite key from variety/province to variety/country/province, plus the related migration and tests
 - Static, single-source Profile Page behavior described in Section 7, including `Unknown` placeholders and removal of the current comparison-toggle scaffold
 - Cloud routing, category-data web search, web-option selection rules, and the separate winery-verification search path
