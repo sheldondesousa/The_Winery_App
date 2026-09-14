@@ -57,13 +57,13 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 ### Variety-region profile storage
 
-The app has a growing on-device Room table named `VarietyRegionProfile`, keyed by the combination of `variety`, `country`, and `province`. Each row stores those key values; nullable body, tannin, and acidity values; a list of flavor notes; generation metadata; and a source value of either `kaggle_derived` or `web_search`.
+The app has a growing on-device Room table named `VarietyRegionProfile`, keyed by the combination of `variety`, `country`, and `province`. Each row stores those key values; nullable body, tannin, and acidity values; a list of flavor notes; generation metadata; a source value of either `kaggle_derived` or `web_search`; and one cached web-search option containing its winery and other resolved option fields.
 
 - On first launch, if the table is empty, the app reads `variety_country_region_profiles.json` from packaged assets and inserts all profiles in one Room batch operation.
 - Asset parsing and database writes run on an IO dispatcher so startup work does not block the interface.
 - Later launches skip asset seeding when the table already contains rows.
 - Replace-on-conflict inserts allow a live web-search result to add or refresh one variety/country/province combination.
-- The repository supports exact variety/country/province lookup. The live chat fallback writes the resolved fields supported by this profile table through the Room pipeline under source `web_search`; option-level winery data is not part of this entity.
+- The repository supports exact variety/country/province lookup. The live chat fallback writes the resolved profile and first usable web option through the Room pipeline under source `web_search`, replacing any previously cached option for that combination. Only one option is cached per profile row; caching all three would require a separate linked table and is outside this design.
 - The profile table does not provide critic ratings. Those come only from a matched genuine Kaggle `points` value.
 
 The Room entity continues to call its region-equivalent column `province`, while the shared app schema uses `region`. Whether to rename that Room column remains unresolved and must not be silently decided during implementation.
@@ -71,8 +71,8 @@ The Room entity continues to call its region-equivalent column `province`, while
 ### Response-source rules
 
 - Gemma produces the initial recommendation. Kaggle then searches either its resolved variety-country-region or, when any of those values is `Unknown`, the original user-query keywords.
-- Kaggle options may supply a real winery, critic points, and reviewer summary. More than three matches are reduced to the top three by points descending.
-- Either Kaggle search returning no matches triggers the category-data fallback web search, which supplies up to three options and writes resolved profile data to Room. Web options never receive critic rating or review summary values.
+- Kaggle options may supply a real winery, critic points, and reviewer summary. More than three matches are reduced using `ORDER BY points DESC, winery ASC`, making winery alphabetical order the deterministic tiebreak for tied or null points.
+- Either Kaggle search returning no matches or failing technically triggers the category-data fallback. When an exact profile is available, the app first checks Room for its cached option and may supplement it with live results; otherwise it runs the full web search. Newly found web options retain the search engine's result order, and the first is cached. Web options never receive critic rating or review summary values.
 - A separate winery-verification web search may verify a specific Kaggle winery for the Profile Page badge.
 - No citations or source-switch controls are displayed in the response and detail flow.
 
@@ -127,37 +127,44 @@ The Room entity continues to call its region-equivalent column `province`, while
 - **AC6:** Given Kaggle or the web-search fallback returns one or more matches, when the app displays them, then up to three option cards render inline in the chat thread. Each card shows only winery and rating, displaying `Unknown` for either unresolved field.
   - **AC6a:** Given the user taps an option card, when tapped, then the app navigates to the Profile Page with that option's full field set. Opening a card does not save it.
   - **AC6b:** Given an option matches a wine already in My List, when it appears in the thread, then it shows the existing personal rating or a `Saved` annotation if unrated, with tap-through access to the saved record and notes.
-  - **AC6c:** Given more than three Kaggle matches exist, then the app displays the three matches with the highest real `points` values, ordered by points descending.
+  - **AC6c:** Given more than three Kaggle matches exist, then the app displays the first three from `ORDER BY points DESC, winery ASC`. Winery alphabetical order is the deterministic tiebreak for tied or null points.
+  - **AC6d:** Given web search returns options, then the app displays up to the first three usable results in the search engine's existing order without applying custom ranking. If fewer than three usable results exist, only those results render.
 
 ### Error Handling
-- **AC7:** Given a cloud LLM call, Kaggle search, or live web search fails, when this occurs, then an inline error is shown in the thread with a retry option in the same casual tone. No fabricated content is displayed in place of the failed operation.
-  - **Exception:** AC10j does not use this retry pattern when the web search cannot be reached because the device has no internet connection. A retry control is not shown because the same action cannot succeed until connectivity returns.
+- **AC7:** Given a cloud LLM call or live web search fails, when this occurs, then an inline error is shown in the thread with a retry option in the same casual tone. No fabricated content is displayed in place of the failed operation.
+  - **AC7a:** A Kaggle query failure does not use this error pattern. It proceeds to the web fallback under AC10e or AC10f in the same way as a clean zero-match result; Kaggle never stops the response on its own.
+  - **AC7b:** AC10j also does not use the retry pattern when the web search cannot be reached because the device has no internet connection and no cached option is available. A retry control is not shown because the same action cannot succeed until connectivity returns.
+  - **AC7c:** AC10k does not replace the response with this error pattern when a cached option remains usable. The cached card renders with a short note that additional options could not be found.
 
 ### Empty States
 - **AC8:** Given no query has been submitted yet, when the screen first loads, then an empty state invites the first query via input placeholder text. No fabricated example results are shown.
 
 ### Eventing
-- **AC9:** Given a query is submitted, then log locally: query text length, routing decision, whether Gemma resolved variety, country, and region, which Kaggle query path ran, whether Kaggle returned matches, whether the category-data web fallback ran, whether web data was written to Room, the selected option source, and any winery-verification result. Personal-use MVP — local logging only, no analytics backend.
+- **AC9:** Given a query is submitted, then log locally: query text length, routing decision, whether Gemma resolved variety, country, and region, which Kaggle query path ran, whether Kaggle missed or failed technically, whether the category-data fallback ran, whether a cached option was used, whether supplementary search degraded to the cached option, whether web data was written to Room, the selected option source, and any winery-verification result. Personal-use MVP — local logging only, no analytics backend.
 
 ### Kaggle fallback chain
-- **AC10:** Given Gemma's initial response is generated, when evaluated, then the app checks whether variety, country, and region all contain resolved values rather than `Unknown`.
-  - **AC10a:** Given variety, country, and region are all resolved, then Kaggle is queried using that variety-country-region.
-  - **AC10b:** Given variety, country, or region is `Unknown`, then Kaggle is queried using keywords from the original user query.
+- **AC10:** `variety`, `country`, and `region` are mandatory for this flow. Given Gemma's initial response is generated, when evaluated, then the app checks whether all three fields contain resolved values rather than `Unknown`.
+  - **AC10a:** Given all three mandatory fields are resolved, then Kaggle is queried using that variety-country-region.
+  - **AC10b:** Given any mandatory field is `Unknown`, whether partial or full non-resolution, then Kaggle is queried using only keywords from the original user query. The app does not run a hybrid search using the mandatory fields Gemma resolved; those values are discarded for search purposes and may be backfilled from a Kaggle match under AC10d.
   - **AC10c:** Given the AC10a query returns one or more matches, then up to three option cards are shown under AC6.
-  - **AC10d:** Given the AC10b query returns one or more matches, then Gemma's missing variety, country, or region fields are populated from the matched Kaggle data and up to three option cards are shown under AC6.
-  - **AC10e:** Given the AC10a query returns zero matches, then the app proceeds directly to the live web search in AC10g. It does not retry Kaggle with keywords because Gemma's resolved fields were the best available Kaggle input.
-  - **AC10f:** Given the AC10b query returns zero matches, then the app proceeds to the same live web search in AC10g.
-  - **AC10g:** Given the web search runs after AC10e or AC10f, then it resolves variety, country, region, and any other resolvable attributes and produces up to three options displayed under AC6. When Gemma supplied no usable variety-country-region, the search uses the original user-query keywords. Web options show `Unknown` for rating and review summary because both are reserved for a real Kaggle match. This fallback is part of the MVP.
-  - **AC10h:** Given AC10g resolves new field-level data for a variety-country-region combination, then the app writes that data to the `VarietyRegionProfile` Room table with source `web_search`, using its existing replace-on-conflict behavior and the expanded `variety` + `country` + `province` composite key.
-  - **AC10i:** Given the web search fails or returns nothing usable, then AC7 applies: the app shows an inline retry error in a casual tone and presents no fabricated content.
-  - **AC10j:** Given the web search in AC10g cannot run because the device has no internet connection, then the response plainly explains that web search could not run without a connection and that Gemma's knowledge and the on-device Kaggle data do not contain enough information to answer accurately. The message uses the same casual tone as the rest of the thread and does not show a retry control. This differs from AC10i, which covers a reachable web search that runs but fails or returns nothing usable.
+  - **AC10d:** Given the AC10b query returns one or more matches, then all three mandatory fields are backfilled from the matched Kaggle data, including any values Gemma had resolved before the keyword search, and up to three option cards are shown under AC6.
+  - **AC10e:** Given the AC10a query returns zero matches or fails to execute because of a read, parse, or other technical error, then the app proceeds directly to AC10g. It does not retry Kaggle with keywords because Gemma's resolved fields were the best available Kaggle input. A Kaggle technical failure is treated like a clean miss and never halts the response.
+  - **AC10f:** Given the AC10b query returns zero matches or fails to execute, then the app proceeds to the same fallback in AC10g. A Kaggle technical failure is treated like a clean miss.
+  - **AC10g:** Given the fallback runs after AC10e or AC10f, then the following rules apply:
+    - When AC10e triggered the fallback, the app first checks `VarietyRegionProfile` for a cached option at the exact variety-country-region. If one exists, it is shown immediately as the first card. When the device is online, a live search also runs for up to two additional options, merged with the cached card to a maximum of three. When the device is offline, only the cached card is shown and AC10j does not apply.
+    - When AC10e triggered the fallback and no cached option exists, the app runs the full web search to resolve variety, country, region, and other fields and find up to three options.
+    - When AC10f triggered the fallback, no resolved combination exists for a cache lookup, so the full web search always runs using the original user-query keywords.
+    - Every newly found web option retains the search engine's result order. Rating and review summary display as `Unknown` for cached and newly found web options because both are reserved for a real Kaggle match. This fallback is part of the MVP.
+  - **AC10h:** Given AC10g's live web search resolves new field-level data and options for a variety-country-region combination, then the app writes the profile and the first option returned by that live search, including winery and other resolved fields, to `VarietyRegionProfile` with source `web_search`. The write replaces any cached option for the same expanded `variety` + `country` + `province` composite key. Only the first result is cached; no custom web ranking is applied.
+  - **AC10i:** Given a full web search fails or returns nothing usable, then AC7 applies: the app shows an inline retry error in a casual tone and presents no fabricated content.
+  - **AC10j:** Given AC10g requires a live web search but the device has no internet connection, and either no cached option exists for the resolved variety-country-region or the request followed AC10f with no combination available to look up, then the response plainly explains that web search could not run without a connection and that Gemma's knowledge and the on-device Kaggle data do not contain enough information to answer accurately. The message uses the thread's casual tone and does not show a retry control. When a cached option exists, AC10g's offline branch applies and this failure message is not shown.
+  - **AC10k:** Given AC10g finds a cached option and the device is online, but the supplementary search for up to two additional options fails or returns nothing usable, then the cached card still renders with a short, casual inline note explaining that additional options could not be found. This is not an AC10j offline dead end or an AC10i full failure because a usable cached answer remains available.
 
 **Open assumptions:**
 - Exact routing heuristic for cloud escalation (word count? explicit constraint count?) is not yet defined — needed before this can be built.
 - Assumed cheese pairing is requested via a dedicated action, not by re-parsing free text for intent — confirm this matches your expectation.
 - Exact styling and visual treatment of the wine option-card section within the chat response.
 - Whether structured prompt extraction and History's lightweight `Your Request:` keyword extraction should share one mechanism or remain separate.
-- Selection and ranking criteria for choosing up to three web-search-sourced options, which do not have Kaggle points.
 
 ---
 
@@ -265,14 +272,13 @@ Surfaced here for validation before development starts:
 4. Main Conversation: cheese pairing assumed to be a dedicated action, not free-text intent parsing.
 5. Main Conversation: exact styling and visual treatment of the wine option-card section.
 6. Main Conversation: whether structured query extraction and History's `Your Request:` extraction should share one mechanism or remain separate.
-7. Main Conversation: selection and ranking criteria for choosing up to three web-search-sourced options, which have no Kaggle points.
-8. Data naming: whether the Room entity's existing `province` column should be renamed to match the shared schema's `region` field.
-9. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
-10. History: date-grouping granularity — assumed per-day.
-11. My List: sort order for the list.
-12. My List: confirmation step assumed required before removing a saved wine.
-13. **Scope confirmation:** location/price lookup (Google Places), discussed earlier in this project, is not part of these five MVP screens — confirm this is an intentional deferral.
-14. Final system prompt. The current structured-output instruction is implementation scaffolding and has not been approved as the final product prompt.
+7. Data naming: whether the Room entity's existing `province` column should be renamed to match the shared schema's `region` field.
+8. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
+9. History: date-grouping granularity — assumed per-day.
+10. My List: sort order for the list.
+11. My List: confirmation step assumed required before removing a saved wine.
+12. **Scope confirmation:** location/price lookup (Google Places), discussed earlier in this project, is not part of these five MVP screens — confirm this is an intentional deferral.
+13. Final system prompt. The current structured-output instruction is implementation scaffolding and has not been approved as the final product prompt.
 
 ---
 
@@ -294,11 +300,11 @@ Not yet complete:
 - Frank Ruhl Libre font bundling
 - Inclusion and device-level verification of the renamed `variety_country_region_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
 - Gemma's three-part conversational response with distinct variety, country, and region values in its recommendation and hidden attribute profile
-- Automatic Kaggle variety-country-region or original-query keyword matching, top-three-by-points selection, reviewer summaries, and per-card Profile Page navigation
-- In-scope web fallback after either Kaggle query misses, including up to three web options, country resolution, runtime `web_search` profile write-back to Room, and a distinct no-connection message without a retry control
-- Expansion of the Room entity, DAO lookup, and composite key from variety/province to variety/country/province, plus the related migration and tests
+- Automatic Kaggle variety-country-region or original-query keyword matching, cascade-on-error behavior, deterministic `points DESC, winery ASC` selection, reviewer summaries, and per-card Profile Page navigation
+- In-scope web fallback after either Kaggle query misses or fails, including first-result ordering, cached-first behavior, supplementary search degradation, and the distinct no-connection path
+- Expansion of the Room entity, DAO lookup, and composite key from variety/province to variety/country/province; storage of one cached web option; runtime `web_search` write-back; and the related migration and tests
 - Static, single-source Profile Page behavior described in Section 7, including `Unknown` placeholders and removal of the current comparison-toggle scaffold
-- Cloud routing, category-data web search, web-option selection rules, and the separate winery-verification search path
+- Cloud routing, category-data web search, first-result option selection, and the separate winery-verification search path
 - Personal ratings and notes in My List
 - Real model-generated cheese pairing on the Profile Page; the current Profile Page result is placeholder copy
 - Physical-device execution of the Profile Page instrumentation tests and final responsive visual QA
