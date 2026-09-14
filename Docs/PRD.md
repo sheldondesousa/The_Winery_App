@@ -2,21 +2,21 @@
 
 **Status:** Draft
 **Author:** Sheldon
-**Last updated:** 13 September 2026
+**Last updated:** 14 September 2026
 **Platform:** Android only, native (Kotlin) — matches your Pixel 10 Pro Fold
 **On-device model:** Gemma 4 E2B instruction-tuned LiteRT-LM bundle, downloaded from Hugging Face on first launch and stored in private app storage (not Gemini Nano/AICore)
 **User:** Personal use (single user); BYOK model if ever shared
 
 ## 1. Overview
 
-A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Suggestions begin with an on-device LLM and may escalate to a cloud LLM for complex or high-stakes queries. A bundled on-device Kaggle database resolves local gaps and supplies matching bottles with genuine critic scores. Web search is the fallback when local sources cannot resolve variety/region or cannot find matching bottles. A separate on-device variety-region profile table is initially seeded from Kaggle-derived JSON and can grow when live web searches fill missing combinations.
+A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Gemma generates the initial suggestion from its trained knowledge: a variety, its best or most popular country and region, and a flavor and attribute summary. Complex or high-stakes queries may still escalate to a cloud LLM. If Gemma resolves variety, country, and region, the app searches Kaggle with that combination for up to three real-world options. If any of those fields is `Unknown`, it searches Kaggle using keywords from the original user query. A Kaggle keyword hit fills Gemma's missing fields and supplies up to three options. Either Kaggle search falling to zero matches triggers an in-scope live web search, which resolves variety, country, region, and other fields where possible and supplies up to three web options. Kaggle therefore follows and depends on Gemma's response rather than acting as an independent comparison. Newly resolved web-search profile data is written to the growing on-device `VarietyRegionProfile` Room table with source `web_search`.
 
 ## 2. MVP Scope
 
 Five screens:
 1. Splash Screen
 2. Main Conversation Screen
-3. Stage Show
+3. Profile Page
 4. History
 5. My List
 
@@ -36,16 +36,22 @@ Used by AI-sourced profiles and Kaggle reviewer matches so the results remain co
 name
 winery
 variety
+country       (nullable string)
 region
 body          (light | medium | full | Unknown)
 tannin        (low | medium | high | Unknown)
 acidity       (low | medium | high | Unknown)
 flavor_notes  (2-4 short tags)
+review_summary (nullable string, 1-2 sentences)
 ```
 
 Critic `rating` is a nullable integer reserved for the Kaggle `points` field. It is not requested from or populated by Gemma.
 
-Unrecognized/unextractable fields render as "Unknown" rather than guessed. `Unknown` is styled in muted/secondary text, visually distinct from resolved values.
+`review_summary` is populated only when the app matches a real Kaggle review. Gemma and the web-search fallback never populate it.
+
+All profile keys are static on the Profile Page. The full field set—variety, country, region, body, tannin, acidity, flavor notes, winery, rating, and review summary—always renders regardless of source. Unrecognized or unresolved fields render as `Unknown` rather than being guessed or omitted. `Unknown` is styled in muted or secondary text, visually distinct from resolved values.
+
+`country` is a distinct schema field immediately before `region`. Gemma, a Kaggle match, or the web-search fallback may resolve it through the same flow used for variety and region.
 
 For category-level requests such as "Malbec," the AI may use learned knowledge to provide typical variety characteristics even when no exact bottle is identified. Bottle-specific winery, vintage, critic rating, or provenance claims remain `Unknown` unless a separate source supplies them. Critic rating must come from a real Kaggle match.
 
@@ -56,15 +62,17 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
 - On first launch, if the table is empty, the app reads `variety_region_profiles.json` from packaged assets and inserts all profiles in one Room batch operation.
 - Asset parsing and database writes run on an IO dispatcher so startup work does not block the interface.
 - Later launches skip asset seeding when the table already contains rows.
-- Replace-on-conflict inserts allow a future live web-search result to add or refresh one variety/province combination.
-- A standalone repository currently supports exact variety/province lookup. It is intentionally not connected to the chat recommendation flow yet.
-- The profile table does not provide critic ratings. Those remain reserved for a future lookup against genuine Kaggle `points` data.
+- Replace-on-conflict inserts allow a live web-search result to add or refresh one variety/province combination.
+- A standalone repository supports exact variety/province lookup. The live chat fallback writes the resolved fields supported by this profile table through the Room pipeline under source `web_search`; option-level winery data is not part of this entity. Whether the new country field maps onto the existing key or requires its own Room column remains an implementation decision.
+- The profile table does not provide critic ratings. Those come only from a matched genuine Kaggle `points` value.
 
-### Response-source terminology
+### Response-source rules
 
-- **AI sourced** covers values produced by on-device Gemma and values obtained through web search. The response does not visually distinguish between those two origins.
-- **Database** or **Kaggle** refers only to matches from the bundled Kaggle dataset.
-- No citations are displayed in this response and detail flow.
+- Gemma produces the initial recommendation. Kaggle then searches either its resolved variety-country-region or, when any of those values is `Unknown`, the original user-query keywords.
+- Kaggle options may supply a real winery, critic points, and reviewer summary. More than three matches are reduced to the top three by points descending.
+- Either Kaggle search returning no matches triggers the category-data fallback web search, which supplies up to three options and writes resolved profile data to Room. Web options never receive critic rating or review summary values.
+- A separate winery-verification web search may verify a specific Kaggle winery for the Profile Page badge.
+- No citations or source-switch controls are displayed in the response and detail flow.
 
 ---
 
@@ -95,7 +103,7 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
 
 ## 6. Main Conversation Screen
 
-**Purpose:** Single chat-style interface, casual and personable in tone. It surfaces a suggestion, not a data sheet — the detailed, factual breakdown lives in Stage Show.
+**Purpose:** Single chat-style interface, casual and personable in tone. Gemma supplies the initial recommendation, which automatically drives a Kaggle search and the defined fallback chain. The detailed profile lives on the Profile Page.
 
 ### Navigation & Display
 - **AC1:** Given the app has passed splash, when the Main Conversation Screen loads, then a persistent text input is displayed at the bottom of the screen.
@@ -104,89 +112,84 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
   - **AC2b:** Given the LLM can produce any number of suggestions within one session, when the user's query shifts to a different topic within the same session, then earlier suggestion cards remain visible in the thread rather than being cleared or collapsed.
 
 ### Content Tone
-- **AC3:** Given the on-device or cloud model generates a response, when phrased, then it uses casual, personable language (e.g. "This could work well — a Malbec would bring some dark fruit into it") rather than a structured field:value breakdown. The casual text and its bottle-tile section render together as one chat response.
-- **AC3a:** Given response data came from on-device Gemma or web search, when it is displayed, then it uses the single label `AI sourced`. Gemma and web-search values are not visually distinguished and no citations are shown.
+- **AC3:** Given a query is submitted, when Gemma responds, then the response consists of three parts in order: a warm greeting acknowledging the query; a suggested variety and its best or most popular country and region; and a casual-prose summary of flavor notes, tannin, acidity, and body.
+- **AC3a:** Given Gemma's suggestion is generated, when the app checks whether variety, country, and region were all resolved under AC10, then it automatically searches Kaggle immediately afterward. It uses the resolved variety-country-region when all three values are known, or keywords from the original user query when any value is `Unknown`, with no separate user action.
 
 ### Data & Content
 - **AC4:** Given a query is assessed as high-stakes or complex per the routing logic, when this is detected, then the query is escalated to the cloud LLM. The response stays in the same casual tone; escalation is not called out with a visible badge in the thread.
-- **AC4a:** Given Gemma is asked to produce a structured profile, then its hidden output includes `variety`, `region`, `body`, `tannin`, `acidity`, and `flavor_notes`. It also extracts `country`, `province` or region-adjacent terms, and any body, tannin, acidity, or flavor descriptors explicitly present in the user's prompt. The machine-readable payload is removed before the response is displayed.
-- **AC4b:** Given both Gemma's `variety` and `region` are known, when the structured profile is parsed, then the app proceeds directly to bottle-tile sourcing under AC6.
-- **AC4c:** Given either Gemma's `variety` or `region` is `Unknown`, when the structured profile is parsed, then the app queries the bundled on-device Kaggle database using other extracted prompt details. `country` and `province` may be exact-match filters because they are indexed Kaggle columns. Body, tannin, acidity, and flavor descriptors may only be lower-confidence fuzzy signals against review-description text; they are not exact filters.
-- **AC4d:** Given the Kaggle query still cannot resolve variety or region, then the app attempts a web search to resolve them and fill the remaining structured attribute keys.
-- **AC4e:** Given variety/region is resolved by Gemma, Kaggle, or web search—or the user explicitly accepts unresolved values through AC7c—then the app proceeds to bottle-tile sourcing.
+- **AC4a:** Given Gemma is asked to produce a structured profile, then its hidden output includes `variety`, `country`, `region`, `body`, `tannin`, `acidity`, and `flavor_notes`. The machine-readable payload is removed before the response is displayed. Gemma does not produce `rating` or `review_summary`.
 - **AC5:** Given cheese is not requested, when a response is generated, then no cheese pairing is included by default.
   - **AC5a:** Given the user explicitly requests a cheese pairing, then a cheese suggestion is appended in the same casual tone.
 
-### Bottle-tile sourcing
-- **AC6:** Given variety and region are known, when the app sources bottle options, then it first queries the bundled on-device Kaggle database for matching bottles.
-  - **AC6a:** Given Kaggle has matching bottles, then the response renders one or more tiles showing `winery` and `rating`. Rating is the genuine Kaggle `points` value and is never generated or inferred by Gemma or web search.
-  - **AC6b:** Given Kaggle has no matching bottles, then the app performs a web search for alternative options.
-  - **AC6c:** Given web search returns bottle options, then each tile shows `winery` and `title` and omits rating entirely.
-  - **AC6d:** Given web-search bottle tiles are generated, then the same web-search call also retrieves the full attribute data needed by Stage Show: variety, region, body, tannin, acidity, and flavor notes. This is an eager fetch; attributes are not deferred until tile tap.
-  - **AC6e:** Given a response contains multiple bottle tiles, when the user taps one tile, then the app opens Stage Show with that specific bottle's data. Every tile is a separate Stage Show entry point. Opening a tile does not save it.
-  - **AC6f:** Given a tile matches a wine already in My List, when it appears in the thread, then it shows the personal rating or a `Saved` annotation if unrated, with tap-through access to the saved record and notes.
-
-### Web attribute fetch timing
-
-Web-search bottle attributes use an eager fetch: the same call that produces the alternative tile list also retrieves the Stage Show attributes for every returned tile. This avoids a second request and a loading state after a tile is tapped. The accepted trade-off is that the app pays the latency and cost for every generated web tile, including tiles the user never opens. If local event logs show a high Kaggle-miss rate, this decision should be revisited in favor of fetching full attributes only after a tile is tapped.
+### Wine options
+- **AC6:** Given Kaggle or the web-search fallback returns one or more matches, when the app displays them, then up to three option cards render inline in the chat thread. Each card shows only winery and rating, displaying `Unknown` for either unresolved field.
+  - **AC6a:** Given the user taps an option card, when tapped, then the app navigates to the Profile Page with that option's full field set. Opening a card does not save it.
+  - **AC6b:** Given an option matches a wine already in My List, when it appears in the thread, then it shows the existing personal rating or a `Saved` annotation if unrated, with tap-through access to the saved record and notes.
+  - **AC6c:** Given more than three Kaggle matches exist, then the app displays the three matches with the highest real `points` values, ordered by points descending.
 
 ### Error Handling
-- **AC7:** Given the cloud LLM call fails (no network, invalid API key, etc.), when this occurs, then an inline error is shown in the thread with a retry option, in the same casual tone. No fabricated content is displayed in place of a failed call.
-- **AC7a:** Given Gemma and Kaggle cannot resolve variety/region and the web-resolution step cannot run because there is no internet connection, then the app explains that local resources did not contain enough information and an internet connection is needed. This error is separate from the cloud-LLM failure in AC7 and offers `Retry` and `Decline` actions.
-- **AC7b:** Given the user selects `Retry` on the structured-resolution error, then the app attempts the web-resolution step again.
-- **AC7c:** Given the user selects `Decline`, then unresolved keys remain `Unknown` and the app continues to bottle-tile sourcing without fabricating values.
+- **AC7:** Given a cloud LLM call, Kaggle search, or live web search fails, when this occurs, then an inline error is shown in the thread with a retry option in the same casual tone. No fabricated content is displayed in place of the failed operation.
 
 ### Empty States
 - **AC8:** Given no query has been submitted yet, when the screen first loads, then an empty state invites the first query via input placeholder text. No fabricated example results are shown.
 
 ### Eventing
-- **AC9:** Given a query is submitted, then log locally: query text length, routing decision, whether Gemma left variety/region unresolved, whether Kaggle resolved that gap, whether bottle matching reached the web-search fallback, the selected tile source, and any verification result. Track the Kaggle-miss rate so the cost and latency of eager web fetching can be reassessed. Personal-use MVP — local logging only, no analytics backend.
+- **AC9:** Given a query is submitted, then log locally: query text length, routing decision, whether Gemma resolved variety, country, and region, which Kaggle query path ran, whether Kaggle returned matches, whether the category-data web fallback ran, whether web data was written to Room, the selected option source, and any winery-verification result. Personal-use MVP — local logging only, no analytics backend.
+
+### Kaggle fallback chain
+- **AC10:** Given Gemma's initial response is generated, when evaluated, then the app checks whether variety, country, and region all contain resolved values rather than `Unknown`.
+  - **AC10a:** Given variety, country, and region are all resolved, then Kaggle is queried using that variety-country-region.
+  - **AC10b:** Given variety, country, or region is `Unknown`, then Kaggle is queried using keywords from the original user query.
+  - **AC10c:** Given the AC10a query returns one or more matches, then up to three option cards are shown under AC6.
+  - **AC10d:** Given the AC10b query returns one or more matches, then Gemma's missing variety, country, or region fields are populated from the matched Kaggle data and up to three option cards are shown under AC6.
+  - **AC10e:** Given the AC10a query returns zero matches, then the app proceeds directly to the live web search in AC10g. It does not retry Kaggle with keywords because Gemma's resolved fields were the best available Kaggle input.
+  - **AC10f:** Given the AC10b query returns zero matches, then the app proceeds to the same live web search in AC10g.
+  - **AC10g:** Given the web search runs after AC10e or AC10f, then it resolves variety, country, region, and any other resolvable attributes and produces up to three options displayed under AC6. When Gemma supplied no usable variety-country-region, the search uses the original user-query keywords. Web options show `Unknown` for rating and review summary because both are reserved for a real Kaggle match. This fallback is part of the MVP.
+  - **AC10h:** Given AC10g resolves new field-level data for a variety-country-region combination, then the app writes that data to the `VarietyRegionProfile` Room table with source `web_search`, using its existing replace-on-conflict behavior. The Room key or column treatment for country must be resolved before implementation.
+  - **AC10i:** Given the web search fails or returns nothing usable, then AC7 applies: the app shows an inline retry error in a casual tone and presents no fabricated content.
 
 **Open assumptions:**
 - Exact routing heuristic for cloud escalation (word count? explicit constraint count?) is not yet defined — needed before this can be built.
 - Assumed cheese pairing is requested via a dedicated action, not by re-parsing free text for intent — confirm this matches your expectation.
-- Exact styling and visual treatment of the bottle-tile section within the chat response.
-- If the user's prompt yields no country or province for the local gap-resolution query, whether the app should skip directly to web search.
+- Exact styling and visual treatment of the wine option-card section within the chat response.
 - Whether structured prompt extraction and History's lightweight `Your Request:` keyword extraction should share one mechanism or remain separate.
-- Behavior when variety/region is known but Kaggle has no bottle matches and the alternative-options web search is unavailable.
+- Selection and ranking criteria for choosing up to three web-search-sourced options, which do not have Kaggle points.
 
 ---
 
-## 7. Stage Show
+## 7. Profile Page
 
 **Purpose:** Full-screen, distraction-free showcase of a single wine. Deliberate and factual in tone — the opposite register from Main Conversation's casual suggestions.
 
 ### Navigation & Display
-- **AC1:** Given the user taps a bottle tile (Section 6, AC6e), a My List entry, or a History entry (Section 8, AC5), when Stage Show opens, then it displays that specific wine's name, origin, and key traits in large typography, with no persistent nav chrome.
-- **AC2:** Given no bottle imagery is used in MVP scope, when Stage Show renders, then typography carries the full visual weight — no image or image placeholder is shown.
-- **AC3:** Given the user tapped a Kaggle-sourced tile, when Stage Show renders, then an `AI` / `Kaggle` toggle appears. The Kaggle side represents that specific review and the AI side represents the corresponding AI-sourced profile.
-  - **AC3a:** Given the user tapped a web-search-sourced tile, when Stage Show renders, then no AI/Kaggle toggle appears because no Kaggle match exists. The single profile is labeled `AI sourced`.
-  - **AC3b:** Given Stage Show displays AI-sourced or Kaggle data, then no citations are shown.
+- **AC1:** Given the user taps an option card, Gemma's own suggestion, a My List entry, or a History entry, when the Profile Page opens, then it displays that specific wine's name, origin, and key traits in large typography, with no persistent navigation chrome.
+- **AC2:** Given no bottle imagery is used in MVP scope, when the Profile Page renders, then typography carries the full visual weight, with no image or image placeholder.
 
 ### Data & Content — Key for Wine Description
-- **AC4:** Given the `AI` toggle position is active, or a web-search tile has no toggle, when Stage Show renders, then the shared schema fields display as `AI sourced`. This label covers both on-device Gemma values and web-search-derived values without visually distinguishing them:
+- **AC4:** Given the user navigates to the Profile Page from a tapped option card or Gemma's own suggestion, when the page renders, then it displays the full static field set from that entry with no source switch:
   - `variety`
+  - `country`
   - `region`
   - `body` (light | medium | full | Unknown)
   - `tannin` (low | medium | high | Unknown)
   - `acidity` (low | medium | high | Unknown)
   - `flavor_notes`
-- **AC4a:** Given the `Kaggle` toggle position is active, when Stage Show renders, then the attributes are extracted from that tile's specific Kaggle review-description text. Its critic rating displays only when that review has a real Kaggle `points` value.
-- **AC4b:** Given a web-search-sourced tile opens Stage Show, then all attributes fetched eagerly with the tile list are displayed immediately. Stage Show makes no second network request and shows no attribute-loading state.
-- **AC4c:** Given no Kaggle comparison exists, when Stage Show renders, then available AI-sourced fields remain populated. Absence of Kaggle is not a reason to replace them with `Unknown`.
-- **AC5:** Given a field value is Unknown on either toggle position, when displayed, then it renders in muted/secondary text, visually distinct from resolved values.
-- **AC6:** Given both an AI suggestion and a Kaggle match exist, when Stage Show renders (regardless of which toggle position is active), then an agreement indicator is shown near the toggle ("Similar pick" / "Different take") based on variety + region overlap between the two.
-- **AC7:** Given the "Kaggle" toggle is active and the matched winery has been verified via web search, when this is the case, then a verified indicator displays near the winery name.
+  - `winery`
+  - `rating`
+  - `review_summary`
+- **AC4a:** Given the entry came from a Kaggle option, when rendered, then winery, rating, and review summary display resolved values where the matched Kaggle record supplies them.
+- **AC4b:** Given the entry came from Gemma's own suggestion without a matched option, when rendered, then winery, rating, and review summary display as `Unknown`; they are not omitted from the layout.
+- **AC4c:** Given the entry came from a web-search-sourced option under Section 6, AC10g, when rendered, then winery, variety, country, region, and other attributes display where the search resolved them. Rating and review summary display as `Unknown` because both are reserved for a real Kaggle match.
+- **AC5:** Given a shared attribute value is `Unknown`, when displayed, then it renders in muted or secondary text, visually distinct from resolved values.
+- **AC7:** Given a Kaggle option's winery has been separately verified through a winery-verification web search, when the Profile Page renders, then a verified indicator displays near the winery name.
   - **AC7a:** Given verification is inconclusive, absent, or failed, then no badge is shown either way — no false claim in either direction.
-- **AC8:** Given the wine has a cheese pairing attached, when Stage Show renders, then the pairing displays as a secondary section below the wine details, not as the primary focus, and independent of which toggle position is active.
+  - **AC7b:** The winery-verification search checks one specific Kaggle winery. It is separate from the category-data fallback web search in Section 6, AC10g, which retrieves options and resolves missing attributes after a Kaggle miss. The implementation must keep these as distinct search paths.
+- **AC8:** Given the wine has a cheese pairing attached, when the Profile Page renders, then the pairing displays as a secondary section below the wine details, not as the primary focus.
 
 ### Actions
-- **AC9:** Given Attributes is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
-- **AC10:** Given Attributes is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to My List (Section 9) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and My List tiles do not display heart icons.
-  - **AC10a:** Personal rating is display-only on Attributes. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
-
-**Open assumptions:**
-- Which toggle position should be selected initially when a Kaggle-sourced tile opens Stage Show.
+- **AC9:** Given the Profile Page is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
+- **AC10:** Given the Profile Page is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to My List (Section 9) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and My List tiles do not display heart icons.
+  - **AC10a:** Personal rating is display-only on the Profile Page. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
 
 ---
 
@@ -199,12 +202,12 @@ Web-search bottle attributes use an eager fetch: the same call that produces the
 - **AC2:** Given the current session has active suggestions, when History is opened mid-session, then those suggestions also appear, grouped under today's date — consistent with the in-session persistence in Section 6, AC2b.
 
 ### Data & Content
-- **AC3:** Given a suggestion entry in History, when displayed, then it shows the wine name and `Your Request:` followed by useful keywords extracted locally from the user's original prompt, such as country, region, variety, color, body, acidity, tannin, or flavor. Attributes not stated by the user are not added. AI conversation text and the full factual schema are not shown; the schema stays on Stage Show.
-- **AC4:** Given a suggestion in History matches a wine already in My List, when displayed, then an annotation (rating, or a "Saved" mark if unrated) is shown with a tap-through link to that saved wine's full record and notes — the same behavior as Section 6, AC6a.
-- **AC5:** Given the user taps a History entry, when tapped, then the app navigates to Stage Show with that wine's data, identical to tapping a live suggestion.
+- **AC3:** Given a suggestion entry in History, when displayed, then it shows the wine name and `Your Request:` followed by useful keywords extracted locally from the user's original prompt, such as country, region, variety, color, body, acidity, tannin, or flavor. Attributes not stated by the user are not added. AI conversation text and the full factual schema are not shown; the schema stays on the Profile Page.
+- **AC4:** Given a suggestion in History matches a wine already in My List, when displayed, then an annotation (rating, or a "Saved" mark if unrated) is shown with a tap-through link to that saved wine's full record and notes — the same behavior as Section 6, AC6b.
+- **AC5:** Given the user taps a History entry, when tapped, then the app navigates to the Profile Page with that wine's data, identical to tapping a live suggestion.
 
 ### Actions
-- **AC6:** Given a History entry is not yet saved, when the user saves it directly from History (without necessarily opening Stage Show first), then it is added to My List the same way as saving from Stage Show (Section 7, AC10).
+- **AC6:** Given a History entry is not yet saved, when the user saves it directly from History (without necessarily opening the Profile Page first), then it is added to My List the same way as saving from the Profile Page (Section 7, AC10).
 - **AC6a:** Given History contains entries, Clear uses a black-at-10%-opacity background and Clear All remains hidden. Clear displays empty checkboxes for manual selection and changes to Cancel until selection is exited. A floating trash-can icon and Delete label appear above the bottom navigation, stay disabled without a selection, and remove the selected entries from local History when tapped.
 
 ### Data Synchronization
@@ -224,7 +227,7 @@ Web-search bottle attributes use an eager fetch: the same call that produces the
 **Purpose:** The user's saved wines, with an optional personal rating and notes.
 
 ### Navigation & Display
-- **AC1:** Given the user taps `Save` on Stage Show (Section 7, AC10) or saves directly from a History entry (Section 8, AC6), when this happens, then the wine is added to My List, with rating and notes optional at that point. Simply viewing a suggestion or opening Stage Show does not save it.
+- **AC1:** Given the user taps `Save` on the Profile Page (Section 7, AC10) or saves directly from a History entry (Section 8, AC6), when this happens, then the wine is added to My List, with rating and notes optional at that point. Simply viewing a suggestion or opening the Profile Page does not save it.
 - **AC2:** Given My List contains at least one entry, when the My List screen opens, then entries are listed. **Sort order not yet defined — suggest most-recently-saved first, pending confirmation.**
 
 ### Data & Content
@@ -240,7 +243,7 @@ Web-search bottle attributes use an eager fetch: the same call that produces the
 - **AC7:** Given a local storage write fails, when this occurs, then an inline error is shown and the save action does not silently fail.
 
 ### Empty States
-- **AC8:** Given no saved wines exist yet, when My List opens, then an empty state invites saving a wine from Stage Show or History.
+- **AC8:** Given no saved wines exist yet, when My List opens, then an empty state invites saving a wine from the Profile Page or History.
 
 **Open assumptions:**
 - Sort order for My List — not yet defined.
@@ -256,17 +259,16 @@ Surfaced here for validation before development starts:
 2. Splash model progress is resolved: network download uses byte percentage, while local checking and SHA-256 verification use indeterminate progress.
 3. Main Conversation: exact routing heuristic for on-device → cloud escalation.
 4. Main Conversation: cheese pairing assumed to be a dedicated action, not free-text intent parsing.
-5. Main Conversation: exact styling and visual treatment of the bottle-tile section.
-6. Main Conversation: whether a prompt with no extractable country or province should skip directly to web resolution when Gemma leaves variety/region unknown.
-7. Main Conversation: whether structured query extraction and History's `Your Request:` extraction should share one mechanism or remain separate.
-8. Main Conversation: behavior when Kaggle has no bottle matches and the alternative-options web search is unavailable.
-9. Stage Show: initial toggle position when a Kaggle-sourced tile is opened.
-10. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
-11. History: date-grouping granularity — assumed per-day.
-12. My List: sort order for the list.
-13. My List: confirmation step assumed required before removing a saved wine.
-14. **Scope confirmation:** location/price lookup (Google Places), discussed earlier in this project, is not part of these five MVP screens — confirm this is an intentional deferral.
-15. Final system prompt. The current structured-output instruction is implementation scaffolding and has not been approved as the final product prompt.
+5. Main Conversation: exact styling and visual treatment of the wine option-card section.
+6. Main Conversation: whether structured query extraction and History's `Your Request:` extraction should share one mechanism or remain separate.
+7. Main Conversation: selection and ranking criteria for choosing up to three web-search-sourced options, which have no Kaggle points.
+8. Data storage: whether the new `country` field maps onto the existing `variety` + `province` Room key or requires a distinct Room column.
+9. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
+10. History: date-grouping granularity — assumed per-day.
+11. My List: sort order for the list.
+12. My List: confirmation step assumed required before removing a saved wine.
+13. **Scope confirmation:** location/price lookup (Google Places), discussed earlier in this project, is not part of these five MVP screens — confirm this is an intentional deferral.
+14. Final system prompt. The current structured-output instruction is implementation scaffolding and has not been approved as the final product prompt.
 
 ---
 
@@ -278,8 +280,8 @@ Implemented on native Android with Kotlin and Jetpack Compose:
 - Offline LiteRT-LM conversation inference after model installation
 - Shared Chat/History/My List header with left-side page title and right-aligned Uncork branding, Chat empty state, conversation thread, input composer, dark status-bar treatment, and labeled bottom navigation
 - 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
-- Full-screen Stage Show navigation and layout, structured AI profile parsing, pairing action, saved state, and 10-dot rating interaction
-- Persistent on-device History storage, date-grouped History list, Chat/History tab navigation, preserved in-session Chat state, and Stage Show entry navigation
+- Full-screen Profile Page navigation and layout, structured AI profile parsing, pairing action, saved state, and 10-dot rating interaction
+- Persistent on-device History storage, date-grouped History list, Chat/History tab navigation, preserved in-session Chat state, and Profile Page entry navigation
 - Room-backed `VarietyRegionProfile` storage with a variety/province composite key, JSON flavor-note conversion, batch and single-row inserts, exact lookup repository, and off-main-thread seed-on-empty startup logic
 
 Not yet complete:
@@ -287,12 +289,12 @@ Not yet complete:
 - Final product-owned system prompt
 - Frank Ruhl Libre font bundling
 - Inclusion and device-level verification of the `variety_region_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
-- Expansion of structured query extraction to include country, province, and user-stated attribute descriptors
-- Gemma → Kaggle → web variety/region resolution, including the offline `Retry` / `Decline` path
-- Kaggle bottle matching, multi-tile chat responses, genuine `points` ratings, and per-tile Stage Show navigation
-- Web-search alternative tiles with eager attribute fetching and runtime `web_search` profile caching
-- AI-sourced/Kaggle Stage Show behavior described in Section 7; current conditional toggle UI is only an unvalidated scaffold
-- Cloud routing, web search, and winery verification
+- Gemma's three-part conversational response with distinct variety, country, and region values in its recommendation and hidden attribute profile
+- Automatic Kaggle variety-country-region or original-query keyword matching, top-three-by-points selection, reviewer summaries, and per-card Profile Page navigation
+- In-scope web fallback after either Kaggle query misses, including up to three web options, country resolution, and runtime `web_search` profile write-back to Room
+- Room schema decision and implementation for persisting the distinct country field
+- Static, single-source Profile Page behavior described in Section 7, including `Unknown` placeholders and removal of the current comparison-toggle scaffold
+- Cloud routing, category-data web search, web-option selection rules, and the separate winery-verification search path
 - Personal ratings and notes in My List
-- Real model-generated cheese pairing on Stage Show; the current Stage Show result is placeholder copy
-- Physical-device execution of the Stage Show instrumentation tests and final responsive visual QA
+- Real model-generated cheese pairing on the Profile Page; the current Profile Page result is placeholder copy
+- Physical-device execution of the Profile Page instrumentation tests and final responsive visual QA
