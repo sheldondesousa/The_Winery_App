@@ -42,13 +42,13 @@ body          (string: single value | range | optional trailing * | Unknown)
 tannin        (string: single value | range | optional trailing * | Unknown)
 acidity       (string: single value | range | optional trailing * | Unknown)
 flavor_notes  (2-4 short tags)
-review_summary (nullable string, 1-2 sentences)
+review_summary (nullable string, full untruncated Kaggle review text)
 web_summary   (nullable string, 1-2 sentences)
 ```
 
 Critic `rating` is a nullable integer reserved for the Kaggle `points` field. It is not requested from or populated by Gemma.
 
-`review_summary` is populated only when the app matches a real Kaggle review. Gemma and the web-search fallback never populate it.
+`review_summary` is populated only when the app matches a real Kaggle review. It retains the full, untruncated review text with no sentence or character cap. Gemma and the web-search fallback never populate it. `web_summary` remains limited to a short AI-synthesized paraphrase.
 
 `web_summary` is populated only for an option resolved through the existing web-search fallback after Kaggle misses or fails under AC10e or AC10f. It is an AI-synthesized paraphrase of the search findings, never verbatim source-page text. Gemma suggestions and Kaggle matches never populate it. This does not add a new user action or allow web search to run when Kaggle has returned matches.
 
@@ -83,10 +83,22 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
 - The repository supports exact country/province/variety lookup. When no cached option exists, the live chat fallback writes the resolved profile and first usable web option through the Room pipeline under source `web_search`, replacing any previously cached row for that combination. When a cached first-position option already exists, supplementary live results do not replace or update it. Only one option is cached per profile row; caching supplementary options would require a separate linked table and is outside this design.
 - The profile table does not provide critic ratings. Those come only from a matched genuine Kaggle `points` value.
 
+### Kaggle duplicate-wine aggregation
+
+Before the Kaggle database is made available to the app, exact duplicate source rows with both identical `name` and identical review text are removed so the same review is never counted or displayed twice. The remaining rows are grouped as the same wine when all five fields match: `name`, `winery`, `country`, `province`, and `variety`.
+
+- A group containing one review passes through unchanged.
+- A group containing multiple distinct reviews becomes one database row.
+- The merged `points` value is the average of all non-null contributing points, rounded to the nearest whole number. It is `null` when every contributing points value is null.
+- The merged `review_summary` contains every distinct contributing review in source order, labeled and separated as `Review 1: … || Review 2: … || Review 3: …`. Reviews are not dropped, shortened, or summarized.
+- Ranking under AC6c and AC-KaggleRanking-Nulls uses the merged points value.
+
+The 15 September 2026 database build started with 119,928 cleaned rows, merged 688 wines that had multiple distinct reviews, and produced 119,030 final rows.
+
 ### Response-source rules
 
 - Gemma produces the initial recommendation. Kaggle then searches either its resolved country-province-variety or, when any of those values is `Unknown`, the original user-query keywords.
-- Kaggle options may supply a real winery, critic points, and reviewer summary. More than three matches are reduced using `ORDER BY points DESC, winery ASC`, making winery alphabetical order the deterministic tiebreak for tied or null points.
+- Kaggle options may supply a real wine name, winery, post-aggregation critic points, and full reviewer text. More than three matches are reduced using `ORDER BY points DESC, winery ASC`, making winery alphabetical order the deterministic tiebreak for tied or null points.
 - Either Kaggle search returning no matches or failing technically triggers the category-data fallback. When an exact profile is available, the app first checks Room for its cached option and may supplement it with live results; otherwise it runs the full web search. Newly found web options retain the search engine's result order. On a full search, the first option is cached. On a supplementary search, the existing cached option remains first and the new options are session- and History-only. Each web option receives its own AI-synthesized `web_summary`. Web options never receive critic rating or review summary values.
 - A separate winery-verification web search may verify a specific Kaggle winery for the Profile Page badge.
 - No citations or source-switch controls are displayed in the response and detail flow.
@@ -139,7 +151,7 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
   - **AC5a:** Given the user explicitly requests a cheese pairing, then a cheese suggestion is appended in the same casual tone.
 
 ### Wine options
-- **AC6:** Given Kaggle or the web-search fallback returns one or more matches, when the app displays them, then up to three option cards render inline in the chat thread. Each card shows only winery and rating, displaying `Unknown` for either unresolved field.
+- **AC6:** Given Kaggle or the web-search fallback returns one or more matches, when the app displays them, then up to three option cards render inline in the chat thread. Each card shows the wine's name, winery, and rating, displaying `Unknown` for any unresolved field.
   - **AC6a:** Given the user taps an option card, when tapped, then the app navigates to the Profile Page with that option's full field set. Opening a card does not save it.
   - **AC6b:** Given an option matches a wine already in My List, when it appears in the thread, then it shows the existing personal rating or a `Saved` annotation if unrated, with tap-through access to the saved record and notes.
   - **AC6c:** Given more than three Kaggle matches exist, then the app displays the first three from `ORDER BY points DESC, winery ASC`. Winery alphabetical order is the deterministic tiebreak for tied or null points.
@@ -206,7 +218,7 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
   - `rating`
   - `review_summary`
   - `web_summary`
-- **AC4a:** Given the entry came from a Kaggle option, when rendered, then winery, rating, and review summary display resolved values where the matched Kaggle record supplies them, while web summary displays as `Unknown`.
+- **AC4a:** Given the entry came from a Kaggle option, when rendered, then winery, rating, and the full untruncated review summary display resolved values where the matched Kaggle record supplies them. When duplicate-wine aggregation combined multiple reviews, the labeled concatenation is displayed without dropping or shortening any review. Web summary displays as `Unknown`.
 - **AC4b:** Given the entry came from Gemma's own suggestion without a matched option, when rendered, then winery, rating, review summary, and web summary display as `Unknown`; they are not omitted from the layout.
 - **AC4c:** Given the entry came from a web-search-sourced option under Section 6, AC10g, when rendered, then winery, variety, country, province, web summary, and other attributes display where the search resolved them. Web summary is labeled `AI summary` and is visually distinct from the `Critic review` treatment used for review summary. Rating and review summary display as `Unknown` because both are reserved for a real Kaggle match.
 - **AC4d:** Given `body`, `tannin`, or `acidity` contains the internal trailing `*` thin-evidence marker, whether from fewer than three supporting Kaggle reviews or a web-derived synthesis, when the Profile Page renders that value, then it displays the plain-language annotation `Insufficient data` near the value using the same treatment for either source. The raw `*` character is not shown to the user. The exact caption, tooltip, or icon treatment remains to be defined.
@@ -320,7 +332,7 @@ Not yet complete:
 - Frank Ruhl Libre font bundling
 - Inclusion and device-level verification of the renamed `country_province_variety_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
 - Gemma's three-part conversational response with distinct variety, country, and province values in its recommendation and hidden attribute profile
-- Automatic Kaggle country-province-variety or original-query keyword matching, cascade-on-error behavior, deterministic `points DESC, winery ASC` selection with explicit nulls-last handling outside SQLite, reviewer summaries, and per-card Profile Page navigation
+- Automatic Kaggle country-province-variety or original-query keyword matching, cascade-on-error behavior, duplicate-wine aggregation, deterministic `points DESC, winery ASC` selection with explicit nulls-last handling outside SQLite, full reviewer text, wine names on option cards, and per-card Profile Page navigation
 - In-scope web fallback after either Kaggle query misses or fails, including per-option `web_summary` synthesis, first-result persistence, thin-evidence attribute markers, cached-first behavior, supplementary search degradation, and the distinct no-connection path
 - Expansion of the Room entity, DAO lookup, and composite key from variety/province to country/province/variety; storage of one cached web option; runtime `web_search` write-back; and the related migration and tests
 - Static, single-source Profile Page behavior described in Section 7, including ranged attribute strings, thin-evidence annotations, `Unknown` placeholders, and removal of the current comparison-toggle scaffold
