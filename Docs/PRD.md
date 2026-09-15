@@ -38,9 +38,9 @@ winery
 variety
 country       (nullable string)
 province
-body          (light | medium | full | Unknown)
-tannin        (low | medium | high | Unknown)
-acidity       (low | medium | high | Unknown)
+body          (string: single value | range | optional trailing * | Unknown)
+tannin        (string: single value | range | optional trailing * | Unknown)
+acidity       (string: single value | range | optional trailing * | Unknown)
 flavor_notes  (2-4 short tags)
 review_summary (nullable string, 1-2 sentences)
 web_summary   (nullable string, 1-2 sentences)
@@ -55,6 +55,20 @@ Critic `rating` is a nullable integer reserved for the Kaggle `points` field. It
 All profile keys are static on the Profile Page. The full field set—variety, country, province, body, tannin, acidity, flavor notes, winery, rating, review summary, and web summary—always renders regardless of source. Unrecognized or unresolved fields render as `Unknown` rather than being guessed or omitted. `Unknown` is styled in muted or secondary text, visually distinct from resolved values.
 
 `country` is a distinct schema field immediately before `province`. Gemma, a Kaggle match, or the web-search fallback may resolve it through the same flow used for variety and province.
+
+### Attribute value shapes
+
+`body`, `tannin`, and `acidity` are plain strings rather than fixed enums. Each can use one of these shapes, regardless of whether its source is `kaggle_derived` or `web_search`:
+
+| Shape | Example | Meaning |
+|---|---|---|
+| Single value | `high` | One category clearly dominates the available evidence. |
+| Range | `light to full` | Multiple categories, each representing at least 20% of the group's matched signal, show that the country-province-variety combination spans a genuine range. |
+| Single value, thin evidence | `medium*` | Only one category is present, backed by fewer than three Kaggle reviews or by one AI web synthesis. |
+| Range, thin evidence | `light to full*` | A range in which at least one contributing category has thin support. |
+| Unknown | `Unknown` | No usable signal was found. |
+
+Implementations must preserve these strings as supplied. They must not model the fields as a Kotlin enum, sealed class, or another type restricted to `light`, `medium`, `full`, and `Unknown`.
 
 For category-level requests such as "Malbec," the AI may use learned knowledge to provide typical variety characteristics even when no exact bottle is identified. Bottle-specific winery, vintage, critic rating, or provenance claims remain `Unknown` unless a separate source supplies them. Critic rating must come from a real Kaggle match.
 
@@ -184,9 +198,9 @@ The app has a growing on-device Room table named `VarietyRegionProfile`, keyed b
   - `variety`
   - `country`
   - `province`
-  - `body` (light | medium | full | Unknown)
-  - `tannin` (low | medium | high | Unknown)
-  - `acidity` (low | medium | high | Unknown)
+  - `body` (single value | range | optional trailing `*` | Unknown)
+  - `tannin` (single value | range | optional trailing `*` | Unknown)
+  - `acidity` (single value | range | optional trailing `*` | Unknown)
   - `flavor_notes`
   - `winery`
   - `rating`
@@ -309,7 +323,7 @@ Not yet complete:
 - Automatic Kaggle country-province-variety or original-query keyword matching, cascade-on-error behavior, deterministic `points DESC, winery ASC` selection with explicit nulls-last handling outside SQLite, reviewer summaries, and per-card Profile Page navigation
 - In-scope web fallback after either Kaggle query misses or fails, including per-option `web_summary` synthesis, first-result persistence, thin-evidence attribute markers, cached-first behavior, supplementary search degradation, and the distinct no-connection path
 - Expansion of the Room entity, DAO lookup, and composite key from variety/province to country/province/variety; storage of one cached web option; runtime `web_search` write-back; and the related migration and tests
-- Static, single-source Profile Page behavior described in Section 7, including `Unknown` placeholders and removal of the current comparison-toggle scaffold
+- Static, single-source Profile Page behavior described in Section 7, including ranged attribute strings, thin-evidence annotations, `Unknown` placeholders, and removal of the current comparison-toggle scaffold
 - Cloud routing, category-data web search, first-result option selection, and the separate winery-verification search path
 - Personal ratings and notes in My List
 - Real model-generated cheese pairing on the Profile Page; the current Profile Page result is placeholder copy
