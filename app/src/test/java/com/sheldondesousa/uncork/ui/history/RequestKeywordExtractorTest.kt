@@ -11,7 +11,7 @@ class RequestKeywordExtractorTest {
             name = "Catena Malbec",
             winery = "Catena Zapata",
             variety = "Malbec",
-            region = "Mendoza, Argentina",
+            province = "Mendoza, Argentina",
         )
 
         val keywords = RequestKeywordExtractor.extract(
@@ -30,7 +30,7 @@ class RequestKeywordExtractorTest {
         val suggestion = WineSuggestion(
             name = "Cloudy Bay Sauvignon Blanc",
             variety = "Sauvignon Blanc",
-            region = "Marlborough, New Zealand",
+            province = "Marlborough, New Zealand",
             acidity = "High",
         )
 

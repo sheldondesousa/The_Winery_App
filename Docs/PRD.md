@@ -2,14 +2,14 @@
 
 **Status:** Draft
 **Author:** Sheldon
-**Last updated:** 15 September 2026
+**Last updated:** 17 September 2026
 **Platform:** Android only, native (Kotlin) — matches your Pixel 10 Pro Fold
 **On-device model:** Gemma 4 E2B instruction-tuned LiteRT-LM bundle, downloaded from Hugging Face on first launch and stored in private app storage (not Gemini Nano/AICore)
 **User:** Personal use (single user); BYOK model if ever shared
 
 ## 1. Overview
 
-A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Gemma generates the initial suggestion from its trained knowledge: a variety, its best or most popular country and province, and a flavor and attribute summary. Complex or high-stakes queries may still escalate to a cloud LLM. If Gemma resolves variety, country, and province, the app searches Kaggle with that combination for up to three real-world options. If any of those fields is `Unknown`, it searches Kaggle using keywords from the original user query. A Kaggle keyword hit fills Gemma's missing fields and supplies up to three options. Either Kaggle search falling to zero matches triggers an in-scope live web search, which resolves variety, country, province, and other fields where possible and supplies up to three web options. Kaggle therefore follows and depends on Gemma's response rather than acting as an independent comparison. Newly resolved web-search profile data is written to the growing on-device `VarietyRegionProfile` Room table with source `web_search`.
+A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Gemma leads a fixed three-question onboarding sequence covering wine type, country, and other attributes; explicit lack-of-preference answers are valid and ambiguous answers are clarified at the current step. Kotlin renders Gemma's visible output, retains lightweight field coverage, and orchestrates the Kaggle, cache, and web data sources. When all three questions close, Gemma emits one full preference snapshot and structured recommendation context, and the app queries Kaggle immediately. Kaggle results are followed by an offer to run a broader web search. A Kaggle miss follows AC10e and AC10f. Newly resolved web-search profile data is written to the growing on-device `VarietyRegionProfile` Room table with source `web_search`.
 
 ## 2. MVP Scope
 
@@ -42,6 +42,7 @@ body          (string: single value | range | optional trailing * | Unknown)
 tannin        (string: single value | range | optional trailing * | Unknown)
 acidity       (string: single value | range | optional trailing * | Unknown)
 flavor_notes  (2-4 short tags)
+summary        (nullable string, Gemma only, fewer than 200 characters)
 review_summary (nullable string, full untruncated Kaggle review text)
 web_summary   (nullable string, 1-2 sentences)
 ```
@@ -52,7 +53,9 @@ Critic `rating` is a nullable integer reserved for the Kaggle `points` field. It
 
 `web_summary` is populated only for an option resolved through the existing web-search fallback after Kaggle misses or fails under AC10e or AC10f. It is an AI-synthesized paraphrase of the search findings, never verbatim source-page text. Gemma suggestions and Kaggle matches never populate it. This does not add a new user action or allow web search to run when Kaggle has returned matches.
 
-All profile keys are static on the Profile Page. The full field set—variety, country, province, body, tannin, acidity, flavor notes, winery, rating, review summary, and web summary—always renders regardless of source. Unrecognized or unresolved fields render as `Unknown` rather than being guessed or omitted. `Unknown` is styled in muted or secondary text, visually distinct from resolved values.
+`summary` is populated only for Gemma recommendations. It contains a few concise descriptive lines about the recommendation and stays below 200 characters. Kaggle and web-search options never populate it.
+
+The Profile Page renders the shared factual fields for every option, followed by exactly one source-specific narrative field: `Summary` for Gemma, `Critic Review` for Kaggle, or `Web Summary` for a cached or live web-search option. The other two narrative fields are omitted rather than displayed together or shown as `Unknown`. Unrecognized or unresolved shared fields render as `Unknown` rather than being guessed. `Unknown` is styled in muted or secondary text, visually distinct from resolved values.
 
 `country` is a distinct schema field immediately before `province`. Gemma, a Kaggle match, or the web-search fallback may resolve it through the same flow used for variety and province.
 
@@ -97,9 +100,10 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 
 ### Response-source rules
 
-- Gemma produces the initial recommendation. Kaggle then searches either its resolved country-province-variety or, when any of those values is `Unknown`, the original user-query keywords.
+- Gemma targets three valid structured recommendations as lookup context. Once Q1-Q3 close, the app queries the enthusiast database immediately rather than displaying Gemma cards first.
+- Kaggle cards trigger an optional offer for a broader web search. A Kaggle miss proceeds to the web-search layer automatically. Every later layer excludes cards already shown.
 - Kaggle options may supply a real wine name, winery, post-aggregation critic points, and full reviewer text. More than three matches are reduced using `ORDER BY points DESC, winery ASC`, making winery alphabetical order the deterministic tiebreak for tied or null points.
-- Either Kaggle search returning no matches or failing technically triggers the category-data fallback. When an exact profile is available, the app first checks Room for its cached option and may supplement it with live results; otherwise it runs the full web search. Newly found web options retain the search engine's result order. On a full search, the first option is cached. On a supplementary search, the existing cached option remains first and the new options are session- and History-only. Each web option receives its own AI-synthesized `web_summary`. Web options never receive critic rating or review summary values.
+- Either Kaggle search returning no matches or failing technically triggers the cache lookup. A usable cached option stops the chain. When the cache also misses, the app runs the full web search. Newly found web options retain the search engine's result order, and the first option is cached. Each web option receives its own AI-synthesized `web_summary`. Web options never receive critic rating or review summary values.
 - A separate winery-verification web search may verify a specific Kaggle winery for the Profile Page badge.
 - No citations or source-switch controls are displayed in the response and detail flow.
 
@@ -132,26 +136,61 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 
 ## 6. Main Conversation Screen
 
-**Purpose:** Single chat-style interface, casual and personable in tone. Gemma supplies the initial recommendation, which automatically drives a Kaggle search and the defined fallback chain. The detailed profile lives on the Profile Page.
+**Purpose:** Single chat-style interface, casual and personable in tone. Each cycle targets three option cards and requires at least one. Gemma is attempted first, followed by Kaggle and the web-search layer when the preceding source has no valid card. The detailed profile loads on the Profile Page.
 
 ### Navigation & Display
 - **AC1:** Given the app has passed splash, when the Main Conversation Screen loads, then a persistent text input is displayed at the bottom of the screen.
+  - **AC1a:** Given a new conversation opens, then UnCork briefly introduces itself as the user's personal sommelier and immediately asks whether they want **red**, **rosé**, **white**, **sparkling**, **sweet**, or **fortified** wine. The six options are bold so the first critical filter is clear without an open-ended introductory question.
+  - **AC1b:** Given the launch greeting is already visible, when Gemma generates any later response, then it does not introduce itself again.
 - **AC2:** Given a prior response exists in the current session, when the screen renders, then the conversation thread displays above the input, most recent at the bottom.
   - **AC2a:** Given the app is closed and reopened (a new session), when the Main Conversation Screen loads, then the screen starts fresh — the previous session's suggestions are not shown inline, but remain accessible under History (Section 8), grouped by date.
   - **AC2b:** Given the LLM can produce any number of suggestions within one session, when the user's query shifts to a different topic within the same session, then earlier suggestion cards remain visible in the thread rather than being cleared or collapsed.
 
 ### Content Tone
-- **AC3:** Given a query is submitted, when Gemma responds, then the response consists of three parts in order: a warm greeting acknowledging the query; a suggested variety and its best or most popular country and province; and a casual-prose summary of flavor notes, tannin, acidity, and body.
-- **AC3a:** Given Gemma's suggestion is generated, when the app checks whether variety, country, and province were all resolved under AC10, then it automatically searches Kaggle immediately afterward. It uses the resolved country-province-variety when all three values are known, or keywords from the original user query when any value is `Unknown`, with no separate user action.
+- **AC3:** Given a query contains enough relevant wine information, when Gemma responds successfully, then it returns exactly three distinct lightweight card records in one hidden `[WINE_CARDS]` JSON array. Each record contains `name`, `variety`, `country`, `province`, and a relevant `summary` of fewer than 200 characters. Gemma must choose options for which both name and country are known; neither mandatory field may be `Unknown`. Variety and province may be `Unknown`.
+- **AC3a:** Given Gemma closes Q1, Q2, and Q3 and returns its final structured response, then the app uses the accumulated request and resolved card fields to query Kaggle immediately. Gemma's cards provide lookup context but are not displayed before this handoff.
+- **AC3b:** Given all fields in the fixed question set are closed (Q1: type, Q2: country, Q3: other attributes), when Gemma generates that turn's final response, then it emits the full preference snapshot once and the app proceeds immediately to the Kaggle search. The app does not wait for a separate enthusiast-search confirmation at this point.
+- **AC3c:** Given Gemma is generating its response, then visible prose streams into a temporary assistant message as tokens arrive. Hidden coverage, snapshot, and card data never appears in the thread. Once the final structured response is parsed, Kotlin uses it as Kaggle lookup context and displays the resulting source cards.
+- **AC3d:** Given a new conversation begins, the fixed launch greeting introduces UnCork and presents the six primary wine types. Every user reply after that greeting is sent directly to Gemma. Gemma tracks answered questions and leads the remaining onboarding conversation one question at a time: wine type, country, then body, tannin, acidity, or flavor. Onboarding questions and clarification responses produce no visible wine cards and do not trigger Kaggle or web search.
+- **AC3e:** Given Gemma has already used a conversational acknowledgement or filler in the current thread, when it handles a later clarification answer, then it asks the next question directly and does not repeat that filler. Phrases such as "That's a good starting point," "Great choice," and "Sounds good" must not recur across consecutive clarification turns.
+- **AC3e-1:** Given Gemma or the app asks any question containing selectable answers, then every option is individually formatted in bold Markdown. This is a hard rule covering the launch wine types, the second clarification, repeated clarifications, explanatory follow-ups, and every other question with alternatives. Surrounding prose and punctuation remain unbolded; a question containing an unbolded selectable option is invalid.
+- **AC3f:** Given the user supplies `no preference`, `surprise me`, `choose for you`, or an equivalent uncertainty or lack-of-preference answer at an applicable onboarding step, then Gemma treats it as a valid answer and advances without demanding specificity. Directional answers are retained for later fallback searches.
+- **AC3g:** Given the user gives a genuinely uninterpretable answer to an onboarding question, then Gemma keeps the current question pending and asks one concise clarification. Kotlin does not classify or rewrite the user's conversational answer.
+- **AC3g-1:** Given Gemma asks about wine attributes, when it presents the choice, then it uses terms such as body, tannin, and acidity and offers to explain unfamiliar terms.
+- **AC3h:** Gemma owns conversational decisions, including deviations, revised answers, uncertainty, clarification, and the three sequential onboarding questions. Kotlin does not classify or rewrite the user's message; it prepends the current field coverage described in AC3i. Kotlin continues to own structured-output parsing, card rendering, and fallback execution.
+- **AC3i:** Kotlin holds session-only field coverage for Q1, Q2, and Q3. Before completion, each Gemma turn emits a hidden `[FIELD_COVERAGE]` block and Kotlin feeds the latest coverage back on the next turn. Kotlin does not request or require the full preference snapshot while any question remains open. Once Q1–Q3 are all closed, Gemma emits one full `[STATE_SNAPSHOT]` containing `type`, `country`, `body`, `tannin`, `acidity`, `variety`, `flavor`, and `occasion`. Coverage and snapshot state are never written to Room and reset with the conversation session.
+- **AC3j:** Kotlin removes `[FIELD_COVERAGE]`, `[STATE_SNAPSHOT]`, `[WINE_CARDS]`, `[NEEDS_CLARIFICATION]`, and `[OUT_OF_SCOPE]` control content before rendering Gemma text. Clarification, digression, out-of-scope, and onboarding turns never show cards or trigger a fallback source. A valid all-closed coverage block is the only signal that the question set is complete and that AC3b may run.
+- **AC3k:** Given final Gemma cards are parsed, Kotlin compares every resolved snapshot field represented in the card (`type`, `country`, `body`, `tannin`, `acidity`, `variety`, `flavor`, and `occasion`) with the corresponding response field. `Unknown` snapshot values impose no constraint, so unspecified attributes returned by Gemma remain valid. A mismatched card is discarded without replacement and the log names the mismatched field.
+- **AC3l:** Given Gemma misses or mangles a hidden marker, Kotlin keeps extraction strict and does not guess state from the near miss. Independently, the display sanitizer removes fenced structured blocks, brace-delimited objects containing multiple key-value pairs, and near-miss snapshot or card labels so raw JSON never appears in the conversation. The prior valid snapshot remains active.
+- **AC3m:** Given Gemma asks Q2, Q3, or another question with choices, then bold text identifies real selectable values such as **France**, **Italy**, **light**, **full**, **low**, or **high**. A field label such as country, body, or tannin is never formatted as though it were itself a selectable answer.
+- **AC3n:** The former mandatory recap-and-confirmation turn is retired. Closing Q3 completes the fixed question set, produces the one full snapshot, and triggers AC3b immediately. A later correction reopens the affected coverage field and prevents another completed handoff until Gemma closes the revised field.
+
+### Field Coverage Tracking
+
+**Purpose:** Determine when Gemma has gathered enough information to complete the fixed question sequence while allowing wine-related digressions.
+
+- **AC-Cov1:** Given each conversational turn before completion, when Gemma generates its response, then it emits lightweight `clarify` or `closed` coverage for Q1, Q2, and Q3 in `[FIELD_COVERAGE]`. This replaces full snapshot generation until all three questions are closed.
+- **AC-Cov2:** Gemma classifies the current answer using question-specific criteria:
+  - **Q1 — type:** `closed` when the answer semantically identifies a recognized wine type such as red, white, rosé, sparkling, sweet/dessert, or fortified, including a clear synonym or description. Otherwise it remains `clarify`.
+  - **Q2 — country:** `closed` when the answer identifies a real wine-producing country or clearly implies one, such as `France` or `something Italian`. Otherwise it remains `clarify`.
+  - **Q3 — other attributes:** `closed` when the answer supplies at least one valid body, tannin, acidity, or flavor descriptor, or explicitly declines or states no preference. Otherwise it remains `clarify`.
+  - A `closed` answer advances to the next open question. A `clarify` answer repeats the current question and does not advance.
+- **AC-Cov3:** Given a field closes through an explicit decline or no-preference answer, then its eventual snapshot value remains `Unknown`; this does not block completion.
+- **AC-Cov4:** Given Q1, Q2, and Q3 are all `closed`, then Gemma's response is the final recommendation turn and AC3b applies.
+- **AC-Cov5:** Given one user message supplies answers for multiple questions, then Gemma closes every applicable question on that turn and triggers AC3b immediately when none remain open.
+- **AC-Cov6:** Given the user revises a previously closed answer in the same session, then the affected field reopens while Gemma applies the correction. AC3b does not fire again until all coverage fields are closed under the revised understanding.
+- **AC-Cov8 — digression:** Given the user asks about wine, the wine market, or the wine industry instead of answering the current question, then Gemma answers briefly from its own expertise and repeats the interrupted question. Coverage does not change.
+- **AC-Cov9 — off-domain:** Given the user asks something outside wine, the wine market, or the wine industry, then Gemma states that this falls outside its expertise and that it can help with those wine domains, then repeats the interrupted question. Coverage does not change.
+- **AC-Cov10 — attribute discretion:** Given `body`, `tannin`, `acidity`, or `flavor` remains `Unknown` in the final snapshot, then Gemma, Kaggle, and web search may return any value for it. Given one of these attributes is resolved, each subsequent source treats it as a filter. `flavor` is used for display or ranking rather than SQL equality because it is multi-valued. Variety, country, and province remain governed by AC10.
 
 ### Data & Content
 - **AC4:** Given a query is assessed as high-stakes or complex per the routing logic, when this is detected, then the query is escalated to the cloud LLM. The response stays in the same casual tone; escalation is not called out with a visible badge in the thread.
-- **AC4a:** Given Gemma is asked to produce a structured profile, then its hidden output includes `variety`, `country`, `province`, `body`, `tannin`, `acidity`, and `flavor_notes`. The machine-readable payload is removed before the response is displayed. Gemma does not produce `rating`, `review_summary`, or `web_summary`.
+- **AC4a:** Given Gemma is asked for recommendations in Chat, then its hidden `[WINE_CARDS]` output contains `name`, `variety`, `country`, `province`, and a descriptive `summary` of fewer than 200 characters; it does not generate winery, rating, or review information. Given a Gemma card's Profile Page opens, the summary displays immediately while a separate on-device request preserves the card fields and resolves `body`, `tannin`, `acidity`, `flavor_notes`, and `suggested_pairing`. `suggested_pairing` remains `Unknown` unless the original request explicitly asked for a food or cheese pairing. Gemma never produces `winery`, `rating`, `review_summary`, `web_summary`, or `confidence` in the full profile.
 - **AC5:** Given cheese is not requested, when a response is generated, then no cheese pairing is included by default.
   - **AC5a:** Given the user explicitly requests a cheese pairing, then a cheese suggestion is appended in the same casual tone.
 
 ### Wine options
-- **AC6:** Given Kaggle or the web-search fallback returns one or more matches, when the app displays them, then up to three option cards render inline in the chat thread. Each card shows the wine's name, winery, and rating, displaying `Unknown` for any unresolved field.
+- **AC6:** Given Gemma, Kaggle, the cache, or the web-search fallback returns one or more matches, when the app displays them, then the permitted number of option cards render inline in the chat thread. Each card shows the wine name; the winery when available; and origin formatted as `Country, Province`, displaying `Unknown` for either unresolved origin field. Critic rating remains available on the Profile Page and is not shown on the option card.
   - **AC6a:** Given the user taps an option card, when tapped, then the app navigates to the Profile Page with that option's full field set. Opening a card does not save it.
   - **AC6b:** Given an option matches a wine already in My List, when it appears in the thread, then it shows the existing personal rating or a `Saved` annotation if unrated, with tap-through access to the saved record and notes.
   - **AC6c:** Given more than three Kaggle matches exist, then the app displays the first three from `ORDER BY points DESC, winery ASC`. Winery alphabetical order is the deterministic tiebreak for tied or null points.
@@ -160,34 +199,35 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 
 ### Error Handling
 - **AC7:** Given a cloud LLM call or live web search fails, when this occurs, then an inline error is shown in the thread with a retry option in the same casual tone. No fabricated content is displayed in place of the failed operation.
-  - **AC7a:** A Kaggle query failure does not use this error pattern. It proceeds to the web fallback under AC10e or AC10f in the same way as a clean zero-match result; Kaggle never stops the response on its own.
+  - **AC7a:** A Kaggle query failure does not use this error pattern. It proceeds to the cache lookup and then the web fallback under AC10e or AC10f in the same way as a clean zero-match result; Kaggle never stops the response on its own.
   - **AC7b:** AC10j also does not use the retry pattern when the web search cannot be reached because the device has no internet connection and no cached option is available. A retry control is not shown because the same action cannot succeed until connectivity returns.
-  - **AC7c:** AC10k does not replace the response with this error pattern when a cached option remains usable. The cached card renders with a short note that additional options could not be found.
+  - **AC7c:** AC10k does not use this error pattern when a cached option is usable. The cached card renders and the chain stops before web search.
 
 ### Empty States
 - **AC8:** Given no query has been submitted yet, when the screen first loads, then an empty state invites the first query via input placeholder text. No fabricated example results are shown.
 
 ### Eventing
-- **AC9:** Given a query is submitted, then log locally: query text length, routing decision, whether Gemma resolved variety, country, and province, which Kaggle query path ran, whether Kaggle missed or failed technically, whether the category-data fallback ran, whether a cached option was used, whether supplementary search degraded to the cached option, whether web data was written to Room, the selected option source, and any winery-verification result. Personal-use MVP — local logging only, no analytics backend.
+- **AC9:** Given a query is submitted, then log locally: query text length, routing decision, how many valid Gemma cards were produced, which Kaggle query path ran, whether Kaggle missed or failed technically, whether cached web data was used, whether live web search ran, whether web data was written to Room, the selected option source, and any winery-verification result. Personal-use MVP — local logging only, no analytics backend.
 
-### Kaggle fallback chain
-- **AC10:** `variety`, `country`, and `province` are mandatory for this flow. Given Gemma's initial response is generated, when evaluated, then the app checks whether all three fields contain resolved values rather than `Unknown`.
-  - **AC10a:** Given all three mandatory fields are resolved, then Kaggle is queried using that country-province-variety.
-  - **AC10b:** Given any mandatory field is `Unknown`, whether partial or full non-resolution, then Kaggle is queried using only keywords from the original user query. The app does not run a hybrid search using the mandatory fields Gemma resolved; those values are discarded for search purposes and may be backfilled from a Kaggle match under AC10d.
-  - **AC10c:** Given the AC10a query returns one or more matches, then up to three option cards are shown under AC6.
-  - **AC10d:** Given the AC10b query returns one or more matches, then all three mandatory fields are backfilled from the matched Kaggle data, including any values Gemma had resolved before the keyword search, and up to three option cards are shown under AC6.
-  - **AC10e:** Given the AC10a query returns zero matches or fails to execute because of a read, parse, or other technical error, then the app proceeds directly to AC10g. It does not retry Kaggle with keywords because Gemma's resolved fields were the best available Kaggle input. A Kaggle technical failure is treated like a clean miss and never halts the response.
-  - **AC10f:** Given the AC10b query returns zero matches or fails to execute, then the app proceeds to the same fallback in AC10g. A Kaggle technical failure is treated like a clean miss.
-  - **AC10g:** Given the fallback runs after AC10e or AC10f, then the following rules apply:
-    - When AC10e triggered the fallback, the app first checks `VarietyRegionProfile` for a cached option at the exact country-province-variety. If one exists, it is shown immediately as the first card with the `web_summary` stored when it was originally cached. When the device is online, a live search also runs for up to two additional options, merged with the cached card to a maximum of three. Each newly found supplementary card receives its own newly synthesized `web_summary`. These supplementary cards and summaries remain in the session and History only; they are not persisted to Room and do not replace or update the cached first card. When the device is offline, only the cached card is shown and AC10j does not apply.
-    - When AC10e triggered the fallback and no cached option exists, the app runs the full web search to resolve variety, country, province, and other fields and find up to three options.
-    - When AC10f triggered the fallback, no resolved combination exists for a cache lookup, so the full web search always runs using the original user-query keywords.
-    - Every newly found web option retains the search engine's result order. Each returned option, up to three, receives its own independently synthesized `web_summary`. Rating and review summary display as `Unknown` for cached and newly found web options because both are reserved for a real Kaggle match. This fallback is part of the MVP.
+### Recommendation fallback chain
+- **AC10:** A displayed card requires `name` and `country`; `winery` and `province` are optional. A clarification response under AC3d is not a Gemma failure. Gemma must return three valid cards to complete its layer. Fewer than three defers immediately to Kaggle. A Kaggle miss proceeds through cached web data to live web search. At least one card is required across the complete flow; otherwise the app displays the polite no-results response in AC10i.
+- **AC10-offer-context:** Given the user accepts a broader-web offer after clarification, the next layer uses the complete accumulated request—not only the final short answer—and excludes every card already shown.
+  - **AC10a:** Given variety, country, and province are all resolved, then Kaggle queries that exact combination. Any resolved `body`, `tannin`, or `acidity` value is applied as an additional filter. `flavor` is excluded from SQL equality filtering and is used only for display or ranking because it is multi-valued. Results remain ordered by points descending and winery ascending and limited to three cards.
+  - **AC10b:** Given the preference-pool query returns no result, Kaggle uses every country, province, or variety value explicitly supplied by the user or shared by all Gemma options as structured search criteria. One shared key produces a one-field lookup, two shared keys produce a two-field lookup, and three shared keys produce a full country-province-variety lookup. If that structured lookup is unavailable or empty, Kaggle searches the ordinary `wine_reviews` columns using bound, case-insensitive keyword parameters because Android's bundled SQLite may not provide FTS5. The app first requires all meaningful terms from the accumulated user request and falls back to an any-term match only when the strict search is empty. If the request-only search is empty, the query expands with resolved Gemma wine names, wineries, countries, provinces, and varieties. User terms take priority over generated terms and Kaggle results remain ordered by points descending and winery ascending. Rosé searches are limited to the wine name and variety fields so tasting-note mentions of rose do not produce the wrong wine type. Resolved values may be backfilled from a Kaggle match under AC10d.
+  - **AC10c:** Given the AC10a query returns one or more matches, then up to three option cards are shown under AC6 and a separate assistant message asks, "Would you like me to run a broader web search?"
+  - **AC10d:** Given the AC10b query returns one or more matches, then country, province, and variety are backfilled from the matched Kaggle data, including any values Gemma had resolved before the keyword search, and up to three option cards are shown under AC6.
+  - **AC10e:** Given the AC10a query returns zero matches or fails, then behavior depends on whether an attribute filter was applied. Without an attribute filter, the app proceeds directly to AC10g without retrying Kaggle with keywords; a technical failure is treated as a clean miss. With a `body`, `tannin`, or `acidity` filter, the app does not fall back to cache or web search. It instead explains in the thread that no match was found for the specified combination and names the applied attribute as the likely limiting factor. No retry control is shown.
+  - **AC10f:** Given the AC10b query returns zero matches or fails to execute, then the app checks the cache when a complete country-province-variety is available; otherwise it proceeds to the web fallback in AC10g. A Kaggle technical failure is treated like a clean miss.
+  - **AC10g:** Given Kaggle and the cache return no usable option, then the following web-search rules apply:
+    - When one or more complete Gemma profiles exist, the app runs the full web search using their resolved country-province-variety information and the original request to find up to three options.
+    - When no complete combination exists, the full web search runs using the original user-query keywords.
+    - Brave search requests bottle-focused recommendation evidence and includes expanded result excerpts. Gemma returns three distinct supported options whenever the evidence contains at least three, otherwise every supported option available up to three. Each returned option receives its own independently synthesized `web_summary`. Rating and review summary remain unset for cached and newly found web options because both are reserved for a real Kaggle match; the Profile Page omits the Critic Review section for these options. This fallback is part of the MVP.
     - The generation that produces each `web_summary` also resolves that option's structured `body`, `tannin`, and `acidity` values. Prose and structured attributes come from one generation step rather than separate calls.
-  - **AC10h:** Given AC10g performs a full live web search because no cached option exists, when it resolves new field-level data and options for a country-province-variety combination, then the app writes the profile and first returned option, including winery, `web_summary`, `body`, `tannin`, `acidity`, and other resolved fields, to `VarietyRegionProfile` with source `web_search`. The write replaces any row for the same `country` + `province` + `variety` composite key. Only that first-position result is cached; the other options remain in the session thread and History entry. Given AC10g instead begins with an existing cached first-position option and runs a supplementary live search, then none of the supplementary results are written to Room. No custom web ranking is applied. Web-derived `body`, `tannin`, and `acidity` values carry the internal trailing `*` thin-evidence marker.
-  - **AC10i:** Given a full web search fails or returns nothing usable, then AC7 applies: the app shows an inline retry error in a casual tone and presents no fabricated content.
-  - **AC10j:** Given AC10g requires a live web search but the device has no internet connection, and either no cached option exists for the resolved country-province-variety or the request followed AC10f with no combination available to look up, then the response plainly explains that web search could not run without a connection and that Gemma's knowledge and the on-device Kaggle data do not contain enough information to answer accurately. The message uses the thread's casual tone and does not show a retry control. When a cached option exists, AC10g's offline branch applies and this failure message is not shown.
-  - **AC10k:** Given AC10g finds a cached option and the device is online, but the supplementary search for up to two additional options fails or returns nothing usable, then the cached card still renders with a short, casual inline note explaining that additional options could not be found. This is not an AC10j offline dead end or an AC10i full failure because a usable cached answer remains available.
+  - **AC10h:** Given AC10g performs a full live web search because no cached option exists, when it resolves new field-level data and options for a country-province-variety combination, then the app writes the profile and first returned option, including winery, `web_summary`, `body`, `tannin`, `acidity`, and other resolved fields, to `VarietyRegionProfile` with source `web_search`. The write replaces any row for the same `country` + `province` + `variety` composite key. Only that first-position result is cached; the other options remain in the session thread and History entry. No custom web ranking is applied. Web-derived `body`, `tannin`, and `acidity` values carry the internal trailing `*` thin-evidence marker.
+  - **AC10i:** Given the web-search layer fails or returns no valid card after Gemma and Kaggle also failed, then the app politely states that it could not find relevant information for the request. It presents no fabricated card.
+  - **AC10j:** Given AC10g requires a live web search but the device has no internet connection, then the response plainly explains that web search could not run without a connection and that Gemma, Kaggle, and the on-device cache did not contain enough information to answer accurately. The message uses the thread's casual tone and does not show a retry control.
+  - **AC10k:** Given the cache returns three usable options, then they render and no live web search runs. Given it returns only one or two, they remain the current web-layer candidate while live search is checked for a larger set.
+  - **AC10l:** Given Kaggle cards have displayed and the user accepts the broader-web offer, then live web search runs with the retained criteria and excludes every Gemma or Kaggle card already shown.
 
 **Open assumptions:**
 - Exact routing heuristic for cloud escalation (word count? explicit constraint count?) is not yet defined — needed before this can be built.
@@ -206,7 +246,7 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 - **AC2:** Given no bottle imagery is used in MVP scope, when the Profile Page renders, then typography carries the full visual weight, with no image or image placeholder.
 
 ### Data & Content — Key for Wine Description
-- **AC4:** Given the user navigates to the Profile Page from a tapped option card or Gemma's own suggestion, when the page renders, then it displays the full static field set from that entry with no source switch:
+- **AC4:** Given the user navigates to the Profile Page from a tapped option card or Gemma's own suggestion, when the page renders, then it displays the shared static field set from that entry with no source switch:
   - `variety`
   - `country`
   - `province`
@@ -216,11 +256,9 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
   - `flavor_notes`
   - `winery`
   - `rating`
-  - `review_summary`
-  - `web_summary`
-- **AC4a:** Given the entry came from a Kaggle option, when rendered, then winery, rating, and the full untruncated review summary display resolved values where the matched Kaggle record supplies them. When duplicate-wine aggregation combined multiple reviews, the labeled concatenation is displayed without dropping or shortening any review. Web summary displays as `Unknown`.
-- **AC4b:** Given the entry came from Gemma's own suggestion without a matched option, when rendered, then winery, rating, review summary, and web summary display as `Unknown`; they are not omitted from the layout.
-- **AC4c:** Given the entry came from a web-search-sourced option under Section 6, AC10g, when rendered, then winery, variety, country, province, web summary, and other attributes display where the search resolved them. Web summary is labeled `AI summary` and is visually distinct from the `Critic review` treatment used for review summary. Rating and review summary display as `Unknown` because both are reserved for a real Kaggle match.
+- **AC4a:** Given the entry came from a Kaggle option, when rendered, then winery, rating, and the full untruncated review summary display resolved values where the matched Kaggle record supplies them. When duplicate-wine aggregation combined multiple reviews, the labeled concatenation is displayed without dropping or shortening any review. The narrative section is labeled `Critic Review`; `Summary` and `Web Summary` are not displayed.
+- **AC4b:** Given the entry came from Gemma's own suggestion without a matched option, when rendered, then its under-200-character descriptive text is displayed in a narrative section labeled `Summary`. `Critic Review` and `Web Summary` are not displayed, and rating remains absent because Gemma does not supply it.
+- **AC4c:** Given the entry came from a cached or live web-search option under Section 6, AC10g, when rendered, then winery, variety, country, province, web summary, and other attributes display where the search resolved them. The narrative section is labeled `Web Summary`; `Summary` and `Critic Review` are not displayed. Rating remains absent because it is reserved for a real Kaggle match.
 - **AC4d:** Given `body`, `tannin`, or `acidity` contains the internal trailing `*` thin-evidence marker, whether from fewer than three supporting Kaggle reviews or a web-derived synthesis, when the Profile Page renders that value, then it displays the plain-language annotation `Insufficient data` near the value using the same treatment for either source. The raw `*` character is not shown to the user. The exact caption, tooltip, or icon treatment remains to be defined.
 - **AC5:** Given a shared attribute value is `Unknown`, when displayed, then it renders in muted or secondary text, visually distinct from resolved values.
 - **AC7:** Given a Kaggle option's winery has been separately verified through a winery-verification web search, when the Profile Page renders, then a verified indicator displays near the winery name.
@@ -303,7 +341,7 @@ Surfaced here for validation before development starts:
 4. Main Conversation: cheese pairing assumed to be a dedicated action, not free-text intent parsing.
 5. Main Conversation: exact styling and visual treatment of the wine option-card section.
 6. Main Conversation: whether structured query extraction and History's `Your Request:` extraction should share one mechanism or remain separate.
-7. Profile Page: exact visual treatment for distinguishing `AI summary` from `Critic review`.
+7. Profile Page: exact typography and spacing for the source-specific `Summary`, `Critic Review`, and `Web Summary` sections.
 8. Profile Page: exact caption, tooltip, or icon treatment for the `Insufficient data` annotation.
 9. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
 10. History: date-grouping granularity — assumed per-day.
@@ -316,27 +354,61 @@ Surfaced here for validation before development starts:
 
 ## 11. Implementation Status
 
-Implemented on native Android with Kotlin and Jetpack Compose:
+Status checked against the working code on 17 September 2026. A checked item is implemented and has passed the computer-only build or automated checks. Partially complete items have working foundations but still require the work stated beside them.
 
-- Splash branding, authenticated resumable Gemma E2B download, byte progress, SHA-256 verification, three automatic retries, and manual retry state
-- Offline LiteRT-LM conversation inference after model installation
-- Shared Chat/History/My List header with left-side page title and right-aligned Uncork branding, Chat empty state, conversation thread, input composer, dark status-bar treatment, and labeled bottom navigation
-- 16sp user and AI message text, Markdown-style `**bold**` rendering, 5% black AI background wash, and 1dp AI rule at 50% opacity
-- Full-screen Profile Page navigation and layout, structured AI profile parsing, pairing action, saved state, and 10-dot rating interaction
-- Persistent on-device History storage, date-grouped History list, Chat/History tab navigation, preserved in-session Chat state, and Profile Page entry navigation
-- Current Room-backed `VarietyRegionProfile` storage with the original variety/province composite key, JSON flavor-note conversion, batch and single-row inserts, exact lookup repository, and off-main-thread seed-on-empty startup logic
+### Complete
 
-Not yet complete:
+- [x] Splash branding, authenticated resumable Gemma E2B download, burgundy byte-percentage progress, SHA-256 verification, three automatic retries, and manual retry state
+- [x] Offline LiteRT-LM conversation inference after model installation
+- [x] Shared Chat, History, and My List navigation, headers, empty states, conversation thread, composer, and persistent in-session Chat state
+- [x] Gemma hidden-profile schema uses `country`, `province`, and `variety`; `rating` and `confidence` are not requested from or populated by Gemma
+- [x] Gemma prompt and parser support exactly three distinct lightweight records with identity fields and a short summary in one hidden `[WINE_CARDS]` JSON array
+- [x] Gemma runs the fixed Q1 type, Q2 country, and Q3 attribute sequence; invalid or ambiguous answers keep the current question open while explicit no-preference answers close it
+- [x] Lightweight per-turn Q1/Q2/Q3 field coverage replaces repeated full snapshots; one full preference snapshot is emitted only when all three questions close
+- [x] Completed field coverage immediately hands the accumulated criteria to Kaggle, while clarification, digression, and off-domain turns never trigger a fallback source
+- [x] Gemma's visible prose streams while generation continues; hidden structured data remains invisible and each option card appears as soon as its individual profile is complete
+- [x] The Gemma prompt avoids repeated conversational fillers, with a narrow runtime filter removing a previously used opening filler if the model repeats it
+- [x] Compound answers close every applicable question, corrections can reopen affected coverage, and answers already supplied are not asked again
+- [x] Attribute clarification offers help with unfamiliar terms such as body, tannin, and acidity
+- [x] Gemma produces structured recommendations when coverage completes and the app immediately queries the enthusiast database using the accumulated criteria
+- [x] Kaggle cards trigger the broader-web offer; a Kaggle miss continues automatically and later layers exclude previously displayed cards
+- [x] Failed Gemma or Kaggle output advances automatically; complete failure produces a polite no-relevant-information response
+- [x] Gemma cards use lightweight identity payloads; longer attributes, pairing, and Summary are generated when the Profile Page opens
+- [x] Bundled `wine_reviews.db` Kaggle asset, first-launch background extraction, copied-database validation, and read-only access
+- [x] Kaggle exact lookup is case-insensitive and retries bound keyword matching with resolved Gemma criteria when exact spelling or optional lookup fields do not match
+- [x] Kaggle exact country-province-variety lookup and Android-compatible original-query keyword lookup without a runtime FTS5 dependency
+- [x] Kaggle misses with body, tannin, or acidity filters stop with a specific limiting-attribute explanation; exact-profile misses without attribute filters go directly to web search
+- [x] Kaggle results include a separate satisfaction question; rejection sends the retained request and all clarification preferences directly to the web-search layer
+- [x] Kaggle ranking uses `ORDER BY points DESC, winery ASC`, preserving SQLite's nulls-last behavior
+- [x] Wine option cards display wine name, winery when available, and `Country, Province`; keyword matches backfill mandatory profile fields
+- [x] Full, untruncated Kaggle `review_summary` is preserved through Chat, History, My List, and the Profile Page
+- [x] Suggestions retain their Gemma, Kaggle, or web-search origin through History and My List; the Profile Page displays only the matching `Summary`, `Critic Review`, or `Web Summary` section
+- [x] `country_province_variety_profiles.json` is bundled and seeds all 4,119 profiles off the main thread when Room is empty
+- [x] `VarietyRegionProfile` uses the `country` + `province` + `variety` composite key, JSON flavor-note conversion, exact lookup, replace-on-conflict inserts, and non-destructive Room migrations through database version 3
+- [x] Room can store, retrieve, and replace one cached web option with its name, winery, pairing, resolved profile fields, and `web_summary`
+- [x] Profile Page navigation from Chat, History, and My List, with the shared profile fields and null-safe rating display
+- [x] Persistent date-grouped History, original-request keyword extraction, Clear/Cancel selection mode, selection checkboxes, and selected-entry deletion
+- [x] Persistent My List save and remove behavior
+- [x] Computer-only debug APK build, test-APK compilation, lint, JVM recommendation-flow tests, seed parsing tests, and SQLite asset integrity checks
 
-- Final product-owned system prompt
-- Frank Ruhl Libre font bundling
-- Inclusion and device-level verification of the renamed `country_province_variety_profiles.json` seed asset; the Room pipeline is implemented, but the asset is not currently present in this checkout
-- Gemma's three-part conversational response with distinct variety, country, and province values in its recommendation and hidden attribute profile
-- Automatic Kaggle country-province-variety or original-query keyword matching, cascade-on-error behavior, duplicate-wine aggregation, deterministic `points DESC, winery ASC` selection with explicit nulls-last handling outside SQLite, full reviewer text, wine names on option cards, and per-card Profile Page navigation
-- In-scope web fallback after either Kaggle query misses or fails, including per-option `web_summary` synthesis, first-result persistence, thin-evidence attribute markers, cached-first behavior, supplementary search degradation, and the distinct no-connection path
-- Expansion of the Room entity, DAO lookup, and composite key from variety/province to country/province/variety; storage of one cached web option; runtime `web_search` write-back; and the related migration and tests
-- Static, single-source Profile Page behavior described in Section 7, including ranged attribute strings, thin-evidence annotations, `Unknown` placeholders, and removal of the current comparison-toggle scaffold
-- Cloud routing, category-data web search, first-result option selection, and the separate winery-verification search path
-- Personal ratings and notes in My List
-- Real model-generated cheese pairing on the Profile Page; the current Profile Page result is placeholder copy
-- Physical-device execution of the Profile Page instrumentation tests and final responsive visual QA
+### Partially complete
+
+- [~] Brave Search is connected as the final fallback after Gemma, Kaggle, and cache miss; a local `BRAVE_SEARCH_API_KEY` is still required before physical-device verification
+- [x] Web-result write-back stores the first complete Brave/Gemma option for later cache reuse
+- [x] Brave result excerpts are converted by on-device Gemma into structured web options with `web_summary`, body, tannin, and acidity where the evidence supports them
+- [~] The current Gemma system instruction implements the approved two-stage card/profile contract, but remains pending physical-device response-quality testing
+- [~] The Profile Page renders one source in the normal app flow, but the older AI/Kaggle comparison-toggle scaffold still exists in the screen code and must be removed to fully meet Section 7
+- [~] My List stores existing personal-rating values, but the product flow for entering or editing a personal rating and notes is not implemented
+
+### Not yet complete
+
+- [ ] Production-safe Brave API credential delivery; the personal-development build currently reads the ignored `local.properties` value into `BuildConfig`
+- [ ] Online, empty-result, technical-failure, and no-internet web-search responses defined in AC7 and AC10i-AC10j
+- [ ] Cloud-LLM routing for complex or high-stakes requests
+- [ ] Separate winery-verification web search and verified-winery badge data flow
+- [ ] Local event logging defined in AC9
+- [ ] Final product-owned system prompt
+- [ ] Frank Ruhl Libre font bundling
+- [ ] Personal-rating editing and notes in My List
+- [ ] Final model-generated cheese-pairing experience
+- [ ] Physical-device execution of instrumentation tests and final responsive visual QA

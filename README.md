@@ -7,7 +7,7 @@ Uncork is a personal AI sommelier for discovering wine and optional cheese pairi
 
 ## Product overview
 
-The app recommends wines in a casual conversational tone, then presents each recommendation in a focused detail view with structured information such as variety, region, body, tannin, acidity, flavor notes, and rating.
+The app recommends wines in a casual conversational tone, then presents each recommendation in a focused detail view with structured information such as variety, province, body, tannin, acidity, and flavor notes. A critic rating may be added later from a real Kaggle `points` match; Gemma does not generate it.
 
 AI recommendations can be compared with matching entries from a static, user-selected Kaggle wine-review dataset. Gemma produces the AI profile from its learned knowledge; Kaggle is an optional independent comparison rather than a dependency. Where available, winery information may also be corroborated through web search. Missing or unverified bottle-specific data is displayed as unknown rather than invented.
 
@@ -86,3 +86,13 @@ The final system prompt, Frank Ruhl Libre asset, AI/Kaggle comparison interface 
 The first time Uncork opens, enter a Hugging Face read token. The token is sent only as an authorization header for the model download and is never persisted by the app. Interrupted downloads are retained as a partial file and resumed automatically. Keep Uncork open until download and verification complete.
 
 After successful verification, later launches skip the download flow and open Chat directly. Prompts and responses are processed by LiteRT-LM on the device, so chat remains available offline.
+
+## Brave Search fallback
+
+Live web search is the final fallback after Gemma, Kaggle, and the on-device cache miss. Add the following local-only value to `local.properties` before building:
+
+```properties
+BRAVE_SEARCH_API_KEY=your_brave_search_api_key
+```
+
+`local.properties` is excluded from Git. The app sends the accumulated wine criteria to Brave Search, then asks the on-device Gemma model to turn supported search-result excerpts into up to three structured web options. The first complete result is cached for later offline reuse.

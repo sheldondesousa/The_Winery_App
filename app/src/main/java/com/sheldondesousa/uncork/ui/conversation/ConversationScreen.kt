@@ -78,14 +78,24 @@ private val AiResponseInk = Color(0xFF27201D)
 enum class AppTab(val label: String) {
     Conversation("Chat"),
     History("History"),
-    Favorites("Saved Wines"),
+    Favorites("My List"),
 }
 
 class ConversationSessionState {
-    val messages = mutableStateListOf<ChatMessage>()
+    val messages = mutableStateListOf(
+        ChatMessage(
+            id = Long.MIN_VALUE,
+            author = MessageAuthor.Assistant,
+            text = "Hi, I'm UnCork — think of me as your personal sommelier. What are you in " +
+                "the mood for: **red**, **rosé**, **white**, **sparkling**, **sweet**, or " +
+                "**fortified**?",
+        ),
+    )
     var draft by mutableStateOf("")
     var isReplying by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
+    var streamingText by mutableStateOf("")
+    var streamingSuggestions by mutableStateOf(emptyList<WineSuggestion>())
 }
 
 @Composable
@@ -115,14 +125,37 @@ fun ConversationRoute(
         state.draft = ""
         state.isReplying = true
         state.errorMessage = null
+        state.streamingText = ""
+        state.streamingSuggestions = emptyList()
 
         scope.launch {
-            runCatching { responder.replyTo(query) }
+            runCatching {
+                responder.replyToUpdates(query) { update ->
+                    state.streamingText = update.text
+                    state.streamingSuggestions = update.suggestions
+                }
+            }
                 .onSuccess { response ->
-                    state.messages += response
-                    response.suggestion?.let { onSuggestionRecorded(it, query) }
+                    state.streamingText = ""
+                    state.streamingSuggestions = emptyList()
+                    state.messages += response.copy(followUpText = null)
+                    response.wineSuggestions.forEach { suggestion ->
+                        onSuggestionRecorded(suggestion, response.historyRequest ?: query)
+                    }
+                    response.followUpText
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { followUp ->
+                            state.messages += ChatMessage(
+                                id = System.nanoTime(),
+                                author = MessageAuthor.Assistant,
+                                text = followUp,
+                                historyRequest = response.historyRequest,
+                            )
+                        }
                 }
                 .onFailure {
+                    state.streamingText = ""
+                    state.streamingSuggestions = emptyList()
                     state.errorMessage =
                         "I couldn’t finish that suggestion. Check your connection and try again."
                 }
@@ -135,6 +168,8 @@ fun ConversationRoute(
         draft = state.draft,
         isReplying = state.isReplying,
         errorMessage = state.errorMessage,
+        streamingText = state.streamingText,
+        streamingSuggestions = state.streamingSuggestions,
         onDraftChange = { state.draft = it },
         onSend = ::submit,
         onSuggestionClick = onSuggestionClick,
@@ -149,6 +184,8 @@ private fun ConversationScreen(
     draft: String,
     isReplying: Boolean,
     errorMessage: String?,
+    streamingText: String,
+    streamingSuggestions: List<WineSuggestion>,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onSuggestionClick: (WineSuggestion) -> Unit,
@@ -157,8 +194,10 @@ private fun ConversationScreen(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size, isReplying, errorMessage) {
-        val extraRows = (if (isReplying) 1 else 0) + (if (errorMessage != null) 1 else 0)
+    LaunchedEffect(messages.size, isReplying, errorMessage, streamingText, streamingSuggestions.size) {
+        val extraRows = (if (streamingText.isNotBlank() || streamingSuggestions.isNotEmpty()) 1 else 0) +
+            (if (isReplying) 1 else 0) +
+            (if (errorMessage != null) 1 else 0)
         val finalIndex = messages.lastIndex + extraRows
         if (finalIndex >= 0) listState.animateScrollToItem(finalIndex)
     }
@@ -199,6 +238,19 @@ private fun ConversationScreen(
                             message = message,
                             onSuggestionClick = onSuggestionClick,
                         )
+                    }
+                    if (streamingText.isNotBlank() || streamingSuggestions.isNotEmpty()) {
+                        item(key = "streaming-response") {
+                            MessageBubble(
+                                message = ChatMessage(
+                                    id = Long.MIN_VALUE,
+                                    author = MessageAuthor.Assistant,
+                                    text = streamingText,
+                                    suggestions = streamingSuggestions,
+                                ),
+                                onSuggestionClick = {},
+                            )
+                        }
                     }
                     if (isReplying) {
                         item(key = "replying") { ReplyingIndicator() }
@@ -279,12 +331,23 @@ private fun MessageBubble(
                         fontSize = 16.sp,
                         lineHeight = 28.sp,
                     )
-                    message.suggestion?.let { suggestion ->
+                    val suggestions = message.wineSuggestions
+                    if (suggestions.isNotEmpty()) {
                         Spacer(Modifier.height(16.dp))
-                        SuggestionLink(
-                            suggestion = suggestion,
-                            onClick = { onSuggestionClick(suggestion) },
-                        )
+                        suggestions.forEachIndexed { index, suggestion ->
+                            if (index > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(Hairline),
+                                )
+                            }
+                            SuggestionLink(
+                                suggestion = suggestion,
+                                onClick = { onSuggestionClick(suggestion) },
+                            )
+                        }
                     }
                 }
             }
@@ -334,15 +397,27 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = suggestion.name,
+                text = suggestion.name.ifBlank { "Unknown" },
                 color = Ink,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Medium,
             )
+            suggestion.winery
+                .takeIf { it.isUsefulCardValue() }
+                ?.let { winery ->
+                    Text(
+                        text = winery,
+                        color = InkMuted,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.3.sp,
+                    )
+                }
             Text(
-                text = suggestion.region,
-                color = InkMuted,
-                fontSize = 13.sp,
+                text = listOf(suggestion.country, suggestion.province)
+                    .joinToString(", ") { it.cardValueOrUnknown() },
+                modifier = Modifier.padding(top = 4.dp),
+                color = Wine,
+                fontSize = 12.sp,
                 letterSpacing = 0.3.sp,
             )
             if (suggestion.isFavorite) {
@@ -367,6 +442,12 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit) {
         )
     }
 }
+
+private fun String.isUsefulCardValue(): Boolean =
+    isNotBlank() && !equals("Unknown", ignoreCase = true)
+
+private fun String.cardValueOrUnknown(): String =
+    takeIf { it.isUsefulCardValue() } ?: "Unknown"
 
 @Composable
 private fun ReplyingIndicator() {

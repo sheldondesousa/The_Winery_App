@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
@@ -55,17 +57,24 @@ import com.sheldondesousa.uncork.ui.theme.Wine
 
 data class WineProfile(
     val winery: String,
+    val name: String = winery,
+    val country: String = "Unknown",
+    val wineType: String = "Unknown",
     val variety: String,
-    val region: String,
+    val province: String,
     val body: String = "Unknown",
     val tannin: String = "Unknown",
     val acidity: String = "Unknown",
     val flavorNotes: String = "Unknown",
     val suggestedPairing: String = "Unknown",
-    val rating: String = "Unknown",
+    val summary: String = "Unknown",
+    val rating: Int? = null,
+    val reviewSummary: String = "Unknown",
+    val webSummary: String = "Unknown",
+    val source: WineSuggestionSource = WineSuggestionSource.GEMMA,
+    val requestContext: String? = null,
     val cheesePairing: String? = null,
     val verified: Boolean = false,
-    val confidencePercent: Int? = null,
 )
 
 data class StageWine(
@@ -77,16 +86,23 @@ data class StageWine(
 
 fun WineSuggestion.toStageWine(): StageWine = StageWine(
     ai = WineProfile(
+        name = name,
         winery = winery,
+        country = country,
+        wineType = wineType,
         variety = variety,
-        region = region,
+        province = province,
         body = body,
         tannin = tannin,
         acidity = acidity,
         flavorNotes = flavorNotes,
         suggestedPairing = suggestedPairing,
-        rating = sourceRating,
-        confidencePercent = confidencePercent,
+        summary = summary,
+        rating = rating,
+        reviewSummary = reviewSummary,
+        webSummary = webSummary,
+        source = source,
+        requestContext = requestContext,
     ),
     userRating = favoriteRating,
 )
@@ -120,6 +136,7 @@ private val ShortBackArrow: ImageVector = ImageVector.Builder(
 fun StageShowRoute(
     wine: StageWine,
     onBack: () -> Unit,
+    loadProfile: suspend (WineSuggestion) -> WineSuggestion = { it },
     initiallyFavorite: Boolean = false,
     onFavoriteChange: (WineSuggestion, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -127,8 +144,21 @@ fun StageShowRoute(
     BackHandler(onBack = onBack)
 
     var source by remember { mutableStateOf(WineSource.AI) }
+    var displayedWine by remember(wine) { mutableStateOf(wine) }
+    var loadingProfile by remember(wine) { mutableStateOf(true) }
     var isFavorite by remember(wine, initiallyFavorite) { mutableStateOf(initiallyFavorite) }
-    val profile = if (source == WineSource.Kaggle) wine.kaggle ?: wine.ai else wine.ai
+    val profile = if (source == WineSource.Kaggle) {
+        displayedWine.kaggle ?: displayedWine.ai
+    } else {
+        displayedWine.ai
+    }
+
+    LaunchedEffect(wine) {
+        val loaded = runCatching { loadProfile(wine.toWineSuggestion()) }
+            .getOrDefault(wine.toWineSuggestion())
+        displayedWine = wine.copy(ai = loaded.toStageWine().ai)
+        loadingProfile = false
+    }
 
     Column(
         modifier = modifier
@@ -155,11 +185,18 @@ fun StageShowRoute(
         ) {
             Spacer(Modifier.height(36.dp))
             Text(
-            text = profile.winery,
+            text = profile.name,
             color = Ink,
             fontSize = 42.sp,
             lineHeight = 46.sp,
             fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text = profile.winery,
+            modifier = Modifier.padding(top = 8.dp),
+            color = InkMuted,
+            fontSize = 17.sp,
+            lineHeight = 23.sp,
         )
         if (source == WineSource.Kaggle && profile.verified) {
             Text(
@@ -172,7 +209,10 @@ fun StageShowRoute(
             )
         }
         Text(
-            text = profile.region,
+            text = listOf(profile.province, profile.country)
+                .filterNot { it.equals("Unknown", ignoreCase = true) }
+                .joinToString(", ")
+                .ifBlank { "Unknown" },
             modifier = Modifier.padding(top = 10.dp),
             color = Wine,
             fontSize = 17.sp,
@@ -188,35 +228,32 @@ fun StageShowRoute(
             )
         }
 
-        if (source == WineSource.AI) {
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = "AI CONFIDENCE · ${profile.confidencePercent?.let { "$it%" } ?: "UNKNOWN"}",
-                color = Wine,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.4.sp,
-            )
-            Text(
-                text = "Model estimate, not verified accuracy",
-                modifier = Modifier.padding(top = 4.dp),
-                color = InkMuted,
-                fontSize = 12.sp,
-                fontStyle = FontStyle.Italic,
-            )
-        }
-
         Spacer(Modifier.height(36.dp))
         ShortDetailsGrid(
-            details = listOf(
-                "VARIETY" to profile.variety,
-                "BODY" to profile.body,
-                "TANNIN" to profile.tannin,
-                "ACIDITY" to profile.acidity,
-                "RATING" to profile.rating,
-            ),
+            details = buildList {
+                add("VARIETY" to profile.variety)
+                add("COUNTRY" to profile.country)
+                add("PROVINCE" to profile.province)
+                add("BODY" to profile.body)
+                add("TANNIN" to profile.tannin)
+                add("ACIDITY" to profile.acidity)
+                profile.rating?.let { add("RATING" to it.toString()) }
+            },
         )
         LongDetail("FLAVOR NOTES", profile.flavorNotes)
+
+        when (profile.source) {
+            WineSuggestionSource.GEMMA -> LongDetail(
+                "SUMMARY",
+                when {
+                    profile.summary.isResolvedValue() -> profile.summary
+                    loadingProfile -> "Loading details…"
+                    else -> "Unknown"
+                },
+            )
+            WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
+            WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
+        }
 
         LongDetail("SUGGESTED PAIRING", profile.suggestedPairing)
 
@@ -251,16 +288,21 @@ fun StageShowRoute(
                 selected = isFavorite,
                 onClick = {
                     isFavorite = !isFavorite
-                    onFavoriteChange(wine.toWineSuggestion(), isFavorite)
+                    onFavoriteChange(displayedWine.toWineSuggestion(), isFavorite)
                 },
             )
         }
     }
 }
 
+private fun String.isResolvedValue(): Boolean =
+    isNotBlank() && !equals("Unknown", ignoreCase = true)
+
 fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
-    name = ai.winery,
-    region = ai.region,
+    name = ai.name,
+    country = ai.country,
+    province = ai.province,
+    wineType = ai.wineType,
     winery = ai.winery,
     variety = ai.variety,
     body = ai.body,
@@ -268,8 +310,12 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
     acidity = ai.acidity,
     flavorNotes = ai.flavorNotes,
     suggestedPairing = ai.suggestedPairing,
-    sourceRating = ai.rating,
-    confidencePercent = ai.confidencePercent,
+    summary = ai.summary,
+    rating = ai.rating ?: kaggle?.rating,
+    reviewSummary = ai.reviewSummary,
+    webSummary = ai.webSummary,
+    source = ai.source,
+    requestContext = ai.requestContext,
     favoriteRating = userRating,
     isFavorite = true,
 )

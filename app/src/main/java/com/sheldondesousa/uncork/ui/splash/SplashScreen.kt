@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.splash
 
+import android.os.SystemClock
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -40,6 +41,8 @@ import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 private sealed interface SplashUiState {
@@ -47,21 +50,53 @@ private sealed interface SplashUiState {
     data object TokenRequired : SplashUiState
     data class Downloading(val progress: Float) : SplashUiState
     data object Verifying : SplashUiState
+    data class Preparing(val progress: Float) : SplashUiState
     data class Error(val message: String) : SplashUiState
 }
 
 @Composable
 fun SplashRoute(
     modelFileManager: ModelFileManager,
-    onModelReady: () -> Unit,
+    prepareApp: suspend () -> Unit,
+    onReady: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var state by remember { mutableStateOf<SplashUiState>(SplashUiState.Checking) }
     var accessToken by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
+    suspend fun prepareAndContinue() = coroutineScope {
+        val startedAt = SystemClock.elapsedRealtime()
+        state = SplashUiState.Preparing(0f)
+        val preparation = async { prepareApp() }
+        var progress = 0f
+
+        do {
+            val elapsed = SystemClock.elapsedRealtime() - startedAt
+            val minimumElapsed = elapsed >= MINIMUM_PREPARATION_MILLIS
+            val preparationComplete = preparation.isCompleted
+            val timedProgress =
+                (elapsed.toFloat() / MINIMUM_PREPARATION_MILLIS).coerceIn(0f, 1f)
+            progress = if (minimumElapsed && preparationComplete) {
+                1f
+            } else {
+                timedProgress.coerceAtMost(MAX_PROGRESS_WHILE_PREPARING)
+            }
+            state = SplashUiState.Preparing(progress)
+            if (progress < 1f) delay(PROGRESS_UPDATE_MILLIS)
+        } while (progress < 1f)
+
+        preparation.await()
+        delay(COMPLETION_DISPLAY_MILLIS)
+        onReady()
+    }
+
     LaunchedEffect(modelFileManager) {
-        if (modelFileManager.isModelReady()) onModelReady() else state = SplashUiState.TokenRequired
+        if (modelFileManager.isModelReady()) {
+            prepareAndContinue()
+        } else {
+            state = SplashUiState.TokenRequired
+        }
     }
 
     fun startDownload() {
@@ -75,7 +110,7 @@ fun SplashRoute(
                         when (event) {
                             is ModelDownloadEvent.Progress -> state = SplashUiState.Downloading(event.fraction)
                             ModelDownloadEvent.Verifying -> state = SplashUiState.Verifying
-                            ModelDownloadEvent.Ready -> onModelReady()
+                            ModelDownloadEvent.Ready -> prepareAndContinue()
                         }
                     }
                 }
@@ -148,6 +183,10 @@ private fun SplashScreen(
                 label = "Downloading Gemma 4 E2B",
             )
             SplashUiState.Verifying -> LoadingState(null, "Verifying model…")
+            is SplashUiState.Preparing -> LoadingState(
+                progress = state.progress,
+                label = "Loading Gemma and datasets…",
+            )
             is SplashUiState.Error -> ErrorState(
                 message = state.message,
                 onRetry = onRetry,
@@ -237,7 +276,7 @@ private fun LoadingState(progress: Float?, label: String) {
             Spacer(Modifier.height(14.dp))
             Text(
                 text = "${(progress * 100).toInt()}%",
-                color = InkMuted,
+                color = Wine,
                 fontSize = 11.sp,
                 letterSpacing = 1.sp,
             )
@@ -280,3 +319,7 @@ private fun ErrorState(
 
 private const val MAX_AUTOMATIC_ATTEMPTS = 3
 private const val RETRY_DELAY_MILLIS = 1_000L
+private const val MINIMUM_PREPARATION_MILLIS = 5_000L
+private const val PROGRESS_UPDATE_MILLIS = 50L
+private const val COMPLETION_DISPLAY_MILLIS = 250L
+private const val MAX_PROGRESS_WHILE_PREPARING = 0.95f
