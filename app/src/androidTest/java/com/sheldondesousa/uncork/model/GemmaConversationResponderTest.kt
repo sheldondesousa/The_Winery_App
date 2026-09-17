@@ -44,6 +44,7 @@ class GemmaConversationResponderTest {
         assertEquals(true, request.contains("Treat the user's latest message as their answer"))
         assertEquals(true, request.contains("User's latest message: Red"))
         assertEquals(true, request.contains("Coverage so far:"))
+        assertEquals(true, request.contains("Current pending question: Q1 wine type"))
         assertEquals(true, request.contains("always emit [FIELD_COVERAGE]"))
     }
 
@@ -57,8 +58,31 @@ class GemmaConversationResponderTest {
 
         assertEquals(true, request.contains("immediately preceding reply"))
         assertEquals(true, request.contains("\"q1_type\":\"closed\""))
+        assertEquals(true, request.contains("Current pending question: Q2 country"))
         assertEquals(true, request.contains("Never repeat a question"))
         assertEquals(true, request.contains("User's latest message: France"))
+    }
+
+    @Test
+    fun contextCapacityErrorIsRecognizedThroughWrappedCause() {
+        val error = IllegalStateException(
+            "send failed",
+            IllegalArgumentException(
+                "FAILED_PRECONDITION: Prefill input length exceeds available state entries " +
+                    "(remaining capacity: 224).",
+            ),
+        )
+
+        assertEquals(
+            true,
+            with(GemmaConversationResponder) { error.isContextCapacityError() },
+        )
+        assertEquals(
+            false,
+            with(GemmaConversationResponder) {
+                IllegalStateException("another failure").isContextCapacityError()
+            },
+        )
     }
 
     @Test

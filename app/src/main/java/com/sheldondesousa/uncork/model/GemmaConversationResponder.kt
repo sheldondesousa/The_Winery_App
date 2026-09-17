@@ -60,38 +60,40 @@ class GemmaConversationResponder(
             isFirstTurn = onboardingTurnCount == 0,
         )
         var lastVisibleText = ""
-        var lastSuggestions = emptyList<WineSuggestion>()
         var firstTokenLogged = false
-        val response = buildString {
-            activeConversation.sendMessageAsync(modelQuery).collect { message ->
-                message.contents.contents
-                    .filterIsInstance<Content.Text>()
-                    .forEach { content ->
-                        if (!firstTokenLogged && content.text.isNotEmpty()) {
-                            firstTokenLogged = true
-                            logFlow(
-                                "Gemma timing firstTokenMs=" +
-                                    (SystemClock.elapsedRealtime() - requestStartedAt),
-                            )
-                        }
-                        append(content.text)
-                        val accumulated = toString()
-                        val visibleText = accumulated.toStreamingVisibleResponse()
-                            .withoutRepeatedConversationOpener(recordUsage = false)
-                        val partialSuggestions = emptyList<WineSuggestion>()
-                        if (visibleText != lastVisibleText || partialSuggestions != lastSuggestions) {
-                            lastVisibleText = visibleText
-                            lastSuggestions = partialSuggestions
-                            onUpdate(
-                                ConversationStreamUpdate(
-                                    text = visibleText,
-                                    suggestions = partialSuggestions,
-                                ),
-                            )
-                        }
+        suspend fun collectResponse(active: Conversation): String = buildString {
+            active.sendMessageAsync(modelQuery).collect { message ->
+                message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                    if (!firstTokenLogged && content.text.isNotEmpty()) {
+                        firstTokenLogged = true
+                        logFlow(
+                            "Gemma timing firstTokenMs=" +
+                                (SystemClock.elapsedRealtime() - requestStartedAt),
+                        )
                     }
+                    append(content.text)
+                    val visibleText = toString().toStreamingVisibleResponse()
+                        .withoutRepeatedConversationOpener(recordUsage = false)
+                    if (visibleText != lastVisibleText) {
+                        lastVisibleText = visibleText
+                        onUpdate(ConversationStreamUpdate(text = visibleText))
+                    }
+                }
             }
         }.trim()
+        val response = try {
+            collectResponse(activeConversation)
+        } catch (error: Throwable) {
+            if (!error.isContextCapacityError()) throw error
+            logFlow("Gemma context exhausted; rebuilding conversation and retrying turn once")
+            withContext(Dispatchers.Default) {
+                conversation?.close()
+                conversation = null
+            }
+            firstTokenLogged = false
+            lastVisibleText = ""
+            collectResponse(ensureConversation())
+        }
 
         if (response.isBlank()) error("The on-device model returned an empty response.")
         onboardingTurnCount += 1
@@ -419,6 +421,7 @@ class GemmaConversationResponder(
             appendLine("Record every usable answer before deciding which question remains unanswered.")
             appendLine("Never repeat a question when the latest message supplies its answer.")
             appendLine("Coverage so far: ${coverage.toCompactJson()}")
+            appendLine("Current pending question: ${coverage.pendingQuestion}")
             appendLine("User's latest message: $query")
             append(
                 "Required hidden output: always emit [FIELD_COVERAGE]. Before all questions " +
@@ -426,6 +429,14 @@ class GemmaConversationResponder(
                     "that closes all three, emit one full [STATE_SNAPSHOT] and [WINE_CARDS].",
             )
         }
+
+        internal fun Throwable.isContextCapacityError(): Boolean =
+            generateSequence(this) { it.cause }.any { cause ->
+                cause.message?.contains(
+                    "Prefill input length exceeds available state entries",
+                    ignoreCase = true,
+                ) == true
+            }
 
         private val WINE_CARDS_MARKER = Regex(
             pattern = "\\[WINE_CARDS](.+?)\\[/WINE_CARDS]",
