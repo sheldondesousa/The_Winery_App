@@ -42,7 +42,7 @@ class HistoryScreenTest {
             createdAtEpochMillis = System.currentTimeMillis(),
             suggestion = WineSuggestion(
                 name = "Catena Malbec",
-                region = "Mendoza, Argentina",
+                province = "Mendoza, Argentina",
                 variety = "Malbec",
             ),
             requestKeywords = listOf("Malbec"),
@@ -72,7 +72,7 @@ class HistoryScreenTest {
         val entry = HistoryEntry(
             id = 42L,
             createdAtEpochMillis = System.currentTimeMillis(),
-            suggestion = WineSuggestion(name = "Barolo", region = "Piedmont, Italy"),
+            suggestion = WineSuggestion(name = "Barolo", province = "Piedmont, Italy"),
             requestKeywords = listOf("Barolo"),
         )
 

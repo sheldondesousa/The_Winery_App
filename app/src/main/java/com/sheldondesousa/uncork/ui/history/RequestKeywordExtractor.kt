@@ -32,8 +32,9 @@ object RequestKeywordExtractor {
         add(suggestion.name)
         add(suggestion.winery)
         add(suggestion.variety)
-        add(suggestion.region)
-        addAll(suggestion.region.split(',').map(String::trim))
+        add(suggestion.country)
+        add(suggestion.province)
+        addAll(suggestion.province.split(',').map(String::trim))
     }.filter { it.isUsefulValue() }.distinctBy { it.lowercase(Locale.ROOT) }
 
     private fun String.findPhrase(phrase: String): Int? {

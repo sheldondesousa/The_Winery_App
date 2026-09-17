@@ -7,31 +7,73 @@ enum class MessageAuthor {
     Assistant,
 }
 
+enum class WineSuggestionSource {
+    GEMMA,
+    KAGGLE,
+    WEB_SEARCH,
+}
+
 data class ChatMessage(
     val id: Long,
     val author: MessageAuthor,
     val text: String,
     val suggestion: WineSuggestion? = null,
+    val suggestions: List<WineSuggestion> = emptyList(),
+    val historyRequest: String? = null,
+    val followUpText: String? = null,
+    val needsClarification: Boolean = false,
+    val stageOneOutput: Boolean = false,
+    val coverageComplete: Boolean = false,
+    val discardedStageOneCards: Int = 0,
 )
 
 data class WineSuggestion(
     val name: String,
-    val region: String,
+    val province: String,
+    val country: String = "Unknown",
+    val wineType: String = "Unknown",
     val winery: String = name,
     val variety: String = name,
     val body: String = "Unknown",
     val tannin: String = "Unknown",
     val acidity: String = "Unknown",
     val flavorNotes: String = "Unknown",
+    val preferenceFlavor: String = "Unknown",
+    val occasion: String = "Unknown",
     val suggestedPairing: String = "Unknown",
-    val sourceRating: String = "Unknown",
-    val confidencePercent: Int? = null,
+    val summary: String = "Unknown",
+    // Critic score from a genuine Kaggle `points` value. Must never be set from model output.
+    val rating: Int? = null,
+    val reviewSummary: String = "Unknown",
+    val webSummary: String = "Unknown",
+    val source: WineSuggestionSource = WineSuggestionSource.GEMMA,
+    val requestContext: String? = null,
     val favoriteRating: Int? = null,
     val isFavorite: Boolean = false,
 )
 
+val ChatMessage.wineSuggestions: List<WineSuggestion>
+    get() = suggestions.ifEmpty { listOfNotNull(suggestion) }
+
+data class ConversationStreamUpdate(
+    val text: String,
+    val suggestions: List<WineSuggestion> = emptyList(),
+)
+
 fun interface ConversationResponder {
     suspend fun replyTo(query: String): ChatMessage
+
+    suspend fun replyToStreaming(
+        query: String,
+        onPartialText: (String) -> Unit,
+    ): ChatMessage = replyTo(query)
+
+    suspend fun replyToUpdates(
+        query: String,
+        onUpdate: (ConversationStreamUpdate) -> Unit,
+    ): ChatMessage = replyToStreaming(query) { text ->
+        onUpdate(ConversationStreamUpdate(text = text))
+    }
 }
 
 /**
@@ -47,7 +89,7 @@ class DemoConversationResponder : ConversationResponder {
             text = "A bright Pinot Noir could work beautifully here — enough red fruit to feel generous, with the freshness to keep the pairing lively.",
             suggestion = WineSuggestion(
                 name = "Pinot Noir",
-                region = "Willamette Valley, Oregon",
+                province = "Willamette Valley, Oregon",
             ),
         )
     }

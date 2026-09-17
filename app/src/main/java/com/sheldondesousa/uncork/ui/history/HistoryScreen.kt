@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ButtonDefaults
@@ -24,7 +25,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -122,7 +123,7 @@ fun HistoryRoute(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.DeleteForever,
+                            imageVector = Icons.Outlined.Delete,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
                             tint = deleteColor,
@@ -269,18 +270,6 @@ private fun HistoryRow(
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        if (isSelecting) {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = onSelectionChange,
-                modifier = Modifier.padding(top = 2.dp, end = 12.dp),
-                colors = CheckboxDefaults.colors(
-                    checkedColor = Wine,
-                    uncheckedColor = InkMuted,
-                    checkmarkColor = Parchment,
-                ),
-            )
-        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = entry.suggestion.name,
@@ -291,7 +280,7 @@ private fun HistoryRow(
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = entry.suggestion.region,
+                text = entry.suggestion.province,
                 modifier = Modifier.padding(top = 3.dp),
                 color = InkMuted,
                 fontSize = 12.sp,
@@ -325,16 +314,31 @@ private fun HistoryRow(
                     .background(Hairline),
             )
         }
-        if (!isSelecting) {
-            Text(
-                text = "›",
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .padding(start = 16.dp),
-                color = InkMuted,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Light,
-            )
+        Box(
+            modifier = Modifier
+                .width(32.dp)
+                .align(Alignment.CenterVertically),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            if (isSelecting) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange,
+                    modifier = Modifier.size(32.dp),
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Wine,
+                        uncheckedColor = InkMuted,
+                        checkmarkColor = Parchment,
+                    ),
+                )
+            } else {
+                Text(
+                    text = "›",
+                    color = InkMuted,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Light,
+                )
+            }
         }
     }
 }

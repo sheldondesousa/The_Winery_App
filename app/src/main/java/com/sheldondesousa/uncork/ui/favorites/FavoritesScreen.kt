@@ -46,7 +46,7 @@ fun FavoritesRoute(
             icon = Icons.Outlined.FavoriteBorder,
         )
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(favorites, key = { "${it.winery}|${it.variety}|${it.region}" }) { wine ->
+            items(favorites, key = { "${it.winery}|${it.variety}|${it.province}" }) { wine ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -63,7 +63,7 @@ fun FavoritesRoute(
                             fontWeight = FontWeight.Medium,
                         )
                         Text(
-                            text = wine.region,
+                            text = wine.province,
                             modifier = Modifier.padding(top = 3.dp),
                             color = InkMuted,
                             fontSize = 12.sp,
