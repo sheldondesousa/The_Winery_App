@@ -24,6 +24,14 @@ data class WineFieldCoverage(
             q2Country == CoverageStatus.Closed &&
             q3Attributes == CoverageStatus.Closed
 
+    val pendingQuestion: String
+        get() = when {
+            q1Type != CoverageStatus.Closed -> "Q1 wine type"
+            q2Country != CoverageStatus.Closed -> "Q2 country"
+            q3Attributes != CoverageStatus.Closed -> "Q3 body, tannin, acidity, or flavor"
+            else -> "none; all questions are closed"
+        }
+
     fun toCompactJson(): String = JSONObject()
         .put("q1_type", q1Type.wireValue)
         .put("q2_country", q2Country.wireValue)
