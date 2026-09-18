@@ -211,7 +211,7 @@ fun StageShowRoute(
                 add("COUNTRY" to profile.country)
                 add("PROVINCE" to profile.province)
                 if (profile.sweetness != "Unknown") add("SWEETNESS" to profile.sweetness)
-                add("BODY" to profile.body)
+                add("BODY" to profile.body.removeSuffix("-Bodied"))
                 add("TANNIN" to profile.tannin)
                 add("ACIDITY" to profile.acidity)
                 profile.rating?.let { add("RATING" to it.toString()) }

@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.components.AppHeader
@@ -50,7 +51,50 @@ import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 
-private enum class LocationPicker { Location, Country, Province }
+/** One tile per field on the Find form; tapping a tile opens its options in a bottom sheet. */
+private enum class FormField(val label: String) {
+    Type("Type"), Sweetness("Sweetness"), Tannin("Tannin"), Body("Body"), Acidity("Acidity"),
+    Country("Country"), Province("Province"),
+}
+
+private fun FormField.options(): List<String> = when (this) {
+    FormField.Type -> GuidedOptions.types
+    FormField.Sweetness -> GuidedOptions.sweetness
+    FormField.Tannin -> GuidedOptions.tannin
+    FormField.Body -> GuidedOptions.body
+    FormField.Acidity, FormField.Country, FormField.Province -> emptyList()
+}
+
+private fun FormField.selected(selection: GuidedCriteria): Set<String> = when (this) {
+    FormField.Type -> selection.wineType
+    FormField.Sweetness -> selection.sweetness
+    FormField.Tannin -> selection.tannin
+    FormField.Body -> selection.body
+    FormField.Acidity -> selection.acidity
+    FormField.Country, FormField.Province -> emptySet()
+}
+
+private fun FormField.toggled(selection: GuidedCriteria, value: String): GuidedCriteria = when (this) {
+    FormField.Type -> selection.copy(wineType = selection.wineType.toggled(value))
+    FormField.Sweetness -> selection.copy(sweetness = selection.sweetness.toggled(value))
+    FormField.Tannin -> selection.copy(tannin = selection.tannin.toggled(value))
+    FormField.Body -> selection.copy(body = selection.body.toggled(value))
+    FormField.Acidity -> selection.copy(acidity = selection.acidity.toggled(value))
+    FormField.Country, FormField.Province -> selection
+}
+
+private fun Set<String>.summaryText(labelFor: (String) -> String = { it }): String =
+    if (isEmpty()) "Any" else sorted().joinToString(" / ") { labelFor(it) }
+
+private fun FormField.summary(selection: GuidedCriteria): String = when (this) {
+    FormField.Type -> selection.wineType.summaryText()
+    FormField.Sweetness -> selection.sweetness.summaryText()
+    FormField.Tannin -> selection.tannin.summaryText()
+    FormField.Body -> selection.body.summaryText { it.removeSuffix("-Bodied") }
+    FormField.Acidity -> selection.acidity.summaryText()
+    FormField.Country -> selection.country.ifBlank { "Any" }
+    FormField.Province -> selection.province.ifBlank { "Any" }
+}
 
 @Composable
 fun GuidedSelectionScreen(
@@ -84,7 +128,7 @@ private fun GuidedSelectionFormScreen(
     onBack: () -> Unit,
 ) {
     val selection = state.selection
-    var picker by remember { mutableStateOf<LocationPicker?>(null) }
+    var activeField by remember { mutableStateOf<FormField?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     androidx.activity.compose.BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().background(Parchment).statusBarsPadding()) {
@@ -103,29 +147,24 @@ private fun GuidedSelectionFormScreen(
                     Text("Clear all", color = Wine, fontWeight = FontWeight.Bold)
                 }
             }
-            Choices("Type", GuidedOptions.types, selection.wineType, hint = "select any that apply") {
-                state.selection = state.selection.copy(wineType = state.selection.wineType.toggled(it))
+            FormTile(FormField.Type, selection, Modifier.fillMaxWidth()) { activeField = it }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FormTile(FormField.Country, selection, Modifier.weight(1f)) { activeField = it }
+                FormTile(FormField.Province, selection, Modifier.weight(1f)) { activeField = it }
             }
-            HorizontalDivider()
-            LocationField("Location", selection.locationLabel,
-                onClick = { picker = LocationPicker.Location })
             HorizontalDivider()
             Column {
                 CategoryTitle("Taste profile")
                 Text("Optional — leave blank if you're not sure", color = InkSubtle,
                     style = MaterialTheme.typography.bodySmall)
             }
-            Choices("Sweetness", GuidedOptions.sweetness, selection.sweetness) {
-                state.selection = state.selection.copy(sweetness = state.selection.sweetness.toggled(it))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FormTile(FormField.Sweetness, selection, Modifier.weight(1f)) { activeField = it }
+                FormTile(FormField.Tannin, selection, Modifier.weight(1f)) { activeField = it }
             }
-            Choices("Tannin", GuidedOptions.tannin, selection.tannin) {
-                state.selection = state.selection.copy(tannin = state.selection.tannin.toggled(it))
-            }
-            Choices("Body", GuidedOptions.body, selection.body, labelFor = { it.removeSuffix("-Bodied") }) {
-                state.selection = state.selection.copy(body = state.selection.body.toggled(it))
-            }
-            Choices("Acidity", GuidedOptions.acidity, selection.acidity) {
-                state.selection = state.selection.copy(acidity = state.selection.acidity.toggled(it))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FormTile(FormField.Body, selection, Modifier.weight(1f)) { activeField = it }
+                FormTile(FormField.Acidity, selection, Modifier.weight(1f)) { activeField = it }
             }
             HorizontalDivider()
             TextButton(onClick = { onTabSelected(AppTab.Conversation) }, contentPadding = PaddingValues(0.dp)) {
@@ -157,44 +196,69 @@ private fun GuidedSelectionFormScreen(
             SubmitButton(enabled = state.canSearch, onClick = state::search)
         }
     }
-    picker?.let { active ->
-        val isCountry = active == LocationPicker.Country
-        val options = if (isCountry) state.countries else state.provinces
-        val selected = if (isCountry) selection.country else selection.province
-        ModalBottomSheet(onDismissRequest = { picker = null }, sheetState = sheetState,
-            containerColor = Parchment) {
-            Text(if (active == LocationPicker.Location) "Location" else "Choose ${if (isCountry) "country" else "province"}",
-                fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
-            if (active == LocationPicker.Location) {
-                Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LocationField("Country", selection.country) { picker = LocationPicker.Country }
-                    LocationField("Province", selection.province) { picker = LocationPicker.Province }
-                    Button(onClick = { picker = null }, modifier = Modifier.fillMaxWidth()) { Text("Done") }
-                }
-            } else LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false).testTag("location-options")) {
-                item {
-                    TextButton(onClick = {
-                        state.selection = if (isCountry) state.selection.withCountry("")
-                            else state.selection.copy(province = "")
-                        picker = LocationPicker.Location
-                    }, modifier = Modifier.fillMaxWidth()) { Text("Any ${if (isCountry) "country" else "province"}") }
-                }
-                items(options, key = { it }) { option ->
-                    Row(
-                        Modifier.fillMaxWidth().selectable(selected = option == selected, role = Role.RadioButton, onClick = {
-                            state.selection = if (isCountry) state.selection.withCountry(option)
-                                else state.selection.copy(province = option)
-                            picker = LocationPicker.Location
-                        }).padding(horizontal = 24.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = option == selected, onClick = null)
-                        Text(option, modifier = Modifier.padding(start = 12.dp))
+    activeField?.let { field ->
+        FieldBottomSheet(field = field, state = state, sheetState = sheetState, onDismiss = { activeField = null })
+    }
+}
+
+/** Bottom sheet fixed at half the screen height; its option list scrolls independently when it overflows that space. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FieldBottomSheet(
+    field: FormField,
+    state: GuidedSelectionState,
+    sheetState: SheetState,
+    onDismiss: () -> Unit,
+) {
+    val selection = state.selection
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Parchment) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.5f)) {
+            if (field == FormField.Country || field == FormField.Province) {
+                val isCountry = field == FormField.Country
+                val options = if (isCountry) state.countries else state.provinces
+                val selected = if (isCountry) selection.country else selection.province
+                Text("Choose ${field.label.lowercase()}",
+                    fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+                LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("${field.label.lowercase()}-options")) {
+                    item {
+                        TextButton(onClick = {
+                            state.selection = if (isCountry) state.selection.withCountry("")
+                                else state.selection.copy(province = "")
+                            onDismiss()
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Any ${field.label.lowercase()}") }
+                    }
+                    items(options, key = { it }) { option ->
+                        Row(
+                            Modifier.fillMaxWidth().selectable(selected = option == selected, role = Role.RadioButton, onClick = {
+                                state.selection = if (isCountry) state.selection.withCountry(option)
+                                    else state.selection.copy(province = option)
+                                onDismiss()
+                            }).padding(horizontal = 24.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = option == selected, onClick = null)
+                            Text(option, modifier = Modifier.padding(start = 12.dp))
+                        }
                     }
                 }
+                Spacer(Modifier.height(20.dp).navigationBarsPadding())
+            } else {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
+                    Spacer(Modifier.height(12.dp))
+                    Choices(
+                        title = field.label,
+                        options = field.options(),
+                        selected = field.selected(selection),
+                        hint = if (field == FormField.Type) "select any that apply" else null,
+                        labelFor = if (field == FormField.Body) { { it.removeSuffix("-Bodied") } } else { { it } },
+                    ) { value -> state.selection = field.toggled(state.selection, value) }
+                    Spacer(Modifier.height(12.dp))
+                }
+                Button(onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding()) { Text("Done") }
+                Spacer(Modifier.height(16.dp))
             }
-            Spacer(Modifier.height(20.dp))
         }
     }
 }
@@ -329,20 +393,21 @@ private fun CategoryTitle(title: String) {
         color = Ink, modifier = Modifier.semantics { heading() })
 }
 
+/** A tile summarizing one field's current selection; tapping it opens that field's bottom sheet. */
 @Composable
-private fun LocationField(title: String, value: String, onClick: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        CategoryTitle(title)
-        // A read-only input-shaped control: the entire field opens the picker, with no keyboard.
-        OutlinedCard(onClick = onClick,
-            modifier = Modifier.fillMaxWidth().testTag("${title.lowercase()}-picker")
-                .semantics { contentDescription = "$title: ${value.ifBlank { "Any" }}" },
-            colors = CardDefaults.outlinedCardColors(containerColor = Parchment)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(value.ifBlank { "Select ${title.lowercase()}" },
-                    color = if (value.isBlank()) InkSubtle else Ink, modifier = Modifier.weight(1f))
+private fun FormTile(field: FormField, selection: GuidedCriteria, modifier: Modifier = Modifier, onClick: (FormField) -> Unit) {
+    val value = field.summary(selection)
+    OutlinedCard(onClick = { onClick(field) },
+        modifier = modifier.testTag("${field.label.lowercase()}-tile")
+            .semantics { contentDescription = "${field.label}: $value" },
+        colors = CardDefaults.outlinedCardColors(containerColor = Parchment)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(field.label, fontWeight = FontWeight.Bold, color = Ink, modifier = Modifier.weight(1f))
                 Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
             }
+            Text(value, color = if (value == "Any") InkSubtle else Wine, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
