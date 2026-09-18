@@ -9,6 +9,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.sheldondesousa.uncork.ui.guided.GuidedResult
+import com.sheldondesousa.uncork.ui.guided.GuidedSelectionScreen
+import com.sheldondesousa.uncork.ui.guided.GuidedSelectionState
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.sheldondesousa.uncork.data.profile.VarietyRegionDatabase
@@ -24,10 +29,9 @@ import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
 import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionState
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
-import com.sheldondesousa.uncork.ui.history.HistoryRepository
-import com.sheldondesousa.uncork.ui.history.HistoryRoute
 import com.sheldondesousa.uncork.ui.favorites.FavoritesRoute
 import com.sheldondesousa.uncork.ui.favorites.FavoritesRepository
+import com.sheldondesousa.uncork.ui.landing.LandingRoute
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
@@ -48,7 +52,6 @@ class MainActivity : ComponentActivity() {
             ),
         )
         val modelFileManager = ModelFileManager(applicationContext)
-        val historyRepository = HistoryRepository(applicationContext)
         val favoritesRepository = FavoritesRepository(applicationContext)
         val varietyRegionDatabase = VarietyRegionDatabase.getInstance(applicationContext)
         val wineReviewRepository = WineReviewRepository(applicationContext)
@@ -83,37 +86,65 @@ class MainActivity : ComponentActivity() {
             UncorkTheme {
                 var modelReady by remember { mutableStateOf(false) }
                 var stageWine by remember { mutableStateOf<StageWine?>(null) }
-                var selectedTab by remember { mutableStateOf(AppTab.Conversation) }
-                var historyEntries by remember { mutableStateOf(historyRepository.load()) }
+                var selectedTab by remember { mutableStateOf<AppTab?>(null) }
                 var favorites by remember { mutableStateOf(favoritesRepository.load()) }
                 val conversationState = rememberConversationSessionState()
+                val guidedScope = rememberCoroutineScope()
+                val guidedState = remember {
+                    GuidedSelectionState(
+                        scope = guidedScope,
+                        gemmaSearch = gemmaResponder::guidedSelection,
+                        databaseSearch = { criteria ->
+                            val result = wineReviewRepository.findGuided(criteria)
+                            GuidedResult.Complete(
+                                cards = result.reviews.map { match ->
+                                    val review = match.review
+                                    WineSuggestion(
+                                        name = review.name, winery = review.winery,
+                                        country = review.country, province = review.province,
+                                        variety = review.variety, rating = review.points,
+                                        reviewSummary = review.reviewSummary,
+                                        wineType = match.wineType, sweetness = match.sweetness,
+                                        tannin = match.tannin, acidity = match.acidity, body = match.body,
+                                        source = WineSuggestionSource.KAGGLE,
+                                        requestContext = criteria.description, profileComplete = true,
+                                    )
+                                },
+                                usedProvinceFallback = result.usedProvinceFallback,
+                            )
+                        },
+                        reportDatabaseError = { error ->
+                            Log.w("GuidedSelection", "Database search failed.", error)
+                        },
+                    )
+                }
                 val onTabSelected: (AppTab) -> Unit = { tab ->
                     selectedTab = tab
+                }
+                val onBackToLanding: () -> Unit = {
+                    selectedTab = null
                 }
 
                 if (modelReady) {
                     when (selectedTab) {
+                        null -> LandingRoute(onTabSelected = onTabSelected)
+                        AppTab.Find -> GuidedSelectionScreen(
+                            state = guidedState,
+                            onSuggestionClick = { stageWine = it.toStageWine() },
+                            onTabSelected = onTabSelected,
+                            onModelSetup = { modelReady = false },
+                            onBack = onBackToLanding,
+                        )
                         AppTab.Conversation -> ConversationRoute(
                             responder = conversationResponder,
                             state = conversationState,
                             onSuggestionClick = { stageWine = it.toStageWine() },
-                            onSuggestionRecorded = { suggestion, request ->
-                                historyEntries = historyRepository.record(suggestion, request)
-                            },
-                            onTabSelected = onTabSelected,
-                        )
-                        AppTab.History -> HistoryRoute(
-                            entries = historyEntries,
-                            onEntryClick = { stageWine = it.suggestion.toStageWine() },
-                            onDeleteEntries = { entryIds ->
-                                historyEntries = historyRepository.delete(entryIds)
-                            },
-                            onTabSelected = onTabSelected,
+                            onBack = onBackToLanding,
                         )
                         AppTab.Favorites -> FavoritesRoute(
                             favorites = favorites,
                             onFavoriteClick = { stageWine = it.toStageWine() },
-                            onTabSelected = onTabSelected,
+                            onBack = onBackToLanding,
                         )
                     }
                     stageWine?.let { wine ->
@@ -121,7 +152,7 @@ class MainActivity : ComponentActivity() {
                             wine = wine,
                             onBack = { stageWine = null },
                             loadProfile = { suggestion ->
-                                if (suggestion.source == WineSuggestionSource.GEMMA) {
+                                if (suggestion.source == WineSuggestionSource.GEMMA && !suggestion.profileComplete) {
                                     gemmaResponder.loadProfile(suggestion)
                                 } else {
                                     suggestion

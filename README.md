@@ -11,14 +11,14 @@ The app recommends wines in a casual conversational tone, then presents each rec
 
 AI recommendations can be compared with matching entries from a static, user-selected Kaggle wine-review dataset. Gemma produces the AI profile from its learned knowledge; Kaggle is an optional independent comparison rather than a dependency. Where available, winery information may also be corroborated through web search. Missing or unverified bottle-specific data is displayed as unknown rather than invented.
 
-The MVP is intended for personal, single-user use and stores history, favorites, ratings, notes, and event logs locally on the device.
+The MVP is intended for personal, single-user use and stores favorites, ratings, notes, and event logs locally on the device.
 
 ## MVP screens
 
 1. **Splash** — displays the Uncork identity while loading and validating the on-device model.
-2. **Conversation** — accepts natural-language requests and returns personable wine suggestions.
-3. **Stage Show** — presents one wine in a full-screen, typography-led detail view and supports AI/Kaggle comparison.
-4. **History** — groups previous suggestions by date and provides access to their detail views.
+2. **Find** — the default tab, with Type and tasting preferences plus Country and Province pickers.
+3. **Conversation** — accepts natural-language requests and returns personable wine suggestions.
+4. **Stage Show** — presents one wine in a full-screen, typography-led detail view and supports AI/Kaggle comparison.
 5. **Saved Wines** — stores selected wines with an optional personal rating and notes.
 
 ## Core capabilities
@@ -77,9 +77,9 @@ The wine-red accent is reserved for user-supplied signals: user chat messages, p
 
 ## Status
 
-The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, Chat interface, structured Gemma wine-profile extraction, initial Stage Show, and History are implemented. History saves structured suggestions on-device, groups them by date, preserves the active Chat session when switching tabs, and opens the corresponding Stage Show detail.
+The project is in active MVP development. The native shell, Splash, first-launch model acquisition, offline LiteRT-LM inference, Chat interface, structured Gemma wine-profile extraction, initial Stage Show, and Find are implemented. Navigation contains Find, Chat, and My List; Chat state is preserved when switching tabs. History and automatic history recording have been removed.
 
-The final system prompt, Frank Ruhl Libre asset, AI/Kaggle comparison interface and data pipeline, cloud routing, web verification, persistent History/Favorites/notes, and real Stage Show pairing generation remain open. The current conditional comparison code is only an unvalidated scaffold and is not considered an implemented feature.
+The final system prompt, Frank Ruhl Libre asset, AI/Kaggle comparison interface and data pipeline, cloud routing, web verification, persistent Favorites/notes, and real Stage Show pairing generation remain open. The current conditional comparison code is only an unvalidated scaffold and is not considered an implemented feature.
 
 ## First launch
 

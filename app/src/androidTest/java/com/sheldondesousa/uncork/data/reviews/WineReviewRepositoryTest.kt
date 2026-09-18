@@ -2,8 +2,10 @@ package com.sheldondesousa.uncork.data.reviews
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.sheldondesousa.uncork.ui.guided.GuidedCriteria
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,5 +50,36 @@ class WineReviewRepositoryTest {
             review.name.contains("rosé", ignoreCase = true) ||
                 review.variety.contains("rosé", ignoreCase = true)
         })
+    }
+
+    @Test
+    fun guidedSearchFallsBackToCountryWhenCuratedProvinceHasNoExactMatch() = runBlocking {
+        val repository = WineReviewRepository(ApplicationProvider.getApplicationContext())
+        repository.prepare()
+
+        // "Piedmont" is both the curated catalog's province and the Kaggle dataset's literal value.
+        val exactMatch = repository.findGuided(GuidedCriteria(country = "Italy", province = "Piedmont"))
+        assertFalse(exactMatch.usedProvinceFallback)
+        assertTrue(exactMatch.reviews.isNotEmpty())
+        assertTrue(exactMatch.reviews.all { it.review.province == "Piedmont" })
+
+        // "Sicily" is a curated province with no literal match (Kaggle buckets it as "Sicily & Sardinia").
+        val fallback = repository.findGuided(GuidedCriteria(country = "Italy", province = "Sicily"))
+        assertTrue(fallback.usedProvinceFallback)
+        assertTrue(fallback.reviews.isNotEmpty())
+        assertTrue(fallback.reviews.all { it.review.country == "Italy" })
+    }
+
+    @Test
+    fun guidedSearchFillsProfileAttributesConfirmedByTheMatchedCriteria() = runBlocking {
+        val repository = WineReviewRepository(ApplicationProvider.getApplicationContext())
+        repository.prepare()
+
+        val result = repository.findGuided(
+            GuidedCriteria(country = "Australia", wineType = setOf("Red"), body = setOf("Full-Bodied")),
+        )
+        assertTrue(result.reviews.isNotEmpty())
+        assertTrue(result.reviews.all { it.wineType == "Red" })
+        assertTrue(result.reviews.all { it.body == "Full-Bodied" })
     }
 }

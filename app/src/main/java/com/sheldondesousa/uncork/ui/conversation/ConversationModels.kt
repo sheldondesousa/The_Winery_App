@@ -34,6 +34,7 @@ data class WineSuggestion(
     val wineType: String = "Unknown",
     val winery: String = name,
     val variety: String = name,
+    val sweetness: String = "Unknown",
     val body: String = "Unknown",
     val tannin: String = "Unknown",
     val acidity: String = "Unknown",
@@ -48,6 +49,7 @@ data class WineSuggestion(
     val webSummary: String = "Unknown",
     val source: WineSuggestionSource = WineSuggestionSource.GEMMA,
     val requestContext: String? = null,
+    val profileComplete: Boolean = false,
     val favoriteRating: Int? = null,
     val isFavorite: Boolean = false,
 )

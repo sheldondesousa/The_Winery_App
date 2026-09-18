@@ -20,7 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -31,6 +36,29 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.Wine
+
+val BackArrowIcon: ImageVector = ImageVector.Builder(
+    name = "ShortBackArrow",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+    autoMirror = true,
+).apply {
+    path(
+        fill = null,
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        moveTo(13f, 6f)
+        lineTo(7f, 12f)
+        lineTo(13f, 18f)
+        moveTo(7f, 12f)
+        lineTo(17f, 12f)
+    }
+}.build()
 
 @Composable
 fun AppHeader(

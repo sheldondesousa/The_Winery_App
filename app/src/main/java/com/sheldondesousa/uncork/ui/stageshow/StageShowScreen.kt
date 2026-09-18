@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,12 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -49,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.components.AppHeader
+import com.sheldondesousa.uncork.ui.components.BackArrowIcon
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -62,6 +57,7 @@ data class WineProfile(
     val wineType: String = "Unknown",
     val variety: String,
     val province: String,
+    val sweetness: String = "Unknown",
     val body: String = "Unknown",
     val tannin: String = "Unknown",
     val acidity: String = "Unknown",
@@ -73,6 +69,7 @@ data class WineProfile(
     val webSummary: String = "Unknown",
     val source: WineSuggestionSource = WineSuggestionSource.GEMMA,
     val requestContext: String? = null,
+    val profileComplete: Boolean = false,
     val cheesePairing: String? = null,
     val verified: Boolean = false,
 )
@@ -92,6 +89,7 @@ fun WineSuggestion.toStageWine(): StageWine = StageWine(
         wineType = wineType,
         variety = variety,
         province = province,
+        sweetness = sweetness,
         body = body,
         tannin = tannin,
         acidity = acidity,
@@ -103,34 +101,12 @@ fun WineSuggestion.toStageWine(): StageWine = StageWine(
         webSummary = webSummary,
         source = source,
         requestContext = requestContext,
+        profileComplete = profileComplete,
     ),
     userRating = favoriteRating,
 )
 
 private enum class WineSource { AI, Kaggle }
-
-private val ShortBackArrow: ImageVector = ImageVector.Builder(
-    name = "ShortBackArrow",
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 24f,
-    viewportHeight = 24f,
-    autoMirror = true,
-).apply {
-    path(
-        fill = null,
-        stroke = SolidColor(Color.Black),
-        strokeLineWidth = 2f,
-        strokeLineCap = StrokeCap.Round,
-        strokeLineJoin = StrokeJoin.Round,
-    ) {
-        moveTo(13f, 6f)
-        lineTo(7f, 12f)
-        lineTo(13f, 18f)
-        moveTo(7f, 12f)
-        lineTo(17f, 12f)
-    }
-}.build()
 
 @Composable
 fun StageShowRoute(
@@ -168,7 +144,7 @@ fun StageShowRoute(
     ) {
         AppHeader(
             title = "Attributes",
-            icon = ShortBackArrow,
+            icon = BackArrowIcon,
             onIconClick = onBack,
             iconContentDescription = "Back",
             modifier = Modifier.padding(horizontal = 22.dp),
@@ -234,6 +210,7 @@ fun StageShowRoute(
                 add("VARIETY" to profile.variety)
                 add("COUNTRY" to profile.country)
                 add("PROVINCE" to profile.province)
+                if (profile.sweetness != "Unknown") add("SWEETNESS" to profile.sweetness)
                 add("BODY" to profile.body)
                 add("TANNIN" to profile.tannin)
                 add("ACIDITY" to profile.acidity)
@@ -305,6 +282,7 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
     wineType = ai.wineType,
     winery = ai.winery,
     variety = ai.variety,
+    sweetness = ai.sweetness,
     body = ai.body,
     tannin = ai.tannin,
     acidity = ai.acidity,
@@ -316,33 +294,47 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
     webSummary = ai.webSummary,
     source = ai.source,
     requestContext = ai.requestContext,
+    profileComplete = ai.profileComplete,
     favoriteRating = userRating,
     isFavorite = true,
 )
 
 @Composable
 private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .requiredSize(88.dp)
-            .offset(y = (-24).dp)
-            .clip(CircleShape)
-            .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
-            .clickable(role = Role.Switch, onClick = onClick)
-            .semantics {
-                role = Role.Switch
-                contentDescription = "Save favorite, ${if (selected) "on" else "off"}"
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = if (selected) "Saved" else "Save",
-            color = if (selected) Wine else Parchment,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+    Box(contentAlignment = Alignment.Center) {
+        // A shadow-only layer, offset further up (negative Y) than the button itself, so the
+        // shadow reads as cast upward rather than Compose's default downward elevation shadow.
+        Box(
+            Modifier
+                .requiredSize(88.dp)
+                .offset(y = ButtonOffsetY + ShadowOffsetY)
+                .shadow(elevation = 6.dp, shape = CircleShape, clip = false),
         )
+        Box(
+            modifier = Modifier
+                .requiredSize(88.dp)
+                .offset(y = ButtonOffsetY)
+                .clip(CircleShape)
+                .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
+                .clickable(role = Role.Switch, onClick = onClick)
+                .semantics {
+                    role = Role.Switch
+                    contentDescription = "Save favorite, ${if (selected) "on" else "off"}"
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = if (selected) "Saved" else "Save",
+                color = if (selected) Wine else Parchment,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
+
+private val ButtonOffsetY = (-24).dp
+private val ShadowOffsetY = (-6).dp
 
 @Composable
 private fun SourceSelector(

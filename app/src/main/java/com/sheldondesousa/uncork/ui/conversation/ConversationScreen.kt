@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.conversation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -28,9 +28,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -71,13 +68,14 @@ import com.sheldondesousa.uncork.ui.theme.InkMuted
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import com.sheldondesousa.uncork.ui.components.AppHeader
+import com.sheldondesousa.uncork.ui.components.BackArrowIcon
 import kotlinx.coroutines.launch
 
 private val AiResponseInk = Color(0xFF27201D)
 
 enum class AppTab(val label: String) {
+    Find("Find"),
     Conversation("Chat"),
-    History("History"),
     Favorites("My List"),
 }
 
@@ -107,8 +105,7 @@ fun ConversationRoute(
     responder: ConversationResponder = remember { DemoConversationResponder() },
     state: ConversationSessionState = rememberConversationSessionState(),
     onSuggestionClick: (WineSuggestion) -> Unit = {},
-    onSuggestionRecorded: (WineSuggestion, String) -> Unit = { _, _ -> },
-    onTabSelected: (AppTab) -> Unit = {},
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -139,9 +136,6 @@ fun ConversationRoute(
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
                     state.messages += response.copy(followUpText = null)
-                    response.wineSuggestions.forEach { suggestion ->
-                        onSuggestionRecorded(suggestion, response.historyRequest ?: query)
-                    }
                     response.followUpText
                         ?.takeIf { it.isNotBlank() }
                         ?.let { followUp ->
@@ -173,7 +167,7 @@ fun ConversationRoute(
         onDraftChange = { state.draft = it },
         onSend = ::submit,
         onSuggestionClick = onSuggestionClick,
-        onTabSelected = onTabSelected,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -189,10 +183,11 @@ private fun ConversationScreen(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onSuggestionClick: (WineSuggestion) -> Unit,
-    onTabSelected: (AppTab) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    BackHandler(onBack = onBack)
 
     LaunchedEffect(messages.size, isReplying, errorMessage, streamingText, streamingSuggestions.size) {
         val extraRows = (if (streamingText.isNotBlank() || streamingSuggestions.isNotEmpty()) 1 else 0) +
@@ -211,7 +206,9 @@ private fun ConversationScreen(
     ) {
         AppHeader(
             title = "Chat",
-            icon = Icons.Outlined.ChatBubbleOutline,
+            icon = BackArrowIcon,
+            onIconClick = onBack,
+            iconContentDescription = "Back",
         )
 
         Box(
@@ -267,10 +264,6 @@ private fun ConversationScreen(
             enabled = !isReplying,
             onValueChange = onDraftChange,
             onSend = onSend,
-        )
-        BottomNavigation(
-            selected = AppTab.Conversation,
-            onTabSelected = onTabSelected,
         )
     }
 }
@@ -578,88 +571,3 @@ private fun MessageComposer(
     }
 }
 
-@Composable
-fun BottomNavigation(
-    selected: AppTab,
-    onTabSelected: (AppTab) -> Unit = {},
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Wine)
-            .navigationBarsPadding()
-            .height(72.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        NavigationItem(
-            label = AppTab.Conversation.label,
-            selected = selected == AppTab.Conversation,
-            modifier = Modifier.weight(1f),
-            onClick = { onTabSelected(AppTab.Conversation) },
-        ) {
-            Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null)
-        }
-        NavigationDivider()
-        NavigationItem(
-            label = AppTab.History.label,
-            selected = selected == AppTab.History,
-            modifier = Modifier.weight(1f),
-            onClick = { onTabSelected(AppTab.History) },
-        ) {
-            Icon(Icons.Outlined.History, contentDescription = null)
-        }
-        NavigationDivider()
-        NavigationItem(
-            label = AppTab.Favorites.label,
-            selected = selected == AppTab.Favorites,
-            modifier = Modifier.weight(1f),
-            onClick = { onTabSelected(AppTab.Favorites) },
-        ) {
-            Icon(Icons.Outlined.FavoriteBorder, contentDescription = null)
-        }
-    }
-}
-
-@Composable
-private fun NavigationDivider() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .fillMaxHeight(0.58f)
-            .background(Parchment.copy(alpha = 0.24f)),
-    )
-}
-
-@Composable
-private fun NavigationItem(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    icon: @Composable () -> Unit,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .clickable(role = Role.Tab, onClick = onClick)
-            .semantics { contentDescription = label },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides Parchment.copy(
-                alpha = if (selected) 1f else 0.58f,
-            ),
-        ) {
-            Box(Modifier.size(27.dp), contentAlignment = Alignment.Center) { icon() }
-        }
-        Spacer(Modifier.height(3.dp))
-        Text(
-            text = label,
-            color = Parchment.copy(alpha = if (selected) 1f else 0.68f),
-            fontSize = if (selected) 13.sp else 12.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            letterSpacing = 0.2.sp,
-        )
-    }
-}

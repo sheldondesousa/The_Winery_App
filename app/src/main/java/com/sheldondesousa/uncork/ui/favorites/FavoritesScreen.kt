@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.favorites
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,8 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,8 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.components.AppHeader
-import com.sheldondesousa.uncork.ui.conversation.AppTab
-import com.sheldondesousa.uncork.ui.conversation.BottomNavigation
+import com.sheldondesousa.uncork.ui.components.BackArrowIcon
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -32,9 +30,10 @@ import com.sheldondesousa.uncork.ui.theme.Parchment
 fun FavoritesRoute(
     favorites: List<WineSuggestion>,
     onFavoriteClick: (WineSuggestion) -> Unit,
-    onTabSelected: (AppTab) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    BackHandler(onBack = onBack)
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -43,7 +42,9 @@ fun FavoritesRoute(
     ) {
         AppHeader(
             title = "Saved",
-            icon = Icons.Outlined.FavoriteBorder,
+            icon = BackArrowIcon,
+            onIconClick = onBack,
+            iconContentDescription = "Back",
         )
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(favorites, key = { "${it.winery}|${it.variety}|${it.province}" }) { wine ->
@@ -72,9 +73,5 @@ fun FavoritesRoute(
                 }
             }
         }
-        BottomNavigation(
-            selected = AppTab.Favorites,
-            onTabSelected = onTabSelected,
-        )
     }
 }

@@ -40,9 +40,9 @@ Do not introduce a second accent color. If something new needs to stand out, it 
 
 **Status bar** — persistent across every screen (part of the frame, not any individual screen): time left, signal/wifi/battery right. It is transparent over parchment and uses dark system icons/text for contrast.
 
-**Page header** — Chat, History, Saved, and Attributes share a burgundy horizontal hairline at the same vertical position beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
+**Page header** — Find, Chat, My List, and Attributes share a burgundy horizontal hairline at the same vertical position beneath the title/brand row, separating the page identity from the screen content without using elevation or shadow.
 
-**Bottom nav** — three tabs: Chat, History, Saved Wines. It is flush with the physical bottom of the screen, uses a wine-red background, and has equal-width columns separated by hairline dividers. All icons have visible labels. The selected label is 13sp/700 and unselected labels are 12sp/400; selection uses opacity and weight without a background highlight. Appears on those three screens only.
+**Bottom nav** — three tabs: Find, Chat, My List. It is flush with the physical bottom of the screen, uses a wine-red background, and has equal-width columns separated by hairline dividers. All icons have visible labels. The selected label is 13sp/700 and unselected labels are 12sp/400; selection uses opacity and weight without a background highlight. Appears on those three screens only.
 - **Not** on Splash (nothing to navigate to yet).
 - **Not** on Stage Show, per PRD §7 AC1 — that screen is explicitly full-screen with no persistent nav chrome.
 
@@ -78,7 +78,7 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Sending a message (via the simulated keyboard's Send key) appends it to the thread as a new user bubble.
 
 ### Stage Show
-- No persistent bottom nav chrome (PRD §7 AC1). The top header uses a compact left chevron with a short horizontal back stem beside the page title "Attributes", plus the shared right-aligned Uncork / AI SOMMELIER lockup. Its compact 32dp-wide, 40dp-high control begins on the same 22dp horizontal grid as the Chat, History, and Favorites icons, while the title shares their text alignment. Large typographic wine name + origin, no bottle imagery.
+- No persistent bottom nav chrome (PRD §7 AC1). The top header uses a compact left chevron with a short horizontal back stem beside the page title "Attributes", plus the shared right-aligned Uncork / AI SOMMELIER lockup. Its compact 32dp-wide, 40dp-high control begins on the same 22dp horizontal grid as the Find, Chat, and My List icons, while the title shares their text alignment. Large typographic wine name + origin, no bottle imagery.
 - Current sizes: wine name 42sp, province 17sp, schema values 15sp, schema micro-labels 10sp, and cheese-pairing copy 16sp.
 - The planned AI/Kaggle toggle is a plain text switch (not a pill), with an agreement indicator ("similar pick") next to it. This comparison interface has not yet been designed, connected to data, or approved; the current code contains only an unvalidated conditional scaffold.
 - AI is the primary source and should populate the shared schema from Gemma's learned knowledge. Kaggle is optional comparative evidence; its absence must not force the AI fields to `Unknown`.
@@ -86,12 +86,6 @@ Two alternate demarcation modes were explored and are available in the mockup if
 - Cheese pairing is a secondary, quieter block below the main schema — never the primary focus (PRD §7 AC8).
 - Rating uses a 10-dot strip rather than numeric stepper or stars, matching the integer 1–10 scale without implying half-points.
 
-### History
-- Grouped by date header (sans-serif micro-label: "today," "yesterday"). Each entry: wine name, concise user request, and favorited annotation if applicable.
-- The shared header places the History icon and 24sp title on the left and the right-aligned Uncork/AI SOMMELIER brand lockup on the same line. Entries use the wine name as the primary serif line, followed by province, `Your Request:` plus locally extracted user-request keywords (for example country, province, variety, color, body, acidity, tannin, and flavor), and a trailing chevron. AI conversation text is not shown in History, and suggestion attributes not present in the user's request are not added as request keywords.
-- The empty History content area is intentionally blank for now.
-- Clear sits on the same line as the most recent date heading (for example, TODAY) with a black-at-10%-opacity background for emphasis. Clear All is hidden for now. Clear reveals an empty checkbox to the left of every History entry for manual selection and changes its label to Cancel. Tapping Cancel exits selection. A floating trash-can icon with a `Delete` label appears above the bottom navigation during selection, uses black when active, remains muted and disabled without a selection, and removes the selected local records when tapped.
-- Sits above the shared bottom nav.
 
 ### Saved Wines
 - Sorted most-recently-saved first (resolves PRD open assumption #9).
@@ -112,7 +106,7 @@ These resolve open assumptions from the PRD or were made unprompted while buildi
 | Rating control | 10-dot strip, not stars/stepper | §9 AC4 |
 | Unknown vs. unrated | Different styling (italic-muted vs. plain-muted) so they're never confused | §4 |
 | Chat demarcation | Alignment + accent tint (user) + rule (AI) — three redundant cues, none color-only | new |
-| Bottom nav scope | Conversation/History/Favorites only; excluded from Splash and Stage Show | new, respects §7 AC1 |
+| Bottom nav scope | Find/Conversation/Favorites only; excluded from Splash and Stage Show | new, respects §7 AC1 |
 | Active tab | No filled highlight; full-opacity icon/label plus heavier 13sp label | implementation update |
 | AI response surface | 5% black wash, 11dp radius, and 1dp left rule at 50% opacity | implementation update |
 
@@ -129,7 +123,13 @@ These resolve open assumptions from the PRD or were made unprompted while buildi
 
 ## 6. Still open (not yet decided)
 
-- Attributes shows `Suggested pairing` as an upfront detail field. The profile content scrolls independently while an oversized, enforced 88dp-by-88dp circular control remains center-aligned in a fixed 72dp bottom navigation area matching Chat, History, and Favorites; the circle intentionally overlaps 24dp above the bar in a floating center-button treatment and must not be constrained into an oval. A 104dp circular parchment cutout behind it creates an 8dp gap between the button and bar. The area uses the same black-at-10%-opacity background as the inactive chat send control. Its off state is burgundy with the label `Save`; tapping it saves the wine locally to Favorites and changes it to a lighter muted treatment labeled `Saved`. Tapping again removes the wine and restores `Save`. Favorites list tiles do not show heart icons. Personal rating is read-only on Attributes; without a prior rating, the page says `You have not tried this wine`.
-- Navigation model: whether the bottom nav's Conversation/History/Favorites tabs are the sole way to move between those three, or whether Stage Show and other drill-ins should also get an explicit back control beyond the current back chevron.
+- Attributes shows `Suggested pairing` as an upfront detail field. The profile content scrolls independently while an oversized, enforced 88dp-by-88dp circular control remains center-aligned in a fixed 72dp bottom navigation area matching Find, Chat, and My List; the circle intentionally overlaps 24dp above the bar in a floating center-button treatment and must not be constrained into an oval. A 104dp circular parchment cutout behind it creates an 8dp gap between the button and bar. The area uses the same black-at-10%-opacity background as the inactive chat send control. Its off state is burgundy with the label `Save`; tapping it saves the wine locally to Favorites and changes it to a lighter muted treatment labeled `Saved`. Tapping again removes the wine and restores `Save`. Favorites list tiles do not show heart icons. Personal rating is read-only on Attributes; without a prior rating, the page says `You have not tried this wine`.
+- Navigation model: whether the bottom nav's Find/Conversation/Favorites tabs are the sole way to move between those three, or whether Stage Show and other drill-ins should also get an explicit back control beyond the current back chevron.
 - The PRD's own flagged scope question: whether location/price lookup (Google Places) is intentionally deferred from this MVP or was dropped by oversight (PRD §10, item 11).
 - Final Frank Ruhl Libre font bundling and device-level visual validation.
+
+### Find — three-column reference update
+
+Use three equal-width columns for Type and every Taste profile group. The entire cell toggles its option; at least 48dp tall, with no dead area around the indicator or label. Use empty circular outlines and burgundy filled circles with white checks. Multi-select accessibility semantics describe independent checked states. Type wraps as Red/White/Sparkling, then Rosé/Fortified/empty. Sweetness is Bone-Dry/Off-Dry/Sweet. Tannin is Smooth/Moderate/Astringent; Body is Light-Bodied/Medium-Bodied/Full-Bodied; Acidity is Soft/Crisp/Tart. Labels come from the shared evidence mappings, and may wrap within their full-width clickable cells.
+
+Above the groups, show the applied-filter count and Clear all. Combine Country and Province into one Location field leading to a bottom sheet. Use thin section dividers, bold headings, optional Taste profile helper copy, a Chat helper link, and a fixed burgundy Search CTA above the existing Find/Chat/My List navigation.

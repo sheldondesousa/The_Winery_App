@@ -9,4 +9,7 @@ data class WineReview(
     val variety: String,
     val points: Int?,
     val reviewSummary: String,
+    val body: String = "Unknown",
+    val tannin: String = "Unknown",
+    val acidity: String = "Unknown",
 )
