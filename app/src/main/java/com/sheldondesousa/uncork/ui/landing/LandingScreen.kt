@@ -52,19 +52,19 @@ private data class LandingDestination(
 private val LandingDestinations = listOf(
     LandingDestination(
         tab = AppTab.Find,
-        title = "Find a bottle",
+        title = "Discover a bottle",
         description = "Filter by taste, occasion, and region to discover a wine.",
         icon = Icons.Outlined.Search,
     ),
     LandingDestination(
         tab = AppTab.Conversation,
-        title = "Chat with the AI Sommelier",
+        title = "Consult an AI Sommelier",
         description = "Describe what you're in the mood for and get a recommendation.",
         icon = Icons.Outlined.ChatBubbleOutline,
     ),
     LandingDestination(
         tab = AppTab.Favorites,
-        title = "View saved wines",
+        title = "My wine list",
         description = "Revisit the bottles you've saved and rated.",
         icon = Icons.Outlined.FavoriteBorder,
     ),
