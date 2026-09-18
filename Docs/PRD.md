@@ -11,18 +11,20 @@
 
 A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Gemma leads a fixed three-question onboarding sequence covering wine type, country, and other attributes; explicit lack-of-preference answers are valid and ambiguous answers are clarified at the current step. Kotlin renders Gemma's visible output, retains lightweight field coverage, and orchestrates the Kaggle, cache, and web data sources. When all three questions close, Gemma emits one full preference snapshot and structured recommendation context, and the app queries Kaggle immediately. Kaggle results are followed by an offer to run a broader web search. A Kaggle miss follows AC10e and AC10f. Newly resolved web-search profile data is written to the growing on-device `VarietyRegionProfile` Room table with source `web_search`.
 
+Find is the default entry point, accepting any combination of Type, Location, Sweetness, Tannin, Body, and Acidity selections. It queries on-device Gemma and the bundled database independently, with no Chat fallback, profile-cache access, web search, or automatic History recording. See Section 6A.
+
 ## 2. MVP Scope
 
 Five screens:
 1. Splash Screen
-2. Main Conversation Screen
-3. Profile Page
-4. History
+2. Find
+3. Main Conversation Screen
+4. Profile Page
 5. My List
 
 ## 3. Out of Scope (this MVP)
 
-- Suggestions / discovery feed (a separate curated/"surprise me" feed — distinct from History, which is your own past suggestions)
+- Suggestions / discovery feed (a separate curated/"surprise me" feed)
 - Wine bottle imagery (typography carries the visual weight instead)
 - Cloud sync / multi-device support
 - Location and price lookup (Google Places) — discussed earlier in the project, not included in these five screens. **Flagging this explicitly since it was part of earlier scoping — confirm this is an intentional deferral, not an oversight.**
@@ -41,6 +43,7 @@ province
 body          (string: single value | range | optional trailing * | Unknown)
 tannin        (string: single value | range | optional trailing * | Unknown)
 acidity       (string: single value | range | optional trailing * | Unknown)
+sweetness     (optional string: Bone-Dry | Off-Dry | Sweet | Unknown; generated for Find profiles)
 flavor_notes  (2-4 short tags)
 summary        (nullable string, Gemma only, fewer than 200 characters)
 review_summary (nullable string, full untruncated Kaggle review text)
@@ -98,7 +101,9 @@ Before the Kaggle database is made available to the app, exact duplicate source 
 
 The 15 September 2026 database build started with 119,928 cleaned rows, merged 688 wines that had multiple distinct reviews, and produced 119,030 final rows.
 
-### Response-source rules
+### Response-source rules for Chat
+
+These rules apply to Chat. Find uses the independent rules in Section 6A.
 
 - Gemma targets three valid structured recommendations as lookup context. Once Q1-Q3 close, the app queries the enthusiast database immediately rather than displaying Gemma cards first.
 - Kaggle cards trigger an optional offer for a broader web search. A Kaggle miss proceeds to the web-search layer automatically. Every later layer excludes cards already shown.
@@ -143,7 +148,7 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
   - **AC1a:** Given a new conversation opens, then UnCork briefly introduces itself as the user's personal sommelier and immediately asks whether they want **red**, **rosé**, **white**, **sparkling**, **sweet**, or **fortified** wine. The six options are bold so the first critical filter is clear without an open-ended introductory question.
   - **AC1b:** Given the launch greeting is already visible, when Gemma generates any later response, then it does not introduce itself again.
 - **AC2:** Given a prior response exists in the current session, when the screen renders, then the conversation thread displays above the input, most recent at the bottom.
-  - **AC2a:** Given the app is closed and reopened (a new session), when the Main Conversation Screen loads, then the screen starts fresh — the previous session's suggestions are not shown inline, but remain accessible under History (Section 8), grouped by date.
+  - **AC2a:** Given the app is closed and reopened (a new session), when the Main Conversation Screen loads, then the screen starts fresh — the previous session's suggestions are not shown inline, and only explicitly saved wines remain available in My List.
   - **AC2b:** Given the LLM can produce any number of suggestions within one session, when the user's query shifts to a different topic within the same session, then earlier suggestion cards remain visible in the thread rather than being cleared or collapsed.
 
 ### Content Tone
@@ -223,7 +228,7 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
     - When no complete combination exists, the full web search runs using the original user-query keywords.
     - Brave search requests bottle-focused recommendation evidence and includes expanded result excerpts. Gemma returns three distinct supported options whenever the evidence contains at least three, otherwise every supported option available up to three. Each returned option receives its own independently synthesized `web_summary`. Rating and review summary remain unset for cached and newly found web options because both are reserved for a real Kaggle match; the Profile Page omits the Critic Review section for these options. This fallback is part of the MVP.
     - The generation that produces each `web_summary` also resolves that option's structured `body`, `tannin`, and `acidity` values. Prose and structured attributes come from one generation step rather than separate calls.
-  - **AC10h:** Given AC10g performs a full live web search because no cached option exists, when it resolves new field-level data and options for a country-province-variety combination, then the app writes the profile and first returned option, including winery, `web_summary`, `body`, `tannin`, `acidity`, and other resolved fields, to `VarietyRegionProfile` with source `web_search`. The write replaces any row for the same `country` + `province` + `variety` composite key. Only that first-position result is cached; the other options remain in the session thread and History entry. No custom web ranking is applied. Web-derived `body`, `tannin`, and `acidity` values carry the internal trailing `*` thin-evidence marker.
+  - **AC10h:** Given AC10g performs a full live web search because no cached option exists, when it resolves new field-level data and options for a country-province-variety combination, then the app writes the profile and first returned option, including winery, `web_summary`, `body`, `tannin`, `acidity`, and other resolved fields, to `VarietyRegionProfile` with source `web_search`. The write replaces any row for the same `country` + `province` + `variety` composite key. Only that first-position result is cached; the other options remain in the session thread. No custom web ranking is applied. Web-derived `body`, `tannin`, and `acidity` values carry the internal trailing `*` thin-evidence marker.
   - **AC10i:** Given the web-search layer fails or returns no valid card after Gemma and Kaggle also failed, then the app politely states that it could not find relevant information for the request. It presents no fabricated card.
   - **AC10j:** Given AC10g requires a live web search but the device has no internet connection, then the response plainly explains that web search could not run without a connection and that Gemma, Kaggle, and the on-device cache did not contain enough information to answer accurately. The message uses the thread's casual tone and does not show a retry control.
   - **AC10k:** Given the cache returns three usable options, then they render and no live web search runs. Given it returns only one or two, they remain the current web-layer candidate while live search is checked for a larger set.
@@ -233,16 +238,75 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 - Exact routing heuristic for cloud escalation (word count? explicit constraint count?) is not yet defined — needed before this can be built.
 - Assumed cheese pairing is requested via a dedicated action, not by re-parsing free text for intent — confirm this matches your expectation.
 - Exact styling and visual treatment of the wine option-card section within the chat response.
-- Whether structured prompt extraction and History's lightweight `Your Request:` keyword extraction should share one mechanism or remain separate.
 
 ---
+
+## 6A. Find
+
+**Current design:** Find is the default tab after splash. Tab order: **Find, Chat, My List**. This supersedes the earlier Guided Selection layout, required variety/country/region choices, and ten-country shortlist.
+
+### Layout and selection
+
+The Find layout follows the supplied visual reference: parchment background, burgundy accents, a filter-count pill and Clear all action, followed by Type, Location, and Taste profile sections separated by thin rules. Search stays visible above the existing three-tab navigation while content scrolls. A helper link opens Chat.
+
+| Category | Control and options |
+|---|---|
+| **Type** | Three equal-width columns, wrapping to a second row: Red, White, Sparkling, Rosé, Fortified. Hint: “select any that apply.” Sweet is now a Sweetness option rather than a Type. |
+| **Location** | One outlined field displays Country · Province (or Any country / Any province). It opens a location bottom sheet with Country and Province pickers and Done. Each picker uses alphabetically sorted database values; Province narrows to the selected country. Selecting a value returns to the location sheet. |
+| **Taste profile** | Bold section heading with “Optional — leave blank if you're not sure.” |
+| **Sweetness** | Bone-Dry, Off-Dry, Sweet in three equal-width columns. |
+| **Tannin** | Smooth, Moderate, Astringent in three equal-width columns. |
+| **Body** | Light-Bodied, Medium-Bodied, Full-Bodied in three equal-width columns. |
+| **Acidity** | Soft, Crisp, Tart in three equal-width columns. |
+
+All option groups support multiple selections. Each entire allocated cell—including the circular indicator, label, and whitespace—is one toggle target, at least 48dp tall. There are no separate nested indicator click handlers. The indicator is an empty circle when off and a burgundy circle with a white check when on. Accessibility exposes each cell as a checked/unchecked multi-select control. Empty cells in an incomplete row retain their column width and are not actionable.
+
+Every category is optional. Start with no selections. Tapping a selected cell deselects just that value. Clear all resets all selections and the count to zero, disabling Search; it does not silently re-run or overwrite prior results. Count each selected option plus one for an active Location. Country and Province remain single selections; clearing/changing Country clears Province. Persist and display the field as Province, with `USA` displaying the stored country value `US`.
+
+Option labels come directly from the shared evidence-map keys in `FindPhraseEvidence`. Gemma uses those same descriptive values; the app's shared profile schema remains string-based, preserving existing values and ranges.
+
+The location list is loaded directly from the bundled database, currently 43 countries and 425 distinct provinces. It is not limited to the earlier curated list. If loading fails, provide Retry locations; users can still search with Type or tasting preferences.
+
+### Search and source behavior
+
+- **GS-AC1:** Find opens by default after splash and displays the sections and controls described above. No Variety selector appears.
+- **GS-AC2:** Within Location, tapping Country opens the alphabetically sorted country bottom sheet. Selecting a country updates the field and returns to the Location sheet.
+- **GS-AC3:** Within Location, tapping Province opens an alphabetically sorted province sheet, narrowed by Country when selected. Selecting a province updates the field. Changing Country clears Province.
+- **GS-AC4:** Unselected fields mean no preference and are excluded from both sources' constraints. They must not become hidden default filters.
+- **GS-AC5:** Any single selection enables Search, including Type alone, Country alone, Province alone, or any one tasting preference. An entirely empty selection disables Search.
+- **GS-AC6:** Search captures an immutable snapshot and starts on-device Gemma and Database searches independently. Both receive the same selected criteria. One source's completion, failure, or cancellation does not wait for or cancel the other.
+- **GS-AC7:** Gemma produces at most one category recommendation consistent with all selected criteria. Each selected category is an allowed-value list: accept one selected value per category (OR within a category, AND across categories). It may choose an appropriate variety and fill unselected attributes with plausible model-generated values or Unknown. Validate every selected field, including Type, before displaying the recommendation. Reject contradictory/malformed output with a retryable error; a valid empty recommendation array is an empty result. Do not invent a winery, critic score, or review.
+- **GS-AC8:** Database combines selected categories with AND and selected alternatives within a category with OR. Selected Country and Province use case-insensitive equality. Type uses case-insensitive equality against a union of explicit mapped `variety` values. Never infer Type from a wine name or review. An empty configured mapping returns no Database results without broadening the search. Tasting preferences use review-text phrase evidence. Return at most three matches, ranked by points descending, winery ascending, then ID ascending; null points always sort last. No keyword broadening or fallback runs.
+- **GS-AC9:** Before searching, show guidance. After submission, Gemma and Database each render their own loading, results, or empty state as soon as ready.
+- **GS-AC10:** Cards open the existing Profile Page with all source fields preserved. Gemma supplies Summary; Database supplies the full Critic Review and nullable critic score. Unavailable Database attributes remain Unknown, rather than copying search preferences as facts. No additional inference, profile-cache access, or web lookup runs when these profiles open, including from My List. Explicit Save remains available.
+- **GS-AC11:** Each empty source independently shows “No matches for these selections.”
+- **GS-AC12:** A Gemma failure provides Gemma-only Retry using the submitted criteria and a route to model setup. No cloud escalation occurs.
+- **GS-AC13:** A Database read/parse failure presents the same empty state as zero matches; record a technical diagnostic internally.
+- **GS-AC14:** Selection edits do not change existing results. Show the submitted criteria and a message when another Search is needed. A new search resets both sections and ignores late responses from obsolete searches.
+- **GS-AC15:** Disable duplicate submission while the same criteria are running. Changed selections may start a new search. Retry cannot race a newer search.
+- **GS-AC16:** Returning from Profile preserves selections and results without repeating the search. Buttons expose selected state; pickers support dismissal without changing values.
+
+### Database matching limits
+
+The implementation and review decisions are documented in [Find-Database-Mapping.md](Find-Database-Mapping.md), with compiled-query checks and row counts in [Find-Mapping-Audit.md](Find-Mapping-Audit.md).
+
+The Type whitelist includes 64 actual variety values, covering 87.6% of database rows. All five visible types have backing data, including Sparkling and Fortified. The remaining 637 variety values are unclassified and stay searchable when Type is unselected; no style is guessed for them. Exact variety membership does not certify bottle style.
+
+Tasting filters use the reviewed `FindPhraseEvidence` lists against `review_summary`. Firm tannins maps to Moderate; crisp acidity maps to Crisp. Risky bare terms such as rich, tart, tannic, dry, and sweet are excluded. Selected categories combine with AND; selected options and their phrases within one category combine with OR. Unknown option labels fail validation instead of silently dropping filters. Phrase matching remains approximate and may misread context or negation.
+
+Show the disclaimer: **“Database preferences match descriptions in critic reviews; some wines may have no recorded match.”** Also state: **“Type filters use mapped varieties; unclassified wines may be missed.”**
+
+### Retained product boundaries
+
+On-device Gemma only; at most one Gemma card and three Database cards. No cloud/web fallback, `VarietyRegionProfile` access, or automatic History entries. Explicit Save uses My List. These rules are independent of Chat's fallback pipeline.
+
 
 ## 7. Profile Page
 
 **Purpose:** Full-screen, distraction-free showcase of a single wine. Deliberate and factual in tone — the opposite register from Main Conversation's casual suggestions.
 
 ### Navigation & Display
-- **AC1:** Given the user taps an option card, Gemma's own suggestion, a My List entry, or a History entry, when the Profile Page opens, then it displays that specific wine's name, origin, and key traits in large typography, with no persistent navigation chrome.
+- **AC1:** Given the user taps an option card, Gemma's own suggestion, or a My List entry, when the Profile Page opens, then it displays that specific wine's name, origin, and key traits in large typography, with no persistent navigation chrome.
 - **AC2:** Given no bottle imagery is used in MVP scope, when the Profile Page renders, then typography carries the full visual weight, with no image or image placeholder.
 
 ### Data & Content — Key for Wine Description
@@ -257,7 +321,7 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
   - `winery`
   - `rating`
 - **AC4a:** Given the entry came from a Kaggle option, when rendered, then winery, rating, and the full untruncated review summary display resolved values where the matched Kaggle record supplies them. When duplicate-wine aggregation combined multiple reviews, the labeled concatenation is displayed without dropping or shortening any review. The narrative section is labeled `Critic Review`; `Summary` and `Web Summary` are not displayed.
-- **AC4b:** Given the entry came from Gemma's own suggestion without a matched option, when rendered, then its under-200-character descriptive text is displayed in a narrative section labeled `Summary`. `Critic Review` and `Web Summary` are not displayed, and rating remains absent because Gemma does not supply it.
+- **AC4b:** Find profiles are complete when their cards appear and do not trigger additional model inference, cache access, or web searches, including when reopened from My List. Given the entry came from Gemma's own suggestion without a matched option, when rendered, then its under-200-character descriptive text is displayed in a narrative section labeled `Summary`. `Critic Review` and `Web Summary` are not displayed, and rating remains absent because Gemma does not supply it.
 - **AC4c:** Given the entry came from a cached or live web-search option under Section 6, AC10g, when rendered, then winery, variety, country, province, web summary, and other attributes display where the search resolved them. The narrative section is labeled `Web Summary`; `Summary` and `Critic Review` are not displayed. Rating remains absent because it is reserved for a real Kaggle match.
 - **AC4d:** Given `body`, `tannin`, or `acidity` contains the internal trailing `*` thin-evidence marker, whether from fewer than three supporting Kaggle reviews or a web-derived synthesis, when the Profile Page renders that value, then it displays the plain-language annotation `Insufficient data` near the value using the same treatment for either source. The raw `*` character is not shown to the user. The exact caption, tooltip, or icon treatment remains to be defined.
 - **AC5:** Given a shared attribute value is `Unknown`, when displayed, then it renders in muted or secondary text, visually distinct from resolved values.
@@ -268,46 +332,17 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 
 ### Actions
 - **AC9:** Given the Profile Page is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
-- **AC10:** Given the Profile Page is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to My List (Section 9) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and My List tiles do not display heart icons.
+- **AC10:** Given the Profile Page is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to My List (Section 8) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and My List tiles do not display heart icons.
   - **AC10a:** Personal rating is display-only on the Profile Page. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
 
 ---
 
-## 8. History
-
-**Purpose:** Browse past suggestions across sessions, grouped by date. The way back into anything you saw before, whether or not you saved it.
-
-### Navigation & Display
-- **AC1:** Given at least one session (past or current) contains suggestions, when the History tab is opened, then suggestions are grouped under date headers (e.g. "Today," "Yesterday," or a calendar date), most recent group first.
-- **AC2:** Given the current session has active suggestions, when History is opened mid-session, then those suggestions also appear, grouped under today's date — consistent with the in-session persistence in Section 6, AC2b.
-
-### Data & Content
-- **AC3:** Given a suggestion entry in History, when displayed, then it shows the wine name and `Your Request:` followed by useful keywords extracted locally from the user's original prompt, such as country, province, variety, color, body, acidity, tannin, or flavor. Attributes not stated by the user are not added. AI conversation text and the full factual schema are not shown; the schema stays on the Profile Page.
-- **AC4:** Given a suggestion in History matches a wine already in My List, when displayed, then an annotation (rating, or a "Saved" mark if unrated) is shown with a tap-through link to that saved wine's full record and notes — the same behavior as Section 6, AC6b.
-- **AC5:** Given the user taps a History entry, when tapped, then the app navigates to the Profile Page with that wine's data, identical to tapping a live suggestion.
-
-### Actions
-- **AC6:** Given a History entry is not yet saved, when the user saves it directly from History (without necessarily opening the Profile Page first), then it is added to My List the same way as saving from the Profile Page (Section 7, AC10).
-- **AC6a:** Given History contains entries, Clear uses a black-at-10%-opacity background and Clear All remains hidden. Clear displays empty checkboxes for manual selection and changes to Cancel until selection is exited. A floating trash-can icon and Delete label appear above the bottom navigation, stay disabled without a selection, and remove the selected entries from local History when tapped.
-
-### Data Synchronization
-- **AC7:** Given this is a single-device personal MVP, when suggestions are logged, then History persists in local on-device storage only. No cloud sync.
-
-### Empty States
-- **AC8:** Given no suggestions have been made yet, when History is opened, then its content area remains blank beneath the shared header.
-
-**Open assumptions:**
-- How far back History retains suggestions — indefinitely, or with a rolling cutoff (e.g. 90 days)? Not yet defined, and matters for on-device storage growth since there's no server-side cap in this MVP.
-- Date-grouping granularity — assumed per-day for now; per-session-within-a-day is an alternative if a single day produces many unrelated suggestions.
-
----
-
-## 9. My List
+## 8. My List
 
 **Purpose:** The user's saved wines, with an optional personal rating and notes.
 
 ### Navigation & Display
-- **AC1:** Given the user taps `Save` on the Profile Page (Section 7, AC10) or saves directly from a History entry (Section 8, AC6), when this happens, then the wine is added to My List, with rating and notes optional at that point. Simply viewing a suggestion or opening the Profile Page does not save it.
+- **AC1:** Given the user taps `Save` on the Profile Page (Section 7, AC10), when this happens, then the wine is added to My List, with rating and notes optional at that point. Simply viewing a suggestion or opening the Profile Page does not save it.
 - **AC2:** Given My List contains at least one entry, when the My List screen opens, then entries are listed. **Sort order not yet defined — suggest most-recently-saved first, pending confirmation.**
 
 ### Data & Content
@@ -323,7 +358,7 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 - **AC7:** Given a local storage write fails, when this occurs, then an inline error is shown and the save action does not silently fail.
 
 ### Empty States
-- **AC8:** Given no saved wines exist yet, when My List opens, then an empty state invites saving a wine from the Profile Page or History.
+- **AC8:** Given no saved wines exist yet, when My List opens, then an empty state invites saving a wine from the Profile Page.
 
 **Open assumptions:**
 - Sort order for My List — not yet defined.
@@ -331,7 +366,7 @@ The 15 September 2026 database build started with 119,928 cleaned rows, merged 6
 
 ---
 
-## 10. Open Assumptions & Unresolved Decisions (Full List)
+## 9. Open Assumptions & Unresolved Decisions (Full List)
 
 Surfaced here for validation before development starts:
 
@@ -340,11 +375,8 @@ Surfaced here for validation before development starts:
 3. Main Conversation: exact routing heuristic for on-device → cloud escalation.
 4. Main Conversation: cheese pairing assumed to be a dedicated action, not free-text intent parsing.
 5. Main Conversation: exact styling and visual treatment of the wine option-card section.
-6. Main Conversation: whether structured query extraction and History's `Your Request:` extraction should share one mechanism or remain separate.
 7. Profile Page: exact typography and spacing for the source-specific `Summary`, `Critic Review`, and `Web Summary` sections.
 8. Profile Page: exact caption, tooltip, or icon treatment for the `Insufficient data` annotation.
-9. History: retention window — indefinite vs. a rolling cutoff — not yet defined; affects on-device storage growth over time.
-10. History: date-grouping granularity — assumed per-day.
 11. My List: sort order for the list.
 12. My List: confirmation step assumed required before removing a saved wine.
 13. **Scope confirmation:** location/price lookup (Google Places), discussed earlier in this project, is not part of these five MVP screens — confirm this is an intentional deferral.
@@ -352,7 +384,7 @@ Surfaced here for validation before development starts:
 
 ---
 
-## 11. Implementation Status
+## 10. Implementation Status
 
 Status checked against the working code on 17 September 2026. A checked item is implemented and has passed the computer-only build or automated checks. Partially complete items have working foundations but still require the work stated beside them.
 
@@ -360,7 +392,7 @@ Status checked against the working code on 17 September 2026. A checked item is 
 
 - [x] Splash branding, authenticated resumable Gemma E2B download, burgundy byte-percentage progress, SHA-256 verification, three automatic retries, and manual retry state
 - [x] Offline LiteRT-LM conversation inference after model installation
-- [x] Shared Chat, History, and My List navigation, headers, empty states, conversation thread, composer, and persistent in-session Chat state
+- [x] Shared Find, Chat, and My List navigation, headers, empty states, conversation thread, composer, and persistent in-session Chat state
 - [x] Gemma hidden-profile schema uses `country`, `province`, and `variety`; `rating` and `confidence` are not requested from or populated by Gemma
 - [x] Gemma prompt and parser support exactly three distinct lightweight records with identity fields and a short summary in one hidden `[WINE_CARDS]` JSON array
 - [x] Gemma runs the fixed Q1 type, Q2 country, and Q3 attribute sequence; invalid or ambiguous answers keep the current question open while explicit no-preference answers close it
@@ -381,13 +413,12 @@ Status checked against the working code on 17 September 2026. A checked item is 
 - [x] Kaggle results include a separate satisfaction question; rejection sends the retained request and all clarification preferences directly to the web-search layer
 - [x] Kaggle ranking uses `ORDER BY points DESC, winery ASC`, preserving SQLite's nulls-last behavior
 - [x] Wine option cards display wine name, winery when available, and `Country, Province`; keyword matches backfill mandatory profile fields
-- [x] Full, untruncated Kaggle `review_summary` is preserved through Chat, History, My List, and the Profile Page
-- [x] Suggestions retain their Gemma, Kaggle, or web-search origin through History and My List; the Profile Page displays only the matching `Summary`, `Critic Review`, or `Web Summary` section
+- [x] Full, untruncated Kaggle `review_summary` is preserved through Find, Chat, My List, and the Profile Page
+- [x] Suggestions retain their Gemma, Kaggle, or web-search origin through My List; the Profile Page displays only the matching `Summary`, `Critic Review`, or `Web Summary` section
 - [x] `country_province_variety_profiles.json` is bundled and seeds all 4,119 profiles off the main thread when Room is empty
 - [x] `VarietyRegionProfile` uses the `country` + `province` + `variety` composite key, JSON flavor-note conversion, exact lookup, replace-on-conflict inserts, and non-destructive Room migrations through database version 3
 - [x] Room can store, retrieve, and replace one cached web option with its name, winery, pairing, resolved profile fields, and `web_summary`
-- [x] Profile Page navigation from Chat, History, and My List, with the shared profile fields and null-safe rating display
-- [x] Persistent date-grouped History, original-request keyword extraction, Clear/Cancel selection mode, selection checkboxes, and selected-entry deletion
+- [x] Profile Page navigation from Find, Chat, and My List, with the shared profile fields and null-safe rating display
 - [x] Persistent My List save and remove behavior
 - [x] Computer-only debug APK build, test-APK compilation, lint, JVM recommendation-flow tests, seed parsing tests, and SQLite asset integrity checks
 
@@ -412,3 +443,16 @@ Status checked against the working code on 17 September 2026. A checked item is 
 - [ ] Personal-rating editing and notes in My List
 - [ ] Final model-generated cheese-pairing experience
 - [ ] Physical-device execution of instrumentation tests and final responsive visual QA
+
+### Find implementation status — 17 September 2026
+
+- [x] Default Find tab; three-column, full-cell multi-select controls, circular checks, filter count, Clear all, combined Location and Taste profile sections.
+- [x] Alphabetical Country and Province bottom sheets populated from the full database catalog.
+- [x] Any selection enables Search; only selected criteria reach both sources.
+- [x] Independent Gemma and Database results, Gemma-only retry, and stale-response protection.
+- [x] Type-aware database matching, tasting phrase evidence, stable top-three ranking, and null points last.
+- [x] Full profile handoff and explicit Save without enrichment, automatic History, cloud/web fallback, or profile-cache access.
+- [x] Verification: 49 local unit tests passed; debug APK and instrumented-test APK compiled; Android lint completed successfully.
+- [ ] Visual emulator verification and live on-device Gemma quality evaluation; no physical-device test or reinstall is authorized by this change.
+
+History has been removed from navigation and app behavior. New suggestions are not automatically recorded. Existing saved wines remain in My List; legacy history storage is not erased.

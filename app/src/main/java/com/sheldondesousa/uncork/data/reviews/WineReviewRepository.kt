@@ -34,6 +34,11 @@ data class WineSelectionCriteria(
             .any { !it.isNullOrBlank() }
 }
 
+data class GuidedDatabaseResult(
+    val reviews: List<GuidedReviewMatch>,
+    val usedProvinceFallback: Boolean = false,
+)
+
 data class WineReviewCriteria(
     val country: String? = null,
     val province: String? = null,
@@ -48,6 +53,28 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
 
     suspend fun prepare() {
         installer.ensureInstalled()
+    }
+
+    /**
+     * Falls back to a country-only match when the curated province has no literal match in the
+     * Kaggle data (its regions are Wikipedia-derived and rarely line up with the dataset's own
+     * province labels). [GuidedDatabaseResult.usedProvinceFallback] tells the UI to say so.
+     */
+    suspend fun findGuided(
+        criteria: com.sheldondesousa.uncork.ui.guided.GuidedCriteria,
+    ): GuidedDatabaseResult {
+        val guidedQuery = GuidedReviewQuery.from(criteria)
+        if (guidedQuery.knownEmpty) return GuidedDatabaseResult(emptyList())
+        val exact = query(sql = guidedQuery.sql, arguments = guidedQuery.arguments)
+        if (exact.isNotEmpty() || criteria.province.isBlank()) {
+            return GuidedDatabaseResult(exact.map { GuidedReviewMatch.from(it, criteria) })
+        }
+        val fallbackQuery = GuidedReviewQuery.from(criteria, dropProvince = true)
+        val fallback = query(sql = fallbackQuery.sql, arguments = fallbackQuery.arguments)
+        return GuidedDatabaseResult(
+            reviews = fallback.map { GuidedReviewMatch.from(it, criteria) },
+            usedProvinceFallback = fallback.isNotEmpty(),
+        )
     }
 
     override suspend fun find(criteria: WineReviewCriteria): List<WineReview> {
@@ -199,6 +226,9 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
             if (isNull(index)) null else getInt(index)
         },
         reviewSummary = getString(getColumnIndexOrThrow("review_summary")),
+        body = getString(getColumnIndexOrThrow("body")),
+        tannin = getString(getColumnIndexOrThrow("tannin")),
+        acidity = getString(getColumnIndexOrThrow("acidity")),
     )
 
     internal companion object {
@@ -234,7 +264,7 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
             "low" to listOf("low acidity", "soft acidity", "mellow acidity"),
         )
 
-        private fun varietiesFor(type: String): List<String> = when (type.lowercase()) {
+        internal fun varietiesFor(type: String): List<String> = when (type.lowercase()) {
             "red" -> RED_VARIETIES
             "white" -> WHITE_VARIETIES
             else -> emptyList()

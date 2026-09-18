@@ -48,6 +48,7 @@ class FavoritesRepository(context: Context) {
         put("wineType", wineType)
         put("winery", winery)
         put("variety", variety)
+        put("sweetness", sweetness)
         put("body", body)
         put("tannin", tannin)
         put("acidity", acidity)
@@ -58,6 +59,7 @@ class FavoritesRepository(context: Context) {
         put("reviewSummary", reviewSummary)
         put("webSummary", webSummary)
         put("source", source.name)
+        put("profileComplete", profileComplete)
         put("requestContext", requestContext ?: JSONObject.NULL)
         put("favoriteRating", favoriteRating ?: JSONObject.NULL)
     }
@@ -69,6 +71,7 @@ class FavoritesRepository(context: Context) {
         wineType = optString("wineType", "Unknown"),
         winery = optString("winery", getString("name")),
         variety = optString("variety", getString("name")),
+        sweetness = optString("sweetness", "Unknown"),
         body = optString("body", "Unknown"),
         tannin = optString("tannin", "Unknown"),
         acidity = optString("acidity", "Unknown"),
@@ -80,6 +83,7 @@ class FavoritesRepository(context: Context) {
         webSummary = optString("webSummary", "Unknown"),
         source = suggestionSource(),
         requestContext = optNullableString("requestContext"),
+        profileComplete = optBoolean("profileComplete", false),
         favoriteRating = optIntOrNull("favoriteRating"),
         isFavorite = true,
     )

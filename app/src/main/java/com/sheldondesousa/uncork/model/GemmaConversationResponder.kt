@@ -260,6 +260,38 @@ class GemmaConversationResponder(
             }
         }
 
+    suspend fun guidedSelection(
+        criteria: com.sheldondesousa.uncork.ui.guided.GuidedCriteria,
+    ): List<WineSuggestion> = withContext(Dispatchers.Default) {
+        require(criteria.valid)
+        requestMutex.withLock {
+            // Native inference must finish cleanup before the shared engine can be reused.
+            // The UI ignores responses from superseded requests even if native work cannot stop.
+            withContext(NonCancellable) {
+                val guided = ensureEngine().createConversation(
+                    ConversationConfig(
+                        systemInstruction = Contents.of(GuidedGemmaResponse.instruction),
+                        samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.35),
+                        maxOutputToken = 512,
+                    ),
+                )
+                try {
+                    val response = buildString {
+                        guided.sendMessageAsync(
+                            "fixed_constraints: " + JSONObject(criteria.constraints()).toString(),
+                        ).collect { message ->
+                            message.contents.contents.filterIsInstance<Content.Text>()
+                                .forEach { append(it.text) }
+                        }
+                    }
+                    GuidedGemmaResponse.parse(response, criteria)
+                } finally {
+                    guided.close()
+                }
+            }
+        }
+    }
+
     suspend fun synthesizeWebResults(
         request: WineWebSearchRequest,
         results: List<BraveSearchResult>,
