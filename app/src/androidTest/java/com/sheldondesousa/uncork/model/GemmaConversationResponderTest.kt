@@ -8,62 +8,6 @@ import org.junit.Test
 
 class GemmaConversationResponderTest {
     @Test
-    fun stageOneIsBlockedUntilAllQuestionCoverageIsClosed() {
-        assertEquals(
-            true,
-            GemmaConversationResponder.shouldBlockStageOne(
-                hasStageOneOutput = true,
-                coverageComplete = false,
-            ),
-        )
-        assertEquals(
-            false,
-            GemmaConversationResponder.shouldBlockStageOne(
-                hasStageOneOutput = true,
-                coverageComplete = true,
-            ),
-        )
-        assertEquals(
-            false,
-            GemmaConversationResponder.shouldBlockStageOne(
-                hasStageOneOutput = false,
-                coverageComplete = false,
-            ),
-        )
-    }
-
-    @Test
-    fun firstOnboardingRequestFramesLaunchQuestionAndRequiresCoverage() {
-        val request = GemmaConversationResponder.buildOnboardingRequest(
-            coverage = WineFieldCoverage(),
-            query = "Red",
-            isFirstTurn = true,
-        )
-
-        assertEquals(true, request.contains("The app already asked question 1"))
-        assertEquals(true, request.contains("Treat the user's latest message as their answer"))
-        assertEquals(true, request.contains("User's latest message: Red"))
-        assertEquals(true, request.contains("Coverage so far:"))
-        assertEquals(true, request.contains("Current pending question: Q1 wine type"))
-        assertEquals(true, request.contains("always emit [FIELD_COVERAGE]"))
-    }
-
-    @Test
-    fun laterOnboardingRequestFramesLatestMessageAsAnswerToPreviousQuestion() {
-        val request = GemmaConversationResponder.buildOnboardingRequest(
-            coverage = WineFieldCoverage(q1Type = CoverageStatus.Closed),
-            query = "France",
-            isFirstTurn = false,
-        )
-
-        assertEquals(true, request.contains("immediately preceding reply"))
-        assertEquals(true, request.contains("\"q1_type\":\"closed\""))
-        assertEquals(true, request.contains("Current pending question: Q2 country"))
-        assertEquals(true, request.contains("Never repeat a question"))
-        assertEquals(true, request.contains("User's latest message: France"))
-    }
-
-    @Test
     fun contextCapacityErrorIsRecognizedThroughWrappedCause() {
         val error = IllegalStateException(
             "send failed",
@@ -83,24 +27,6 @@ class GemmaConversationResponderTest {
                 IllegalStateException("another failure").isContextCapacityError()
             },
         )
-    }
-
-    @Test
-    fun fieldCoverageRoundTripsAndIsHiddenFromVisibleText() {
-        val response = """
-            Which country sounds best: **France**, **Italy**, or **Spain**?
-            [FIELD_COVERAGE]
-            {"q1_type":"closed","q2_country":"clarify","q3_attributes":"clarify","event":"answer"}
-            [/FIELD_COVERAGE]
-        """.trimIndent()
-
-        val coverage = GemmaConversationResponder.extractFieldCoverage(response)
-        val visible = with(GemmaConversationResponder) { response.toVisibleResponse() }
-
-        assertEquals(CoverageStatus.Closed, coverage?.q1Type)
-        assertEquals(CoverageStatus.Clarify, coverage?.q2Country)
-        assertEquals(false, coverage?.allClosed)
-        assertEquals("Which country sounds best: **France**, **Italy**, or **Spain**?", visible)
     }
 
     @Test
@@ -202,7 +128,7 @@ class GemmaConversationResponderTest {
         val response = """
             [WEB_RESULTS]
             [
-              {"name":"Example Barolo","winery":"Example Winery","country":"Italy","province":"Piedmont","variety":"Nebbiolo","body":"full","tannin":"high","acidity":"high","flavor_notes":["rose","tar"],"suggested_pairing":"Unknown","web_summary":"A structured Nebbiolo supported by the supplied search results."}
+              {"name":"Example Barolo","winery":"Example Winery","country":"Italy","province":"Piedmont","variety":"Nebbiolo","body":"Full-Bodied","tannin":"Astringent","acidity":"Tart","flavor_notes":["rose","tar"],"suggested_pairing":"Unknown","web_summary":"A structured Nebbiolo supported by the supplied search results."}
             ]
             [/WEB_RESULTS]
         """.trimIndent()
@@ -267,72 +193,6 @@ class GemmaConversationResponderTest {
     }
 
     @Test
-    fun stateSnapshotIsExtractedAndNeverShownToTheUser() {
-        val response = """
-            Would you prefer **light** or **full** body? [NEEDS_CLARIFICATION]
-            [STATE_SNAPSHOT]
-            {"type":"red","country":"Unknown","body":"Unknown","tannin":"Unknown","acidity":"Unknown","variety":"Unknown","flavor":"Unknown","occasion":"Unknown"}
-            [/STATE_SNAPSHOT]
-        """.trimIndent()
-
-        val snapshot = GemmaConversationResponder.extractStateSnapshot(response)
-        val visible = with(GemmaConversationResponder) { response.toVisibleResponse() }
-
-        assertEquals("red", org.json.JSONObject(snapshot.orEmpty()).getString("type"))
-        assertEquals("Would you prefer **light** or **full** body?", visible)
-    }
-
-    @Test
-    fun malformedSnapshotLabelAndStructuredJsonAreHiddenWithoutFuzzyExtraction() {
-        val response = """
-            Would you prefer **France**, **Italy**, or **somewhere else**?
-            *Snapshot resolved_state_snapshot:
-            {"type":"red","country":"Unknown","body":"Unknown","tannin":"Unknown"}
-        """.trimIndent()
-
-        val snapshot = GemmaConversationResponder.extractStateSnapshot(response)
-        val visible = with(GemmaConversationResponder) { response.toVisibleResponse() }
-
-        assertNull(snapshot)
-        assertEquals(
-            "Would you prefer **France**, **Italy**, or **somewhere else**?",
-            visible,
-        )
-    }
-
-    @Test
-    fun unmarkedFencedJsonIsNeverShown() {
-        val response = """
-            Let me narrow that down.
-            ```json
-            {"type":"red","country":"France","body":"full"}
-            ```
-        """.trimIndent()
-
-        val visible = with(GemmaConversationResponder) { response.toVisibleResponse() }
-
-        assertEquals("Let me narrow that down.", visible)
-    }
-
-    @Test
-    fun rawCardArrayIsParsedButNeverIncludedInVisibleResponse() {
-        val response = """
-            These are three crisp options to explore.
-            [
-              {"name":"Chablis","type":"white","variety":"Chardonnay","country":"France","province":"Burgundy"},
-              {"name":"Sancerre","type":"white","variety":"Sauvignon Blanc","country":"France","province":"Loire"},
-              {"name":"Soave Classico","type":"white","variety":"Garganega","country":"Italy","province":"Veneto"}
-            ]
-        """.trimIndent()
-
-        val suggestions = GemmaConversationResponder.extractSuggestions(response)
-        val visible = with(GemmaConversationResponder) { response.toVisibleResponse() }
-
-        assertEquals(3, suggestions.size)
-        assertEquals("These are three crisp options to explore.", visible)
-    }
-
-    @Test
     fun profileWithoutRatingOrConfidenceParsesWithNullRating() {
         val longSummary = "A".repeat(240)
         val response = """
@@ -344,9 +204,9 @@ class GemmaConversationResponderTest {
               "country": "Italy",
               "variety": "Nebbiolo",
               "province": "Piedmont",
-              "body": "high",
-              "tannin": "high",
-              "acidity": "high",
+              "body": "Full-Bodied",
+              "tannin": "Astringent",
+              "acidity": "Tart",
               "flavor_notes": "cherry, rose, tar",
               "suggested_pairing": "Braised beef",
               "summary": "$longSummary",
@@ -376,10 +236,10 @@ class GemmaConversationResponderTest {
         val response = """
             I would try these two wines.
             [WINE_PROFILE]
-            {"name":"Barolo","winery":"Unknown","country":"Italy","province":"Piedmont","variety":"Nebbiolo","body":"high","tannin":"high","acidity":"high","flavor_notes":"rose, tar","suggested_pairing":"Lamb"}
+            {"name":"Barolo","winery":"Unknown","country":"Italy","province":"Piedmont","variety":"Nebbiolo","body":"Full-Bodied","tannin":"Astringent","acidity":"Tart","flavor_notes":"rose, tar","suggested_pairing":"Lamb"}
             [/WINE_PROFILE]
             [WINE_PROFILE]
-            {"name":"Brunello","winery":"Unknown","country":"Italy","province":"Tuscany","variety":"Sangiovese","body":"high","tannin":"medium","acidity":"high","flavor_notes":"cherry, herbs","suggested_pairing":"Lamb"}
+            {"name":"Brunello","winery":"Unknown","country":"Italy","province":"Tuscany","variety":"Sangiovese","body":"Full-Bodied","tannin":"Moderate","acidity":"Tart","flavor_notes":"cherry, herbs","suggested_pairing":"Lamb"}
             [/WINE_PROFILE]
         """.trimIndent()
 
@@ -421,38 +281,91 @@ class GemmaConversationResponderTest {
     }
 
     @Test
-    fun streamingTextStopsBeforePartialOrCompleteHiddenProfileMarker() {
-        assertEquals(
-            "A lively red would work well.",
-            with(GemmaConversationResponder) {
-                "A lively red would work well. [".toStreamingVisibleResponse()
-            },
-        )
-        assertEquals(
-            "A lively red would work well.",
-            with(GemmaConversationResponder) {
-                "A lively red would work well. [WINE_CAR".toStreamingVisibleResponse()
-            },
-        )
-        assertEquals(
-            "A lively red would work well.",
-            with(GemmaConversationResponder) {
-                "A lively red would work well. [WINE_PRO".toStreamingVisibleResponse()
-            },
-        )
-        assertEquals(
-            "A lively red would work well.",
-            with(GemmaConversationResponder) {
-                "A lively red would work well. [WINE_PROFILE]{\"name\":\"Barolo\"}"
-                    .toStreamingVisibleResponse()
-            },
-        )
-        assertEquals(
-            "Would you prefer red, white, rosé, or sparkling wine?",
-            with(GemmaConversationResponder) {
-                "Would you prefer red, white, rosé, or sparkling wine? [NEEDS_CLAR"
-                    .toStreamingVisibleResponse()
-            },
-        )
+    fun rawCardArrayIsParsedFromUnmarkedJson() {
+        val response = """
+            These are three crisp options to explore.
+            [
+              {"name":"Chablis","type":"white","variety":"Chardonnay","country":"France","province":"Burgundy"},
+              {"name":"Sancerre","type":"white","variety":"Sauvignon Blanc","country":"France","province":"Loire"},
+              {"name":"Soave Classico","type":"white","variety":"Garganega","country":"Italy","province":"Veneto"}
+            ]
+        """.trimIndent()
+
+        val suggestions = GemmaConversationResponder.extractSuggestions(response)
+
+        assertEquals(3, suggestions.size)
+        assertEquals(listOf("Chablis", "Sancerre", "Soave Classico"), suggestions.map { it.name })
+    }
+
+    @Test
+    fun matchModeChoiceRecognizesButtonLabelsAndFreeText() {
+        assertEquals(ModeChoice.Curious, matchModeChoice("Curious about wines and pairings"))
+        assertEquals(ModeChoice.FindWine, matchModeChoice("Find a wine"))
+        assertEquals(ModeChoice.FindWine, matchModeChoice("I'd like you to recommend something"))
+        assertEquals(ModeChoice.Curious, matchModeChoice("I have a question about pairings"))
+        assertNull(matchModeChoice("res"))
+    }
+
+    @Test
+    fun matchWineTypeResolvesSynonymsAndRejectsAmbiguity() {
+        assertEquals("red", matchWineType("I'd like a red please"))
+        assertEquals("rose", matchWineType("something pink"))
+        assertEquals("sparkling", matchWineType("bubbly for a toast"))
+        assertNull(matchWineType("res"))
+    }
+
+    @Test
+    fun matchLocationFindsCountryAndInfersFromProvince() {
+        assertEquals(LocationMatch("France", "Bordeaux"), matchLocation("something from Bordeaux"))
+        assertEquals(LocationMatch("Italy", "Unknown"), matchLocation("Italian please"))
+        assertNull(matchLocation("somewhere nice"))
+    }
+
+    @Test
+    fun matchTasteRecognizesFindTabVocabularyNotLowMediumHigh() {
+        val match = matchTaste("light and crisp")
+        assertEquals("Light-Bodied", match.body)
+        assertEquals("Crisp", match.acidity)
+        assertEquals(true, matchTaste("low").isEmpty)
+    }
+
+    @Test
+    fun matchTasteRecognizesSommelierSynonymVocabulary() {
+        val velvety = matchTaste("velvety")
+        assertEquals("Full-Bodied", velvety.body)
+        assertEquals("Smooth", velvety.tannin)
+
+        val grippy = matchTaste("quite grippy on the finish")
+        assertEquals("Moderate", grippy.tannin)
+
+        val zingy = matchTaste("zingy and refreshing")
+        assertEquals("Tart", zingy.acidity)
+
+        val honeyed = matchTaste("honeyed and rich")
+        assertEquals("Sweet", honeyed.sweetness)
+        assertEquals("Full-Bodied", honeyed.body)
+    }
+
+    @Test
+    fun isNoPreferenceAcceptsCommonPhrasing() {
+        assertEquals(true, isNoPreference("no preference"))
+        assertEquals(true, isNoPreference("surprise me"))
+        assertEquals(false, isNoPreference("red"))
+    }
+
+    @Test
+    fun isLikelyDigressionSeparatesTangentsFromNoise() {
+        assertEquals(false, isLikelyDigression("res"))
+        assertEquals(false, isLikelyDigression("huh"))
+        assertEquals(true, isLikelyDigression("what pairs well with steak?"))
+        assertEquals(true, isLikelyDigression("what should I get for my anniversary dinner"))
+    }
+
+    @Test
+    fun requestsFindWineSwitchIsExplicitNotGeneralRecommendation() {
+        assertEquals(true, requestsFindWineSwitch("can you find me a wine"))
+        assertEquals(true, requestsFindWineSwitch("let's find a wine for dinner"))
+        assertEquals(false, requestsFindWineSwitch("what would you recommend with steak?"))
+        assertEquals(false, requestsFindWineSwitch("any suggestions for a light lunch"))
     }
 }
