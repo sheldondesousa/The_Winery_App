@@ -5,9 +5,11 @@ import org.json.JSONObject
 data class WinePreferences(
     val type: String = UNKNOWN,
     val country: String = UNKNOWN,
+    val province: String = UNKNOWN,
     val body: String = UNKNOWN,
     val tannin: String = UNKNOWN,
     val acidity: String = UNKNOWN,
+    val sweetness: String = UNKNOWN,
     val variety: String = UNKNOWN,
     val flavor: String = UNKNOWN,
     val occasion: String = UNKNOWN,
@@ -15,9 +17,11 @@ data class WinePreferences(
     fun toCompactJson(): String = JSONObject().apply {
         put("type", type)
         put("country", country)
+        put("province", province)
         put("body", body)
         put("tannin", tannin)
         put("acidity", acidity)
+        put("sweetness", sweetness)
         put("variety", variety)
         put("flavor", flavor)
         put("occasion", occasion)
@@ -32,6 +36,8 @@ data class WinePreferences(
         cardVariety: String,
         cardFlavor: String,
         cardOccasion: String,
+        cardProvince: String = UNKNOWN,
+        cardSweetness: String = UNKNOWN,
     ): Boolean = cardMismatchReasons(
         cardType = cardType,
         cardCountry = cardCountry,
@@ -41,6 +47,8 @@ data class WinePreferences(
         cardVariety = cardVariety,
         cardFlavor = cardFlavor,
         cardOccasion = cardOccasion,
+        cardProvince = cardProvince,
+        cardSweetness = cardSweetness,
     ).isEmpty()
 
     fun cardMismatchReasons(
@@ -52,15 +60,19 @@ data class WinePreferences(
         cardVariety: String,
         cardFlavor: String,
         cardOccasion: String,
+        cardProvince: String = UNKNOWN,
+        cardSweetness: String = UNKNOWN,
     ): List<String> {
         val normalizedCardType = cardType.normalizedValue()
         return buildList {
             if (normalizedCardType !in WINE_TYPES) add("type is missing or invalid")
             addMismatch("type", type, normalizedCardType)
             addMismatch("country", country, cardCountry)
+            addMismatch("province", province, cardProvince)
             addMismatch("body", body, cardBody)
             addMismatch("tannin", tannin, cardTannin)
             addMismatch("acidity", acidity, cardAcidity)
+            addMismatch("sweetness", sweetness, cardSweetness)
             addMismatch("variety", variety, cardVariety)
             addMismatch("flavor", flavor, cardFlavor)
             addMismatch("occasion", occasion, cardOccasion)
@@ -76,9 +88,11 @@ data class WinePreferences(
             WinePreferences(
                 type = json.preference("type"),
                 country = json.preference("country"),
+                province = json.preference("province"),
                 body = json.preference("body"),
                 tannin = json.preference("tannin"),
                 acidity = json.preference("acidity"),
+                sweetness = json.preference("sweetness"),
                 variety = json.preference("variety"),
                 flavor = json.preference("flavor"),
                 occasion = json.preference("occasion"),

@@ -186,8 +186,10 @@ class KaggleConversationResponder(
         gemmaFallbackText: String = "I found these options for you.",
     ): ChatMessage {
         val selectionCriteria = buildSelectionCriteria(originalQuery, gemmaSuggestions)
-        val kaggleOptions = runCatchingSource {
-            findKaggleOptions(originalQuery, gemmaSuggestions, selectionCriteria)
+        val kaggleOptions = DebugLatencyLog.timed("[Kotlin] Kaggle DB query") {
+            runCatchingSource {
+                findKaggleOptions(originalQuery, gemmaSuggestions, selectionCriteria)
+            }
         }
         logFlow("Kaggle cards=${kaggleOptions.size}")
         if (kaggleOptions.isNotEmpty()) {
@@ -213,11 +215,13 @@ class KaggleConversationResponder(
         }
 
         if (selectionCriteria.hasExactProfile) {
-            return searchWeb(originalQuery, gemmaSuggestions)
+            return DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") { searchWeb(originalQuery, gemmaSuggestions) }
         }
 
-        val cachedOptions = runCatchingSource {
-            findCachedOptions(originalQuery, gemmaSuggestions)
+        val cachedOptions = DebugLatencyLog.timed("[Kotlin] local cache lookup") {
+            runCatchingSource {
+                findCachedOptions(originalQuery, gemmaSuggestions)
+            }
         }
         logFlow("Cache cards=${cachedOptions.size}")
         if (cachedOptions.isNotEmpty()) {
@@ -229,7 +233,9 @@ class KaggleConversationResponder(
             )
         }
 
-        val webResponse = searchWeb(originalQuery, gemmaSuggestions, returnFailure = false)
+        val webResponse = DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") {
+            searchWeb(originalQuery, gemmaSuggestions, returnFailure = false)
+        }
         if (webResponse.wineSuggestions.isNotEmpty()) return webResponse
 
         return if (gemmaFallback.isNotEmpty()) {

@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -69,6 +69,9 @@ import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.model.ChatFlowText
+import com.sheldondesousa.uncork.model.DebugLatencyLog
+import com.sheldondesousa.uncork.BuildConfig
 import kotlinx.coroutines.launch
 
 private val AiResponseInk = Color(0xFF27201D)
@@ -84,9 +87,8 @@ class ConversationSessionState {
         ChatMessage(
             id = Long.MIN_VALUE,
             author = MessageAuthor.Assistant,
-            text = "Hi, I'm UnCork — think of me as your personal sommelier. What are you in " +
-                "the mood for: **red**, **rosé**, **white**, **sparkling**, **sweet**, or " +
-                "**fortified**?",
+            text = ChatFlowText.MODE_CHOICE,
+            quickReplies = listOf(ChatFlowText.CURIOUS_LABEL, ChatFlowText.FIND_WINE_LABEL),
         ),
     )
     var draft by mutableStateOf("")
@@ -110,8 +112,8 @@ fun ConversationRoute(
 ) {
     val scope = rememberCoroutineScope()
 
-    fun submit() {
-        val query = state.draft.trim()
+    fun send(text: String) {
+        val query = text.trim()
         if (query.isEmpty() || state.isReplying) return
 
         state.messages += ChatMessage(
@@ -119,12 +121,12 @@ fun ConversationRoute(
             author = MessageAuthor.User,
             text = query,
         )
-        state.draft = ""
         state.isReplying = true
         state.errorMessage = null
         state.streamingText = ""
         state.streamingSuggestions = emptyList()
 
+        val requestStartedAt = System.currentTimeMillis()
         scope.launch {
             runCatching {
                 responder.replyToUpdates(query) { update ->
@@ -135,7 +137,19 @@ fun ConversationRoute(
                 .onSuccess { response ->
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
-                    state.messages += response.copy(followUpText = null)
+                    val latencyMs = System.currentTimeMillis() - requestStartedAt
+                    val breakdown = if (BuildConfig.DEBUG) {
+                        DebugLatencyLog.drain()
+                            .joinToString(", ") { (label, ms) -> "$label: %.1fs".format(ms / 1000f) }
+                            .takeIf(String::isNotBlank)
+                    } else {
+                        null
+                    }
+                    state.messages += response.copy(
+                        followUpText = null,
+                        debugLatencyMs = if (BuildConfig.DEBUG) latencyMs else null,
+                        debugTimingBreakdown = breakdown,
+                    )
                     response.followUpText
                         ?.takeIf { it.isNotBlank() }
                         ?.let { followUp ->
@@ -157,6 +171,12 @@ fun ConversationRoute(
         }
     }
 
+    fun submit() {
+        val query = state.draft
+        state.draft = ""
+        send(query)
+    }
+
     ConversationScreen(
         messages = state.messages,
         draft = state.draft,
@@ -166,6 +186,7 @@ fun ConversationRoute(
         streamingSuggestions = state.streamingSuggestions,
         onDraftChange = { state.draft = it },
         onSend = ::submit,
+        onQuickReplySelected = ::send,
         onSuggestionClick = onSuggestionClick,
         onBack = onBack,
         modifier = modifier,
@@ -182,6 +203,7 @@ private fun ConversationScreen(
     streamingSuggestions: List<WineSuggestion>,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
+    onQuickReplySelected: (String) -> Unit,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -230,10 +252,12 @@ private fun ConversationScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
-                    items(messages, key = { it.id }) { message ->
+                    itemsIndexed(messages, key = { _, message -> message.id }) { index, message ->
                         MessageBubble(
                             message = message,
                             onSuggestionClick = onSuggestionClick,
+                            quickRepliesEnabled = index == messages.lastIndex && !isReplying,
+                            onQuickReplySelected = onQuickReplySelected,
                         )
                     }
                     if (streamingText.isNotBlank() || streamingSuggestions.isNotEmpty()) {
@@ -277,6 +301,8 @@ private fun EmptyConversation() {
 private fun MessageBubble(
     message: ChatMessage,
     onSuggestionClick: (WineSuggestion) -> Unit,
+    quickRepliesEnabled: Boolean = false,
+    onQuickReplySelected: (String) -> Unit = {},
 ) {
     val isUser = message.author == MessageAuthor.User
     Row(
@@ -324,6 +350,28 @@ private fun MessageBubble(
                         fontSize = 16.sp,
                         lineHeight = 28.sp,
                     )
+                    message.debugLatencyMs?.let { latencyMs ->
+                        val breakdown = message.debugTimingBreakdown
+                        Text(
+                            text = "⏱ %.1fs".format(latencyMs / 1000f) +
+                                if (breakdown != null) " ($breakdown)" else "",
+                            color = InkMuted,
+                            fontSize = 11.sp,
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    if (message.quickReplies.isNotEmpty() && quickRepliesEnabled) {
+                        Spacer(Modifier.height(14.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            message.quickReplies.forEach { label ->
+                                QuickReplyButton(
+                                    label = label,
+                                    onClick = { onQuickReplySelected(label) },
+                                )
+                            }
+                        }
+                    }
                     val suggestions = message.wineSuggestions
                     if (suggestions.isNotEmpty()) {
                         Spacer(Modifier.height(16.dp))
@@ -370,6 +418,22 @@ private fun parseBoldMarkdown(source: String): AnnotatedString = buildAnnotatedS
         }
         cursor = closing + 2
     }
+}
+
+@Composable
+private fun QuickReplyButton(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, Wine.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        color = Wine,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Medium,
+    )
 }
 
 private val LeftRuleShape = RoundedCornerShape(
