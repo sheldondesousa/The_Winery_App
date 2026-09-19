@@ -26,10 +26,11 @@ internal object ChatFlowText {
             "**sweet**, or **fortified**?"
     const val Q2_COUNTRY = "Any **country** or **province** you prefer?"
     const val Q3_TASTE =
-        "Any preference for taste — body (**Light-Bodied**, **Medium-Bodied**, " +
-            "**Full-Bodied**), tannin (**Smooth**, **Moderate**, **Astringent**), " +
-            "acidity (**Soft**, **Crisp**, **Tart**), or sweetness (**Bone-Dry**, " +
-            "**Off-Dry**, **Sweet**)?"
+        "Any preference for taste?\n\n" +
+            "##Body (weight)##\n**Light, Medium, Full**\n\n" +
+            "##Tannin (dryness)##\n**Smooth, Moderate, Astringent**\n\n" +
+            "##Acidity (sourness)##\n**Soft, Crisp, Tart**\n\n" +
+            "##Sweetness (sugar)##\n**Bone-Dry, Off-Dry, Sweet**"
     const val CURIOUS_TRANSITION = "Happy to chat — what's on your mind about wine or pairings?"
 
     fun questionFor(step: FindWineStep): String = when (step) {
@@ -176,8 +177,8 @@ private val BODY_KEYWORDS = linkedMapOf(
         "zesty", "racy", "bright", "quaffable", "airy", "chiseled",
     ),
     "Medium-Bodied" to listOf(
-        "medium-bodied", "medium bodied", "balanced", "versatile", "supple", "round",
-        "fleshy", "approachable", "juicy", "smooth", "moderate", "fluid",
+        "medium-bodied", "medium bodied", "medium", "balanced", "versatile", "supple",
+        "round", "fleshy", "approachable", "juicy", "smooth", "moderate", "fluid",
     ),
     "Full-Bodied" to listOf(
         "full-bodied", "full bodied", "full", "bold", "rich", "opulent", "robust",

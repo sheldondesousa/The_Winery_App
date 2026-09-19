@@ -14,7 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -62,7 +62,8 @@ private fun FormField.options(): List<String> = when (this) {
     FormField.Sweetness -> GuidedOptions.sweetness
     FormField.Tannin -> GuidedOptions.tannin
     FormField.Body -> GuidedOptions.body
-    FormField.Acidity, FormField.Country, FormField.Province -> emptyList()
+    FormField.Acidity -> GuidedOptions.acidity
+    FormField.Country, FormField.Province -> emptyList()
 }
 
 private fun FormField.selected(selection: GuidedCriteria): Set<String> = when (this) {
@@ -227,8 +228,10 @@ private fun FieldBottomSheet(
                                 else state.selection.copy(province = "")
                             onDismiss()
                         }, modifier = Modifier.fillMaxWidth()) { Text("Any ${field.label.lowercase()}") }
+                        HorizontalDivider(color = Hairline)
                     }
-                    items(options, key = { it }) { option ->
+                    itemsIndexed(options, key = { _, option -> option }) { index, option ->
+                        if (index > 0) HorizontalDivider(color = Hairline)
                         Row(
                             Modifier.fillMaxWidth().selectable(selected = option == selected, role = Role.RadioButton, onClick = {
                                 state.selection = if (isCountry) state.selection.withCountry(option)
@@ -412,7 +415,7 @@ private fun FormTile(field: FormField, selection: GuidedCriteria, modifier: Modi
     }
 }
 
-/** Each weighted cell owns the only click target, including its whitespace. */
+/** Each row owns the only click target, including its whitespace; rows stack vertically with a separator between them. */
 @Composable
 internal fun Choices(
     title: String,
@@ -427,35 +430,31 @@ internal fun Choices(
             CategoryTitle(title)
             hint?.let { Text(" · $it", color = InkSubtle, style = MaterialTheme.typography.bodySmall) }
         }
-        options.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                row.forEach { value ->
-                    val checked = value in selected
-                    Row(
-                        Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp)
-                            .testTag("${title.lowercase()}-$value")
-                            .toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle(value) })
-                            .padding(vertical = 10.dp, horizontal = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Circular check matches the reference; checkbox semantics convey multi-select.
-                        Canvas(Modifier.size(20.dp)) {
-                            drawCircle(if (checked) Wine else InkMuted.copy(alpha = 0.45f),
-                                style = if (checked) androidx.compose.ui.graphics.drawscope.Fill else Stroke(1.5.dp.toPx()))
-                            if (checked) {
-                                val tick = Path().apply {
-                                    moveTo(size.width * 0.25f, size.height * 0.52f)
-                                    lineTo(size.width * 0.43f, size.height * 0.70f)
-                                    lineTo(size.width * 0.77f, size.height * 0.30f)
-                                }
-                                drawPath(tick, Color.White, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-                            }
+        options.forEachIndexed { index, value ->
+            if (index > 0) HorizontalDivider(color = Hairline)
+            val checked = value in selected
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .testTag("${title.lowercase()}-$value")
+                    .toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle(value) })
+                    .padding(vertical = 10.dp, horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Circular check matches the reference; checkbox semantics convey multi-select.
+                Canvas(Modifier.size(20.dp)) {
+                    drawCircle(if (checked) Wine else InkMuted.copy(alpha = 0.45f),
+                        style = if (checked) androidx.compose.ui.graphics.drawscope.Fill else Stroke(1.5.dp.toPx()))
+                    if (checked) {
+                        val tick = Path().apply {
+                            moveTo(size.width * 0.25f, size.height * 0.52f)
+                            lineTo(size.width * 0.43f, size.height * 0.70f)
+                            lineTo(size.width * 0.77f, size.height * 0.30f)
                         }
-                        Text(labelFor(value), color = Ink, modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium)
+                        drawPath(tick, Color.White, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                Text(labelFor(value), color = Ink, modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -494,12 +493,22 @@ private fun ResultSection(
                 if (result.cards.isEmpty()) Text("No matches for these selections.", color = InkSubtle)
                 result.cards.forEach { card ->
                     OutlinedCard(onClick = { onSuggestionClick(card) }, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(card.name, style = MaterialTheme.typography.titleMedium)
-                            Text("${card.country} · ${card.province} · ${card.variety}")
-                            Text(if (isModelSection) "Model-generated recommendation" else "Critic review", style = MaterialTheme.typography.labelMedium)
-                            card.rating?.let { Text("Critic score: $it") }
-                            Text("View profile", color = Wine)
+                        Row(
+                            Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(card.name, style = MaterialTheme.typography.titleMedium)
+                                Text("${card.country} · ${card.province} · ${card.variety}")
+                                Text(if (isModelSection) "Model-generated recommendation" else "Critic review", style = MaterialTheme.typography.labelMedium)
+                                card.rating?.let { Text("Critic score: $it") }
+                            }
+                            Text(
+                                text = "›",
+                                color = InkMuted,
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Light,
+                            )
                         }
                     }
                 }

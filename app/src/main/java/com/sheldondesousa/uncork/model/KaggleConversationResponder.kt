@@ -487,8 +487,7 @@ class KaggleConversationResponder(
     private fun WineSuggestion.hasExactSearchCriteria(): Boolean =
         country.isResolved() && province.isResolved() && variety.isResolved()
 
-    private fun WineSuggestion.hasRequiredCardFields(): Boolean =
-        name.isResolved() && country.isResolved()
+    private fun WineSuggestion.hasRequiredCardFields(): Boolean = name.isResolved()
 
     private fun String.isResolved(): Boolean =
         isNotBlank() && !equals("Unknown", ignoreCase = true)

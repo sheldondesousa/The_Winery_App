@@ -54,7 +54,7 @@ class BraveWineWebSearchDataSource(
     }.distinctBy { it.trim().lowercase() }.joinToString(" ")
 
     private companion object {
-        const val SEARCH_RESULT_LIMIT = 12
+        const val SEARCH_RESULT_LIMIT = 3
     }
 }
 
@@ -96,7 +96,7 @@ class BraveSearchHttpClient(
         buildList {
             for (index in 0 until results.length()) {
                 val result = results.optJSONObject(index) ?: continue
-                val title = result.optString("title").trim()
+                val title = result.optString("title").trim().stripHtml()
                 val url = result.optString("url").trim()
                 val description = result.optString("description").trim()
                 val extraSnippets = result.optJSONArray("extra_snippets")
@@ -110,7 +110,7 @@ class BraveSearchHttpClient(
                                 ?.let(::add)
                         }
                     }
-                }.distinct().joinToString(" ")
+                }.distinct().joinToString(" ").stripHtml().take(MAX_EVIDENCE_CHARS_PER_RESULT)
                 if (title.isNotBlank() && url.isNotBlank()) {
                     add(BraveSearchResult(title, url, evidence))
                 }
@@ -118,8 +118,18 @@ class BraveSearchHttpClient(
         }
     }.getOrDefault(emptyList())
 
+    // Raw Brave markup/entities bloat the evidence prompt enough to blow the on-device model's output budget.
+    private fun String.stripHtml(): String = replace(HTML_TAG, "")
+        .replace("&#x27;", "'").replace("&#39;", "'")
+        .replace("&quot;", "\"").replace("&amp;", "&")
+        .replace("&nbsp;", " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
     private companion object {
         const val CONNECT_TIMEOUT_MILLIS = 10_000
         const val READ_TIMEOUT_MILLIS = 15_000
+        const val MAX_EVIDENCE_CHARS_PER_RESULT = 300
+        val HTML_TAG = Regex("<[^>]*>")
     }
 }

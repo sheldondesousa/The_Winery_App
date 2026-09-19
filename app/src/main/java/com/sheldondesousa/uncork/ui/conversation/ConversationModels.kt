@@ -26,11 +26,9 @@ data class ChatMessage(
     val coverageComplete: Boolean = false,
     val discardedStageOneCards: Int = 0,
     val quickReplies: List<String> = emptyList(),
-    // End-to-end wall-clock latency for this turn, tap-to-result, and an optional per-stage
-    // breakdown (e.g. "Kaggle DB query: 20.8s"). Debug builds only; never set from model
-    // output. Purely for on-device latency inspection, not persisted or shown to real users.
+    // Time from request start to the first streamed word, debug builds only. Never set from
+    // model output, not persisted, not shown to real users.
     val debugLatencyMs: Long? = null,
-    val debugTimingBreakdown: String? = null,
 )
 
 data class WineSuggestion(

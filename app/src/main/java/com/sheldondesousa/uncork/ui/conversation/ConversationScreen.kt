@@ -126,7 +126,6 @@ fun ConversationRoute(
         state.streamingText = ""
         state.streamingSuggestions = emptyList()
 
-        val requestStartedAt = System.currentTimeMillis()
         scope.launch {
             runCatching {
                 responder.replyToUpdates(query) { update ->
@@ -137,18 +136,16 @@ fun ConversationRoute(
                 .onSuccess { response ->
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
-                    val latencyMs = System.currentTimeMillis() - requestStartedAt
-                    val breakdown = if (BuildConfig.DEBUG) {
+                    val timeToFirstWordMs = if (BuildConfig.DEBUG) {
                         DebugLatencyLog.drain()
-                            .joinToString(", ") { (label, ms) -> "$label: %.1fs".format(ms / 1000f) }
-                            .takeIf(String::isNotBlank)
+                            .firstOrNull { (label, _) -> label.endsWith("time to first word") }
+                            ?.second
                     } else {
                         null
                     }
                     state.messages += response.copy(
                         followUpText = null,
-                        debugLatencyMs = if (BuildConfig.DEBUG) latencyMs else null,
-                        debugTimingBreakdown = breakdown,
+                        debugLatencyMs = timeToFirstWordMs,
                     )
                     response.followUpText
                         ?.takeIf { it.isNotBlank() }
@@ -350,11 +347,9 @@ private fun MessageBubble(
                         fontSize = 16.sp,
                         lineHeight = 28.sp,
                     )
-                    message.debugLatencyMs?.let { latencyMs ->
-                        val breakdown = message.debugTimingBreakdown
+                    message.debugLatencyMs?.let { timeToFirstWordMs ->
                         Text(
-                            text = "⏱ %.1fs".format(latencyMs / 1000f) +
-                                if (breakdown != null) " ($breakdown)" else "",
+                            text = "⏱ time to first word: %.1fs".format(timeToFirstWordMs / 1000f),
                             color = InkMuted,
                             fontSize = 11.sp,
                             fontStyle = FontStyle.Italic,
@@ -396,25 +391,38 @@ private fun MessageBubble(
     }
 }
 
+// **bold** renders bold black; ##heading## renders burgundy (used for Q3's taste characteristics).
 private fun parseBoldMarkdown(source: String): AnnotatedString = buildAnnotatedString {
     var cursor = 0
 
     while (cursor < source.length) {
-        val opening = source.indexOf("**", cursor)
-        if (opening == -1) {
+        val boldOpening = source.indexOf("**", cursor).takeIf { it != -1 }
+        val headingOpening = source.indexOf("##", cursor).takeIf { it != -1 }
+        val marker = when {
+            boldOpening == null -> headingOpening
+            headingOpening == null -> boldOpening
+            else -> minOf(boldOpening, headingOpening)
+        }
+        if (marker == null) {
             append(source.substring(cursor))
             break
         }
+        val delimiter = source.substring(marker, marker + 2)
 
-        val closing = source.indexOf("**", opening + 2)
+        val closing = source.indexOf(delimiter, marker + 2)
         if (closing == -1) {
             append(source.substring(cursor))
             break
         }
 
-        append(source.substring(cursor, opening))
-        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-            append(source.substring(opening + 2, closing))
+        append(source.substring(cursor, marker))
+        val style = if (delimiter == "**") {
+            SpanStyle(fontWeight = FontWeight.Bold)
+        } else {
+            SpanStyle(color = Wine, fontWeight = FontWeight.Normal)
+        }
+        withStyle(style) {
+            append(source.substring(marker + 2, closing))
         }
         cursor = closing + 2
     }

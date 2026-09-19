@@ -629,12 +629,10 @@ class GemmaConversationResponder(
 
         private fun String.toWineSuggestionOrNull(): WineSuggestion? = runCatching {
             val json = JSONObject(trim())
-            val name = json.requiredString("name")
-            val country = json.requiredString("country")
             WineSuggestion(
-                name = name,
+                name = json.knownString("name", fallback = "Unknown Wine"),
                 province = json.knownString("province"),
-                country = country,
+                country = json.knownString("country"),
                 wineType = json.knownString("type"),
                 winery = json.knownString("winery"),
                 variety = json.knownString("variety"),
@@ -659,18 +657,16 @@ class GemmaConversationResponder(
             }
         }.getOrDefault(emptyList())
 
-        private fun String.toWebSuggestions(): List<WineSuggestion> = runCatching {
-            val array = JSONArray(trim())
-            buildList {
+        private fun String.toWebSuggestions(): List<WineSuggestion> {
+            val array = runCatching { JSONArray(trim()) }.getOrNull() ?: return emptyList()
+            return buildList {
                 for (index in 0 until array.length()) {
                     val json = array.optJSONObject(index) ?: continue
-                    val name = json.requiredString("name")
-                    val country = json.requiredString("country")
-                    add(
+                    val suggestion = runCatching {
                         WineSuggestion(
-                            name = name,
+                            name = json.knownString("name", fallback = "Unknown Wine"),
                             winery = json.knownString("winery"),
-                            country = country,
+                            country = json.knownString("country"),
                             province = json.knownString("province"),
                             variety = json.knownString("variety"),
                             body = json.level("body"),
@@ -684,11 +680,12 @@ class GemmaConversationResponder(
                             webSummary = json.knownString("web_summary")
                                 .take(MAX_WEB_SUMMARY_CHARACTERS),
                             source = WineSuggestionSource.WEB_SEARCH,
-                        ),
-                    )
+                        )
+                    }.getOrNull()
+                    if (suggestion != null) add(suggestion)
                 }
             }
-        }.getOrDefault(emptyList())
+        }
 
         private fun List<WineSuggestion>.distinctSuggestions(): List<WineSuggestion> =
             distinctBy { suggestion ->
@@ -700,9 +697,6 @@ class GemmaConversationResponder(
                     suggestion.variety,
                 ).joinToString("|") { it.trim().lowercase() }
             }
-
-        private fun JSONObject.requiredString(key: String): String =
-            optString(key).trim().takeIf { it.isNotEmpty() } ?: error("Missing $key")
 
         private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String =
             optString(key).trim().takeIf { it.isNotEmpty() && !it.equals("null", true) } ?: fallback
