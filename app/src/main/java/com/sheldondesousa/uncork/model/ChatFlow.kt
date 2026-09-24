@@ -170,8 +170,12 @@ internal data class TasteMatch(
 }
 
 // Vocabulary sourced from Docs/Body.md, Docs/Tannin.md, Docs/Acidity.md, Docs/Sweetness.md —
-// the sommelier synonym lists curated for each of the three tiers per characteristic.
-private val BODY_KEYWORDS = linkedMapOf(
+// the sommelier synonym lists curated for each of the three tiers per characteristic. Internal
+// (not private) so KaggleConversationResponder can reuse them as phrase evidence when checking
+// whether a web result's free text supports a recorded body/tannin/acidity preference, since a
+// web-synthesized card's structured field isn't as reliably populated as Kaggle's precomputed
+// column.
+internal val BODY_KEYWORDS = linkedMapOf(
     "Light-Bodied" to listOf(
         "light-bodied", "light bodied", "light", "delicate", "crisp", "lean", "ethereal",
         "zesty", "racy", "bright", "quaffable", "airy", "chiseled",
@@ -186,7 +190,7 @@ private val BODY_KEYWORDS = linkedMapOf(
         "velvety", "chewy", "fat",
     ),
 )
-private val TANNIN_KEYWORDS = linkedMapOf(
+internal val TANNIN_KEYWORDS = linkedMapOf(
     "Smooth" to listOf(
         "smooth", "soft tannin", "low tannin", "mellow tannin", "silky", "velvety",
         "supple", "resolved", "melted", "polished", "seamless", "satin", "integrated",
@@ -202,7 +206,7 @@ private val TANNIN_KEYWORDS = linkedMapOf(
         "austere", "green", "angular", "coarse", "gripping", "youthful", "puckering",
     ),
 )
-private val ACIDITY_KEYWORDS = linkedMapOf(
+internal val ACIDITY_KEYWORDS = linkedMapOf(
     "Soft" to listOf(
         "soft acid", "soft", "low acid", "mellow acid", "flabby", "flat", "plush",
         "languid", "round", "smooth", "fleshy", "broad", "coating", "baked", "jammy",

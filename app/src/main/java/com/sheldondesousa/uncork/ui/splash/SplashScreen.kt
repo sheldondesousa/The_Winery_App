@@ -319,7 +319,7 @@ private fun ErrorState(
 
 private const val MAX_AUTOMATIC_ATTEMPTS = 3
 private const val RETRY_DELAY_MILLIS = 1_000L
-private const val MINIMUM_PREPARATION_MILLIS = 5_000L
+private const val MINIMUM_PREPARATION_MILLIS = 3_500L
 private const val PROGRESS_UPDATE_MILLIS = 50L
 private const val COMPLETION_DISPLAY_MILLIS = 250L
 private const val MAX_PROGRESS_WHILE_PREPARING = 0.95f

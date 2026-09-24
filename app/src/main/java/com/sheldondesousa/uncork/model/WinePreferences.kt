@@ -1,5 +1,7 @@
 package com.sheldondesousa.uncork.model
 
+import com.sheldondesousa.uncork.data.reviews.WineSelectionCriteria
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import org.json.JSONObject
 
 data class WinePreferences(
@@ -14,6 +16,44 @@ data class WinePreferences(
     val flavor: String = UNKNOWN,
     val occasion: String = UNKNOWN,
 ) {
+    /**
+     * Direct field mapping to the structured Kaggle/cache search shape — no free-text parsing,
+     * since these values were already resolved deterministically during the Q1-Q3 chat flow.
+     */
+    fun toSelectionCriteria(): WineSelectionCriteria = WineSelectionCriteria(
+        wineType = type.takeIfResolved(),
+        country = country.takeIfResolved(),
+        province = province.takeIfResolved(),
+        variety = variety.takeIfResolved(),
+        body = body.takeIfResolved(),
+        tannin = tannin.takeIfResolved(),
+        acidity = acidity.takeIfResolved(),
+    )
+
+    private fun String.takeIfResolved(): String? =
+        takeIf { it.isNotBlank() && !it.equals(UNKNOWN, ignoreCase = true) }
+
+    /**
+     * A [WineSuggestion] "basis" built purely from these recorded answers, for enriching a
+     * Kaggle-sourced card without waiting on Gemma's synthesized one. Carries only what these
+     * deterministic Q1-Q3 answers actually resolved (type/body/tannin/acidity/sweetness/etc.) —
+     * free-text fields Gemma alone can produce (flavor notes, suggested pairing, summary) are
+     * left at their "Unknown" default.
+     */
+    fun toBasisSuggestion(): WineSuggestion = WineSuggestion(
+        name = UNKNOWN,
+        province = province,
+        country = country,
+        wineType = type,
+        variety = variety,
+        sweetness = sweetness,
+        body = body,
+        tannin = tannin,
+        acidity = acidity,
+        preferenceFlavor = flavor,
+        occasion = occasion,
+    )
+
     fun toCompactJson(): String = JSONObject().apply {
         put("type", type)
         put("country", country)

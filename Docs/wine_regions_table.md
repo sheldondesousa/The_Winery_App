@@ -22,6 +22,7 @@ Source: [Wikipedia — List of wine-producing regions](https://en.wikipedia.org/
 | Germany | Ahr, Baden, Franconia (Franken), Hessische Bergstraße, Mittelrhein, Mosel, Nahe, Palatinate (Pfalz), Rheingau, Rheinhessen, Saale-Unstrut, Saxony (Sachsen), Württemberg |
 | Greece | Aegean Islands (Crete, Limnos, Paros, Rhodes, Samos, Santorini), Central Greece (Attica, Epirus incl. Zitsa, Thessaly incl. Nea Anchialos and Rapsani), Ionian Islands (Kefalonia), Macedonia (Amyntaion, Goumenissa, Naousa/Imathia), Peloponnesus (Mantineia, Nemea, Patras) |
 | Hungary | Tokaj, Eger, Villány, Szekszárd, Balaton/Badacsony, Sopron, Mátra, Somló *(not yet verified against the page — placeholder from general reference)* |
+| India | Nashik (Maharashtra), Bangalore (Karnataka), Bijapur/Vijayapura (Karnataka), Narayangaon (Maharashtra), Pune (Maharashtra), Sangli (Maharashtra) |
 | Indonesia | North Bali |
 | Iran | Not detailed on source page (production halted post-1979) |
 | Israel | Galilee, Golan Heights, Judean Hills, Mount Carmel, Rishon LeZion, Negev |

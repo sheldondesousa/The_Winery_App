@@ -11,10 +11,13 @@ import com.sheldondesousa.uncork.ui.conversation.ChatMessage
 import com.sheldondesousa.uncork.ui.conversation.ConversationResponder
 import com.sheldondesousa.uncork.ui.conversation.ConversationStreamUpdate
 import com.sheldondesousa.uncork.ui.conversation.MessageAuthor
+import com.sheldondesousa.uncork.ui.conversation.SourceQueryStatus
+import com.sheldondesousa.uncork.ui.conversation.WineCardSynthesizer
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -34,6 +37,194 @@ class KaggleConversationResponderTest {
         assertEquals(listOf("Wine One", "Wine Two"), response.suggestions.map { it.name })
         assertTrue(dataSource.selectionPoolLookups.isNotEmpty())
         assertTrue(response.text.contains("other wine enthusiasts"))
+    }
+
+    @Test
+    fun keywordFallbackResultsThatDontMatchTheRequestedCountryGetCloseAlternativesCopy() = runBlocking {
+        // No rows for the requested country (e.g. "China" has none in the Kaggle dataset), so
+        // the structured lookups miss and the loose any-term keyword fallback is what actually
+        // returns cards — from unrelated countries. The response text must say so rather than
+        // imply a genuine database match.
+        val dataSource = FakeWineReviewDataSource(
+            keywordResults = listOf(
+                WineReview(
+                    id = 9,
+                    name = "Barolo",
+                    winery = "Winery A",
+                    country = "Italy",
+                    province = "Piedmont",
+                    variety = "Nebbiolo",
+                    points = 95,
+                    reviewSummary = "A fine Italian red.",
+                ),
+            ),
+        )
+        val gemmaOptions = listOf(
+            WineSuggestion(name = "Unknown", winery = "Unknown", country = "China", province = "Unknown"),
+        )
+        val responder = KaggleConversationResponder(
+            gemmaResponder = ConversationResponder {
+                gemmaMessage(gemmaOptions, coverageComplete = true)
+            },
+            wineReviewRepository = dataSource,
+        )
+
+        val response = responder.replyTo("Red. China.")
+
+        assertEquals("Italy", response.suggestions.single().country)
+        assertTrue(response.text.contains("close alternatives"))
+        assertTrue(!response.text.contains("other wine enthusiasts"))
+    }
+
+    @Test
+    fun preferencesDrivenCompletionQueriesKaggleFromRecordedPreferencesNotGemmaCandidates() = runBlocking {
+        val dataSource = FakeWineReviewDataSource(selectionPoolResults = REVIEWS)
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+        val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = dataSource,
+        )
+
+        val response = responder.replyTo("Full body")
+
+        // Gemma and Kaggle both genuinely run (like Find's "AI Sommelier" + "Database"
+        // sections), but Kaggle keeps "database first" priority for the winning text/suggestion
+        // regardless of which one happens to resolve first in the race.
+        assertEquals(listOf("Wine One", "Wine Two"), response.suggestions.map { it.name })
+        assertTrue(response.text.contains("other wine enthusiasts"))
+        assertEquals(
+            WineSelectionCriteria(wineType = "red", country = "Italy", province = "Piedmont"),
+            dataSource.selectionPoolLookups.single(),
+        )
+        // The structured query came from WinePreferences, not from parsing "Full body" or from
+        // reading fields back out of Gemma's returned candidates.
+        assertEquals(
+            setOf(WineSuggestionSource.GEMMA, WineSuggestionSource.KAGGLE, WineSuggestionSource.CACHE),
+            response.sourceResults.map { it.source }.toSet(),
+        )
+    }
+
+    @Test
+    fun preferencesDrivenCacheHitKeepsDatabaseFirstPriorityOverGemma() = runBlocking {
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+        var matchedCriteria: WineSelectionCriteria? = null
+        val cache = object : WineOptionCache {
+            override suspend fun find(country: String, province: String, variety: String): CachedWineOption? = null
+
+            override suspend fun findMatching(criteria: WineSelectionCriteria): List<CachedWineOption> {
+                matchedCriteria = criteria
+                return listOf(
+                    CachedWineOption(
+                        name = "Cached Barolo",
+                        winery = "Cached Winery",
+                        country = "Italy",
+                        province = "Piedmont",
+                        variety = "Nebbiolo",
+                        body = "Full",
+                        tannin = "High",
+                        acidity = "High",
+                        flavorNotes = listOf("rose", "tar"),
+                        suggestedPairing = "Braised beef",
+                        webSummary = "Saved from an earlier web search.",
+                    ),
+                )
+            }
+        }
+        val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = FakeWineReviewDataSource(),
+            optionCache = cache,
+        )
+
+        val response = responder.replyTo("Full body")
+
+        // Cache wins the "database first" priority for the summary text/suggestion — Gemma also
+        // genuinely ran (with real cards) and Kaggle genuinely missed, but neither outranks a
+        // real cache hit.
+        assertEquals("Cached Barolo", response.suggestions.single().name)
+        assertTrue(response.text.contains("saved from an earlier web search"))
+        assertEquals(
+            WineSelectionCriteria(wineType = "red", country = "Italy", province = "Piedmont"),
+            matchedCriteria,
+        )
+        // Gemma and Kaggle race concurrently (order between them isn't guaranteed); cache always
+        // resolves last since it only starts once Kaggle is complete. Kaggle's real miss still
+        // gets its own annotated section rather than being silently omitted.
+        assertEquals(3, response.sourceResults.size)
+        assertEquals(WineSuggestionSource.CACHE, response.sourceResults.last().source)
+        assertEquals(
+            setOf(WineSuggestionSource.GEMMA, WineSuggestionSource.KAGGLE),
+            response.sourceResults.take(2).map { it.source }.toSet(),
+        )
+        assertTrue(response.sourceResults.all { it.status == SourceQueryStatus.COMPLETE })
+        assertTrue(response.sourceResults.first { it.source == WineSuggestionSource.KAGGLE }.suggestions.isEmpty())
+        assertEquals(
+            GEMMA_OPTIONS.map { it.name },
+            response.sourceResults.first { it.source == WineSuggestionSource.GEMMA }.suggestions.map { it.name },
+        )
+        assertEquals(
+            "Cached Barolo",
+            response.sourceResults.first { it.source == WineSuggestionSource.CACHE }.suggestions.single().name,
+        )
+    }
+
+    @Test
+    fun webSearchIsOnlyOfferedAsAFollowUpNotRunAutomatically() = runBlocking {
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+        var webRequest: WineWebSearchRequest? = null
+        val webSearch = WineWebSearchDataSource { request ->
+            webRequest = request
+            listOf(
+                WineSuggestion(
+                    name = "Online Barolo",
+                    winery = "Online Winery",
+                    country = "Italy",
+                    province = "Piedmont",
+                ),
+            )
+        }
+        val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = FakeWineReviewDataSource(),
+            webSearch = webSearch,
+        )
+
+        val firstResponse = responder.replyTo("Full body")
+
+        // Kaggle and cache both missed, so Gemma's own (genuinely run) cards win the summary —
+        // web search never ran; it's only offered, same as the pre-existing follow-up pattern.
+        assertEquals(WineSuggestionSource.GEMMA, firstResponse.suggestions.first().source)
+        assertEquals("Would you like me to run a broader web search?", firstResponse.followUpText)
+        assertNull(webRequest)
+
+        val webResponse = responder.replyTo("yes")
+
+        assertEquals("Online Barolo", webResponse.suggestions.single().name)
+        assertEquals(WineSuggestionSource.WEB_SEARCH, webResponse.suggestions.single().source)
+        // The follow-up web query used Gemma's own resolved cards as search hints.
+        assertEquals(GEMMA_OPTIONS.map { it.name }, webRequest?.gemmaSuggestions?.map { it.name })
+    }
+
+    @Test
+    fun gemmaAlwaysRunsAlongsideKaggleRegardlessOfOutcome() = runBlocking {
+        val dataSource = FakeWineReviewDataSource()
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+        val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = dataSource,
+        )
+
+        val response = responder.replyTo("Full body")
+
+        // Gemma is invoked on every Q3 completion, concurrently with Kaggle — never skipped just
+        // because Kaggle happens to miss (or hit).
+        assertTrue(dataSource.selectionPoolLookups.isNotEmpty())
+        assertEquals(recordedPreferences, gemma.receivedPreferences)
+        assertTrue(response.suggestions.isNotEmpty() || response.text.isNotBlank())
     }
 
     @Test
@@ -675,7 +866,7 @@ class KaggleConversationResponderTest {
     }
 
     @Test
-    fun kaggleMissUsesCachedWebResultBeforeLiveWeb() = runBlocking {
+    fun kaggleMissPrefersCachedResultOverConcurrentLiveWeb() = runBlocking {
         var webWasCalled = false
         val cache = WineOptionCache { country, province, variety ->
             CachedWineOption(
@@ -692,9 +883,18 @@ class KaggleConversationResponderTest {
                 webSummary = "Saved from an earlier web search.",
             )
         }
+        // Cache and web now run at the same time, so even a live result that comes back should
+        // lose to the cached one rather than either overwriting shared state out of order.
         val webSearch = WineWebSearchDataSource {
             webWasCalled = true
-            emptyList()
+            listOf(
+                WineSuggestion(
+                    name = "Online Barolo",
+                    winery = "Online Winery",
+                    country = "Italy",
+                    province = "Piedmont",
+                ),
+            )
         }
         val responder = KaggleConversationResponder(
             gemmaResponder = invalidNamedOptionGemmaResponder(),
@@ -707,8 +907,8 @@ class KaggleConversationResponderTest {
 
         assertEquals("Cached Barolo", response.suggestions.single().name)
         assertEquals("Saved from an earlier web search.", response.suggestions.single().webSummary)
-        assertEquals(WineSuggestionSource.WEB_SEARCH, response.suggestions.single().source)
-        assertTrue(!webWasCalled)
+        assertEquals(WineSuggestionSource.CACHE, response.suggestions.single().source)
+        assertTrue(webWasCalled)
     }
 
     @Test
@@ -765,6 +965,123 @@ class KaggleConversationResponderTest {
         assertEquals("Web Wine", savedOption?.name)
     }
 
+    @Test
+    fun webResultAlreadyCoveredByKaggleIsNotCachedAgain() = runBlocking {
+        var saveWasCalled = false
+        val cache = object : WineOptionCache {
+            override suspend fun find(country: String, province: String, variety: String): CachedWineOption? = null
+            override suspend fun save(option: CachedWineOption) {
+                saveWasCalled = true
+            }
+        }
+        // Kaggle's own structured/keyword search comes up empty (so the flow genuinely reaches
+        // web), but the web result's exact country/province/variety triple turns out to already
+        // be covered by Kaggle — that combination should not be duplicated into the cache.
+        val dataSource = object : WineReviewDataSource {
+            override suspend fun find(criteria: WineReviewCriteria): List<WineReview> = emptyList()
+            override suspend fun findByKeywords(userQuery: String): List<WineReview> = emptyList()
+            override suspend fun findExact(
+                country: String,
+                province: String,
+                variety: String,
+            ): List<WineReview> =
+                if (country == "Italy" && province == "Piedmont" && variety == "Nebbiolo") REVIEWS else emptyList()
+        }
+        val webOption = WineSuggestion(
+            name = "Web Wine",
+            winery = "Web Winery",
+            country = "Italy",
+            province = "Piedmont",
+            variety = "Nebbiolo",
+            webSummary = "A concise web summary.",
+        )
+        val responder = KaggleConversationResponder(
+            gemmaResponder = invalidNamedOptionGemmaResponder(),
+            wineReviewRepository = dataSource,
+            optionCache = cache,
+            webSearch = WineWebSearchDataSource { listOf(webOption) },
+        )
+
+        val response = responder.replyTo("Barolo")
+
+        assertEquals("Web Wine", response.suggestions.single().name)
+        assertEquals(WineSuggestionSource.WEB_SEARCH, response.suggestions.single().source)
+        assertTrue(!saveWasCalled)
+    }
+
+    @Test
+    fun webResultNotMatchingTheRecordedContextIsNotCachedEvenIfFullyResolved() = runBlocking {
+        // Recorded preferences: red wine from France. Kaggle/cache/Gemma all miss, so the
+        // follow-up web search runs — but the live result it returns is a fully-resolved wine
+        // from Italy, not France. Every field on that result is "resolved" (not "Unknown"), but
+        // it doesn't match the context Kotlin actually recorded, so it must not be cached.
+        var saveWasCalled = false
+        val cache = object : WineOptionCache {
+            override suspend fun find(country: String, province: String, variety: String): CachedWineOption? = null
+            override suspend fun save(option: CachedWineOption) {
+                saveWasCalled = true
+            }
+        }
+        val recordedPreferences = WinePreferences(type = "red", country = "France")
+        val gemma = FakeCardSynthesizingGemma(cards = emptyList(), preferences = recordedPreferences)
+        val webOption = WineSuggestion(
+            name = "Barolo",
+            winery = "Some Winery",
+            country = "Italy",
+            province = "Piedmont",
+            variety = "Nebbiolo",
+        )
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = FakeWineReviewDataSource(),
+            optionCache = cache,
+            webSearch = WineWebSearchDataSource { listOf(webOption) },
+        )
+
+        responder.replyTo("Full body")
+        val webResponse = responder.replyTo("yes")
+
+        assertEquals("Barolo", webResponse.suggestions.single().name)
+        assertTrue(!saveWasCalled)
+    }
+
+    @Test
+    fun webResultMatchesViaPhraseEvidenceWhenTheStructuredFieldIsUnresolved() = runBlocking {
+        // Recorded preferences: Italian wine, full body. The live web result's own `body` field
+        // wasn't cleanly synthesized ("Unknown"), but its summary text uses sommelier synonyms
+        // ("bold", "rich", "opulent") for Full-Bodied — that phrase evidence should count as a
+        // match just as much as an exact "Full-Bodied" field value would.
+        var savedOption: CachedWineOption? = null
+        val cache = object : WineOptionCache {
+            override suspend fun find(country: String, province: String, variety: String): CachedWineOption? = null
+            override suspend fun save(option: CachedWineOption) {
+                savedOption = option
+            }
+        }
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", body = "Full-Bodied")
+        val gemma = FakeCardSynthesizingGemma(cards = emptyList(), preferences = recordedPreferences)
+        val webOption = WineSuggestion(
+            name = "Barolo",
+            winery = "Some Winery",
+            country = "Italy",
+            province = "Piedmont",
+            variety = "Nebbiolo",
+            webSummary = "A bold, rich, opulent wine with great structure.",
+        )
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = FakeWineReviewDataSource(),
+            optionCache = cache,
+            webSearch = WineWebSearchDataSource { listOf(webOption) },
+        )
+
+        responder.replyTo("Full body")
+        val webResponse = responder.replyTo("yes")
+
+        assertEquals("Barolo", webResponse.suggestions.single().name)
+        assertEquals("Barolo", savedOption?.name)
+    }
+
     private fun twoOptionGemmaResponder(): ConversationResponder = ConversationResponder {
         gemmaMessage(GEMMA_OPTIONS)
     }
@@ -796,6 +1113,39 @@ class KaggleConversationResponderTest {
         text = text,
         needsClarification = true,
     )
+
+    /**
+     * Simulates the real GemmaConversationResponder's split: the turn that completes Q1-Q3
+     * hands back [resolvedPreferences] without calling Gemma, and [synthesizeCards] is a
+     * separate call a caller can run concurrently with its own lookup.
+     */
+    private inner class FakeCardSynthesizingGemma(
+        private val cards: List<WineSuggestion>,
+        private val preferences: WinePreferences,
+    ) : ConversationResponder, WineCardSynthesizer {
+        var receivedPreferences: WinePreferences? = null
+
+        override suspend fun replyTo(query: String): ChatMessage = replyToUpdates(query) {}
+
+        override suspend fun replyToUpdates(
+            query: String,
+            onUpdate: (ConversationStreamUpdate) -> Unit,
+        ): ChatMessage = ChatMessage(
+            id = 1L,
+            author = MessageAuthor.Assistant,
+            text = "",
+            coverageComplete = true,
+            resolvedPreferences = preferences,
+        )
+
+        override suspend fun synthesizeCards(
+            preferences: WinePreferences,
+            onUpdate: (ConversationStreamUpdate) -> Unit,
+        ): ChatMessage {
+            receivedPreferences = preferences
+            return gemmaMessage(cards, coverageComplete = true)
+        }
+    }
 
     private class FakeWineReviewDataSource(
         private val exactResults: List<WineReview> = emptyList(),

@@ -25,6 +25,7 @@ object WineRegions {
         "Germany" to listOf("Ahr", "Baden", "Franconia", "Hessische Bergstraße", "Mittelrhein", "Mosel", "Nahe", "Palatinate", "Rheingau", "Rheinhessen", "Saale-Unstrut", "Saxony", "Württemberg"),
         "Greece" to listOf("Aegean Islands", "Central Greece", "Ionian Islands", "Macedonia", "Peloponnesus"),
         "Hungary" to listOf("Balaton/Badacsony", "Eger", "Mátra", "Somló", "Sopron", "Szekszárd", "Tokaj", "Villány"),
+        "India" to listOf("Bangalore", "Bijapur", "Narayangaon", "Nashik", "Pune", "Sangli"),
         "Indonesia" to listOf("North Bali"),
         "Israel" to listOf("Galilee", "Golan Heights", "Judean Hills", "Mount Carmel", "Negev", "Rishon LeZion"),
         "Italy" to listOf("Abruzzo", "Apulia", "Calabria", "Campania", "Emilia-Romagna", "Liguria", "Lombardy", "Marche", "Piedmont", "Sardinia", "Sicily", "Trentino-Alto Adige", "Tuscany", "Umbria", "Veneto"),

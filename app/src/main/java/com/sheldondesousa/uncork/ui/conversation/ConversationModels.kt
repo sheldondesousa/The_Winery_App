@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.conversation
 
+import com.sheldondesousa.uncork.model.WinePreferences
 import kotlinx.coroutines.delay
 
 enum class MessageAuthor {
@@ -10,8 +11,23 @@ enum class MessageAuthor {
 enum class WineSuggestionSource {
     GEMMA,
     KAGGLE,
+    CACHE,
     WEB_SEARCH,
 }
+
+enum class SourceQueryStatus { LOADING, COMPLETE }
+
+/**
+ * One source's outcome for the current turn — cards if it found any, an empty list if it ran
+ * and came up with nothing (still worth showing, not silently skipped), or [LOADING] while it's
+ * still in flight. A [ChatMessage]'s [ChatMessage.sourceResults] lists these in the order each
+ * source actually resolved, not a fixed source order.
+ */
+data class SourceResult(
+    val source: WineSuggestionSource,
+    val status: SourceQueryStatus,
+    val suggestions: List<WineSuggestion> = emptyList(),
+)
 
 data class ChatMessage(
     val id: Long,
@@ -29,6 +45,14 @@ data class ChatMessage(
     // Time from request start to the first streamed word, debug builds only. Never set from
     // model output, not persisted, not shown to real users.
     val debugLatencyMs: Long? = null,
+    // Set only when a deterministic Q1-Q3 chat turn just finalized the user's preferences,
+    // before Gemma's card-synthesis call has run. Lets a wrapping responder start a Kaggle
+    // lookup from these recorded answers at the same time as (not after) the Gemma call.
+    val resolvedPreferences: WinePreferences? = null,
+    // Per-source breakdown for a preferences-driven search turn (Kaggle/cache/web/Gemma), in the
+    // order each source actually resolved. Empty for turns that don't run this multi-source
+    // search (e.g. plain chat replies, the Q1-Q3 questions themselves).
+    val sourceResults: List<SourceResult> = emptyList(),
 )
 
 data class WineSuggestion(
@@ -64,6 +88,7 @@ val ChatMessage.wineSuggestions: List<WineSuggestion>
 data class ConversationStreamUpdate(
     val text: String,
     val suggestions: List<WineSuggestion> = emptyList(),
+    val sourceResults: List<SourceResult> = emptyList(),
 )
 
 fun interface ConversationResponder {
@@ -80,6 +105,19 @@ fun interface ConversationResponder {
     ): ChatMessage = replyToStreaming(query) { text ->
         onUpdate(ConversationStreamUpdate(text = text))
     }
+}
+
+/**
+ * Implemented by responders that can synthesize wine cards for an already-resolved
+ * [WinePreferences] outside the normal turn-by-turn [ConversationResponder] flow — letting a
+ * caller kick this off at the same time as an independent lookup driven by the same
+ * preferences, rather than waiting for it to finish first.
+ */
+fun interface WineCardSynthesizer {
+    suspend fun synthesizeCards(
+        preferences: WinePreferences,
+        onUpdate: (ConversationStreamUpdate) -> Unit,
+    ): ChatMessage
 }
 
 /**

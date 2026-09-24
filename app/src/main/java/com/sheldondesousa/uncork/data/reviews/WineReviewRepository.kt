@@ -116,17 +116,16 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
             }
         }
 
-        fun evidence(patterns: List<String>) {
-            if (patterns.isEmpty()) return
-            clauses += patterns.joinToString(prefix = "(", postfix = ")", separator = " OR ") {
-                "review_summary COLLATE NOCASE LIKE ? ESCAPE '\\'"
-            }
-            arguments += patterns.map { "%${it.escapeLikePattern()}%" }
-        }
-
+        // body/tannin/acidity are already resolved to the same three-tier column-label values
+        // Find uses (e.g. "Medium-Bodied") by the time a Chat answer reaches this point — see
+        // ChatFlow.matchTaste() — so this matches the precomputed columns directly, exactly like
+        // GuidedReviewQuery does for Find. No free-text evidence search needed for these.
         exact("country", criteria.country)
         exact("province", criteria.province)
         exact("variety", criteria.variety)
+        exact("body", criteria.body)
+        exact("tannin", criteria.tannin)
+        exact("acidity", criteria.acidity)
         criteria.wineType?.let { type ->
             val varieties = varietiesFor(type)
             val typePatterns = typePatternsFor(type)
@@ -149,9 +148,6 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
                 clauses += alternatives.joinToString(separator = " OR ", prefix = "(", postfix = ")")
             }
         }
-        criteria.body?.let { evidence(BODY_EVIDENCE[it.lowercase()].orEmpty()) }
-        criteria.tannin?.let { evidence(TANNIN_EVIDENCE[it.lowercase()].orEmpty()) }
-        criteria.acidity?.let { evidence(ACIDITY_EVIDENCE[it.lowercase()].orEmpty()) }
         if (clauses.isEmpty()) return emptyList()
 
         return query(
@@ -236,46 +232,30 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
         val KEYWORD_COLUMNS = listOf(
             "name", "winery", "country", "province", "variety", "review_summary",
         )
-        private val RED_VARIETIES = listOf(
-            "aglianico", "barbera", "cabernet franc", "cabernet sauvignon", "carignan",
-            "carmenere", "corvina", "gamay", "grenache", "malbec", "merlot", "mourvedre",
-            "nebbiolo", "nero d'avola", "petite sirah", "pinot noir", "pinotage",
-            "sangiovese", "syrah", "tempranillo", "touriga nacional", "zinfandel",
-        )
-        private val WHITE_VARIETIES = listOf(
-            "albariño", "chenin blanc", "chardonnay", "gewürztraminer", "grüner veltliner",
-            "marsanne", "moscato", "pinot blanc", "pinot gris", "pinot grigio", "riesling",
-            "roussanne", "sauvignon blanc", "semillon", "torrontés", "vermentino",
-            "viognier",
-        )
-        private val BODY_EVIDENCE = mapOf(
-            "full" to listOf("bold", "full-bodied", "full bodied", "powerful", "rich", "robust"),
-            "medium" to listOf("medium-bodied", "medium bodied", "moderate body"),
-            "light" to listOf("light-bodied", "light bodied", "delicate", "lightweight"),
-        )
-        private val TANNIN_EVIDENCE = mapOf(
-            "high" to listOf("high tannin", "firm tannin", "grippy tannin", "powerful tannin"),
-            "medium" to listOf("medium tannin", "moderate tannin"),
-            "low" to listOf("low tannin", "soft tannin", "silky tannin", "gentle tannin"),
-        )
-        private val ACIDITY_EVIDENCE = mapOf(
-            "high" to listOf("high acidity", "bright acidity", "crisp acidity", "racy acidity"),
-            "medium" to listOf("medium acidity", "moderate acidity"),
-            "low" to listOf("low acidity", "soft acidity", "mellow acidity"),
+        // Chat's Q1 wine-type answer ("red"/"rose"/"white"/"sparkling"/"sweet"/"fortified", see
+        // ChatFlow.TYPE_KEYWORDS) uses lowercase, unaccented keys; WineTypeVarietyMap (the
+        // shared source of truth Find's GuidedWineTypeFilter also uses) keys by the display
+        // label. This just bridges the two naming conventions.
+        private val CHAT_TYPE_TO_VARIETY_MAP_KEY = mapOf(
+            "red" to "Red",
+            "white" to "White",
+            "sparkling" to "Sparkling",
+            "rose" to "Rosé",
+            "fortified" to "Fortified",
         )
 
-        internal fun varietiesFor(type: String): List<String> = when (type.lowercase()) {
-            "red" -> RED_VARIETIES
-            "white" -> WHITE_VARIETIES
-            else -> emptyList()
-        }
+        /** Exact varieties for a wine type, from the same list Find's exact-match query uses. */
+        internal fun varietiesFor(type: String): List<String> =
+            CHAT_TYPE_TO_VARIETY_MAP_KEY[type.lowercase()]
+                ?.let { WineTypeVarietyMap.TYPE_TO_VARIETIES[it] }
+                ?.map { it.lowercase() }
+                .orEmpty()
 
+        // "Sweet" is a Chat-only category (Find's WineTypeVarietyMap has no equivalent, since
+        // sweetness is a residual-sugar level rather than a distinct variety/style) with no
+        // variety list to match exactly, so it's the one type that still infers from the name.
         private fun typePatternsFor(type: String): List<String> = when (type.lowercase()) {
-            "rosé", "rose" -> listOf("rosé", "rose")
-            "sparkling" -> listOf("sparkling", "champagne", "prosecco", "cava")
             "sweet" -> listOf("dessert", "late harvest", "icewine", "sauternes")
-            "fortified" -> listOf("port", "sherry", "madeira", "marsala")
-            "red" -> listOf("red blend")
             else -> emptyList()
         }
     }

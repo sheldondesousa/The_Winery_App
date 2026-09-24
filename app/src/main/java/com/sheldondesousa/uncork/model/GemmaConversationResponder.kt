@@ -15,6 +15,7 @@ import com.sheldondesousa.uncork.ui.conversation.ChatMessage
 import com.sheldondesousa.uncork.ui.conversation.ConversationStreamUpdate
 import com.sheldondesousa.uncork.ui.conversation.ConversationResponder
 import com.sheldondesousa.uncork.ui.conversation.MessageAuthor
+import com.sheldondesousa.uncork.ui.conversation.WineCardSynthesizer
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.guided.GuidedOptions
@@ -31,7 +32,7 @@ import java.io.File
 class GemmaConversationResponder(
     context: Context,
     private val modelFile: File,
-) : ConversationResponder, AutoCloseable {
+) : ConversationResponder, WineCardSynthesizer, AutoCloseable {
     private val appContext = context.applicationContext
     private val cacheDirectory = File(context.cacheDir, "litert-lm").apply { mkdirs() }
     private val requestMutex = Mutex()
@@ -196,9 +197,30 @@ class GemmaConversationResponder(
                     )
                     else -> return unmatchedFindWineAnswer(query, ChatFlowText.Q3_TASTE)
                 }
-                produceWineCards()
+                finalizePreferences()
             }
         }
+    }
+
+    /**
+     * The Q1-Q3 flow is complete: hand the fully-resolved [WinePreferences] back to the caller
+     * instead of calling Gemma here. This lets a wrapping responder (e.g. one that also queries
+     * a local database) start its own lookup from these recorded answers at the same moment it
+     * kicks off [synthesizeCards], rather than waiting for that model call to finish first.
+     */
+    private fun finalizePreferences(): ChatMessage {
+        val preferences = chatPreferences
+        // A "find a wine" cycle is one-shot: the next message starts fresh from the mode choice.
+        chatMode = ChatMode.Undecided
+        findWineStep = FindWineStep.Type
+        chatPreferences = WinePreferences()
+        return ChatMessage(
+            id = System.nanoTime(),
+            author = MessageAuthor.Assistant,
+            text = "",
+            coverageComplete = true,
+            resolvedPreferences = preferences,
+        )
     }
 
     /**
@@ -245,8 +267,12 @@ class GemmaConversationResponder(
         )
     }
 
-    private suspend fun produceWineCards(): ChatMessage {
-        val preferences = chatPreferences
+    override suspend fun synthesizeCards(
+        preferences: WinePreferences,
+        onUpdate: (ConversationStreamUpdate) -> Unit,
+    ): ChatMessage = requestMutex.withLock { produceWineCards(preferences) }
+
+    private suspend fun produceWineCards(preferences: WinePreferences): ChatMessage {
         val requestStartedAt = SystemClock.elapsedRealtime()
         val searchConversation = ensureEngine().createConversation(
             ConversationConfig(
@@ -300,11 +326,6 @@ class GemmaConversationResponder(
             "Gemma chat search parsed=${parsedSuggestions.size}, usable=${suggestions.size}, " +
                 "totalMs=$searchElapsedMs",
         )
-
-        // A "find a wine" cycle is one-shot: the next message starts fresh from the mode choice.
-        chatMode = ChatMode.Undecided
-        findWineStep = FindWineStep.Type
-        chatPreferences = WinePreferences()
 
         return ChatMessage(
             id = System.nanoTime(),

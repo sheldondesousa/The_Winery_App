@@ -15,9 +15,9 @@ Return exactly three distinct supported wines when the evidence contains at leas
     "country": "string",
     "province": "string | Unknown",
     "variety": "string | Unknown",
-    "body": "light | medium | full | Unknown",
-    "tannin": "low | medium | high | Unknown",
-    "acidity": "low | medium | high | Unknown",
+    "body": "Light-Bodied | Medium-Bodied | Full-Bodied | Unknown",
+    "tannin": "Smooth | Moderate | Astringent | Unknown",
+    "acidity": "Soft | Crisp | Tart | Unknown",
     "flavor_notes": ["tag1", "tag2"],
     "suggested_pairing": "string | Unknown",
     "web_summary": "one or two concise sentences supported by the search evidence"

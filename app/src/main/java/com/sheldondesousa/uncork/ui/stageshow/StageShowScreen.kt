@@ -229,6 +229,7 @@ fun StageShowRoute(
                 },
             )
             WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
+            WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
             WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
         }
 
