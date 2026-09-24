@@ -10,10 +10,15 @@ import com.sheldondesousa.uncork.ui.conversation.ChatMessage
 import com.sheldondesousa.uncork.ui.conversation.ConversationStreamUpdate
 import com.sheldondesousa.uncork.ui.conversation.ConversationResponder
 import com.sheldondesousa.uncork.ui.conversation.MessageAuthor
+import com.sheldondesousa.uncork.ui.conversation.SourceQueryStatus
+import com.sheldondesousa.uncork.ui.conversation.SourceResult
+import com.sheldondesousa.uncork.ui.conversation.WineCardSynthesizer
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.conversation.wineSuggestions
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.text.Normalizer
@@ -74,6 +79,7 @@ class KaggleConversationResponder(
                 NextSource.WEB -> searchWeb(
                     originalQuery = pending.originalQuery,
                     gemmaSuggestions = pending.gemmaSuggestions,
+                    criteria = pending.criteria,
                 )
             }
         }
@@ -110,12 +116,18 @@ class KaggleConversationResponder(
 
         if (gemmaResponse.coverageComplete) {
             clarificationInputs.clear()
-            val completedSuggestions = gemmaResponse.wineSuggestions.take(TARGET_OPTION_COUNT)
-            logFlow("Onboarding coverage complete; starting Kaggle lookup")
-            return@withLock findKaggleThenWeb(
-                originalQuery = fullRequest,
-                gemmaSuggestions = completedSuggestions,
-            )
+            val preferences = gemmaResponse.resolvedPreferences
+            val synthesizer = gemmaResponder as? WineCardSynthesizer
+            return@withLock if (preferences != null && synthesizer != null) {
+                logFlow("Onboarding coverage complete; querying Kaggle from recorded preferences")
+                findPreferencesDrivenResult(fullRequest, preferences, synthesizer, onUpdate)
+            } else {
+                logFlow("Onboarding coverage complete; starting Kaggle lookup")
+                findKaggleThenWeb(
+                    originalQuery = fullRequest,
+                    gemmaSuggestions = gemmaResponse.wineSuggestions.take(TARGET_OPTION_COUNT),
+                )
+            }
         }
 
         if (!gemmaResponse.stageOneOutput && !requestsMore) {
@@ -179,6 +191,181 @@ class KaggleConversationResponder(
         gemmaFallbackText = initialText,
     )
 
+    /**
+     * The Q1-Q3 flow just finished, so Kotlin already has the resolved [WinePreferences]. Mirrors
+     * Find's own workflow: Gemma's card synthesis and Kaggle run concurrently from the start,
+     * like Find's "AI Sommelier" and "Database" sections (they never contend for a resource —
+     * Kaggle is a plain local DB query; it's Gemma's own *web*-synthesis call, not card
+     * synthesis, that shares the on-device engine mutex with card synthesis). Once Kaggle
+     * finishes, the cache is queried too. Web search is never run automatically here — it's only
+     * offered as a follow-up question, same as the "Would you like me to run a broader web
+     * search?" prompt this app has always shown; accepting it runs [searchWeb] via the existing
+     * [PendingNextSource] handling in [replyToUpdates], which already saves an exact-match live
+     * hit into the cache in the background (see [findWebOptions]).
+     */
+    private suspend fun findPreferencesDrivenResult(
+        originalQuery: String,
+        preferences: WinePreferences,
+        synthesizer: WineCardSynthesizer,
+        onUpdate: (ConversationStreamUpdate) -> Unit,
+    ): ChatMessage {
+        val criteria = preferences.toSelectionCriteria()
+        val basis = preferences.toBasisSuggestion()
+        val progress = SourceProgress(onUpdate)
+
+        progress.startLoading(WineSuggestionSource.GEMMA, WineSuggestionSource.KAGGLE)
+        val (gemmaSuggestions, kaggleOptions) = coroutineScope {
+            val gemmaDeferred = async {
+                val cardsResponse = try {
+                    synthesizer.synthesizeCards(preferences) {}
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    null
+                }
+                val suggestions = cardsResponse?.wineSuggestions.orEmpty()
+                    .filter { it.hasRequiredCardFields() }
+                    .filterNot { it.cardKey() in shownCardKeys }
+                    .distinctBy { it.cardKey() }
+                    .take(TARGET_OPTION_COUNT)
+                progress.resolve(WineSuggestionSource.GEMMA, suggestions)
+                suggestions
+            }
+            val kaggleDeferred = async {
+                val reviews = DebugLatencyLog.timed("[Kotlin] Kaggle DB query (recorded preferences)") {
+                    runCatchingSource { findKaggleReviewsByCriteria(criteria) }
+                }
+                val options = reviews
+                    .distinctBy { it.id }
+                    .map { review -> review.toSuggestion(basis) }
+                    .filter { it.hasRequiredCardFields() }
+                    .filterNot { it.cardKey() in shownCardKeys }
+                    .distinctBy { it.cardKey() }
+                    .take(MAX_FALLBACK_OPTIONS)
+                progress.resolve(WineSuggestionSource.KAGGLE, options)
+                options
+            }
+            gemmaDeferred.await() to kaggleDeferred.await()
+        }
+        logFlow(
+            "From recorded preferences: Gemma cards=${gemmaSuggestions.size}, " +
+                "Kaggle reviews=${kaggleOptions.size}",
+        )
+
+        // Kaggle is complete — query the cache next, same as it always has.
+        progress.startLoading(WineSuggestionSource.CACHE)
+        val cachedOptions = DebugLatencyLog.timed("[Kotlin] local cache lookup (recorded preferences)") {
+            runCatchingSource { findCachedOptionsByCriteria(criteria) }
+        }
+        logFlow("Cache options from recorded preferences=${cachedOptions.size}")
+        progress.resolve(WineSuggestionSource.CACHE, cachedOptions)
+
+        return buildMultiSourceResponse(
+            originalQuery = originalQuery,
+            criteria = criteria,
+            sourceResults = progress.results,
+            webFollowUpSuggestions = gemmaSuggestions.ifEmpty { listOf(basis) },
+        )
+    }
+
+    /**
+     * Publishes [SourceResult]s to the UI as each source resolves, in resolution order, with
+     * every not-yet-resolved source shown as [SourceQueryStatus.LOADING] until it does. A source
+     * that resolves with zero suggestions still gets a [SourceQueryStatus.COMPLETE] entry (an
+     * empty list) so "No results found" can be shown rather than the source silently vanishing.
+     */
+    private class SourceProgress(private val onUpdate: (ConversationStreamUpdate) -> Unit) {
+        private val lock = Mutex()
+        private val resolved = mutableListOf<SourceResult>()
+        private var loading = listOf<WineSuggestionSource>()
+
+        val results: List<SourceResult> get() = resolved.toList()
+
+        suspend fun startLoading(vararg sources: WineSuggestionSource) {
+            lock.withLock { loading = loading + sources }
+            publish()
+        }
+
+        suspend fun resolve(source: WineSuggestionSource, suggestions: List<WineSuggestion>) {
+            lock.withLock {
+                resolved += SourceResult(source, SourceQueryStatus.COMPLETE, suggestions)
+                loading = loading - source
+            }
+            publish()
+        }
+
+        private fun publish() {
+            onUpdate(
+                ConversationStreamUpdate(
+                    text = "",
+                    sourceResults = resolved + loading.map { SourceResult(it, SourceQueryStatus.LOADING) },
+                ),
+            )
+        }
+    }
+
+    private fun buildMultiSourceResponse(
+        originalQuery: String,
+        criteria: WineSelectionCriteria,
+        sourceResults: List<SourceResult>,
+        webFollowUpSuggestions: List<WineSuggestion>,
+    ): ChatMessage {
+        // sourceResults is in actual resolution order, for the progressive per-source display.
+        // The single "winning" text/suggestion, by contrast, keeps "database first" priority
+        // regardless of which one happened to resolve first — Kaggle and Gemma run as a genuine
+        // race, and which one resolves first shouldn't flip which text/card the rest of the app
+        // (favorites, the staged profile view) treats as the primary result.
+        val firstHit = DISPLAY_PRIORITY
+            .firstNotNullOfOrNull { source -> sourceResults.firstOrNull { it.source == source && it.suggestions.isNotEmpty() } }
+        val contextualResults = sourceResults.map { result ->
+            result.copy(
+                suggestions = result.suggestions.map { option ->
+                    option.copy(requestContext = option.requestContext ?: originalQuery)
+                },
+            )
+        }
+        shownCardKeys += contextualResults.flatMap { it.suggestions }.map { it.cardKey() }
+
+        val text = when (firstHit?.source) {
+            null -> "I’m sorry, but I couldn’t find a relevant wine for that request."
+            WineSuggestionSource.KAGGLE -> kaggleResultText(firstHit.suggestions, criteria)
+            WineSuggestionSource.CACHE -> "I found ${
+                if (firstHit.suggestions.size == 1) "an option" else "some options"
+            } saved from an earlier web search."
+            WineSuggestionSource.WEB_SEARCH -> "I searched online and found these options for you."
+            WineSuggestionSource.GEMMA -> "I found these options for you."
+        }
+        val winningOptions = contextualResults.firstOrNull { it.suggestions.isNotEmpty() }?.suggestions.orEmpty()
+
+        // Kaggle/cache/Gemma results (or their absence) don't preclude checking online too —
+        // always offer the same opt-in "broader web search" this app has always offered, rather
+        // than running it automatically.
+        pendingNextSource = PendingNextSource(originalQuery, webFollowUpSuggestions, NextSource.WEB, criteria)
+
+        return ChatMessage(
+            id = System.nanoTime(),
+            author = MessageAuthor.Assistant,
+            text = text,
+            suggestion = winningOptions.firstOrNull(),
+            suggestions = winningOptions,
+            sourceResults = contextualResults,
+            historyRequest = originalQuery,
+            followUpText = WEB_SEARCH_QUESTION,
+        )
+    }
+
+    private suspend fun findKaggleReviewsByCriteria(criteria: WineSelectionCriteria): List<WineReview> =
+        if (criteria.hasAnyValue) wineReviewRepository.findBySelectionPool(criteria) else emptyList()
+
+    private suspend fun findCachedOptionsByCriteria(criteria: WineSelectionCriteria): List<WineSuggestion> {
+        if (!criteria.hasAnyValue) return emptyList()
+        return optionCache.findMatching(criteria).map { it.toSuggestion() }
+            .filter { it.hasRequiredCardFields() }
+            .filterNot { it.cardKey() in shownCardKeys }
+            .distinctBy { it.cardKey() }
+            .take(MAX_FALLBACK_OPTIONS)
+    }
+
     private suspend fun findKaggleThenWeb(
         originalQuery: String,
         gemmaSuggestions: List<WineSuggestion>,
@@ -194,12 +381,13 @@ class KaggleConversationResponder(
         logFlow("Kaggle cards=${kaggleOptions.size}")
         if (kaggleOptions.isNotEmpty()) {
             return successfulOptions(
-                text = "I searched my database and found these matches from other wine enthusiasts.",
+                text = kaggleResultText(kaggleOptions, selectionCriteria),
                 options = kaggleOptions,
                 originalQuery = originalQuery,
                 followUpText = WEB_SEARCH_QUESTION,
                 nextSource = NextSource.WEB,
                 gemmaSuggestions = gemmaSuggestions,
+                criteria = selectionCriteria,
             )
         }
 
@@ -215,15 +403,29 @@ class KaggleConversationResponder(
         }
 
         if (selectionCriteria.hasExactProfile) {
-            return DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") { searchWeb(originalQuery, gemmaSuggestions) }
-        }
-
-        val cachedOptions = DebugLatencyLog.timed("[Kotlin] local cache lookup") {
-            runCatchingSource {
-                findCachedOptions(originalQuery, gemmaSuggestions)
+            return DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") {
+                searchWeb(originalQuery, gemmaSuggestions, criteria = selectionCriteria)
             }
         }
-        logFlow("Cache cards=${cachedOptions.size}")
+
+        // Cache is local/instant and web is a live external call, but the user asked for these
+        // to run together rather than cache-first-then-web: race them and prefer the cache
+        // result when both land, matching the priority the sequential order used to encode.
+        val (cachedOptions, webOptions) = coroutineScope {
+            val cachedDeferred = async {
+                DebugLatencyLog.timed("[Kotlin] local cache lookup") {
+                    runCatchingSource { findCachedOptions(originalQuery, gemmaSuggestions) }
+                }
+            }
+            val webDeferred = async {
+                DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") {
+                    findWebOptions(originalQuery, gemmaSuggestions, selectionCriteria)
+                }
+            }
+            cachedDeferred.await() to webDeferred.await()
+        }
+        logFlow("Cache cards=${cachedOptions.size}, web cards=${webOptions.size}")
+
         if (cachedOptions.isNotEmpty()) {
             return successfulOptions(
                 text = "I found ${if (cachedOptions.size == 1) "an option" else "some options"} " +
@@ -233,10 +435,13 @@ class KaggleConversationResponder(
             )
         }
 
-        val webResponse = DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") {
-            searchWeb(originalQuery, gemmaSuggestions, returnFailure = false)
+        if (webOptions.isNotEmpty()) {
+            return successfulOptions(
+                text = "I searched online and found these options for you.",
+                options = webOptions,
+                originalQuery = originalQuery,
+            )
         }
-        if (webResponse.wineSuggestions.isNotEmpty()) return webResponse
 
         return if (gemmaFallback.isNotEmpty()) {
             successfulOptions(gemmaFallbackText, gemmaFallback, originalQuery)
@@ -249,7 +454,33 @@ class KaggleConversationResponder(
         originalQuery: String,
         gemmaSuggestions: List<WineSuggestion>,
         returnFailure: Boolean = true,
+        criteria: WineSelectionCriteria = WineSelectionCriteria(),
     ): ChatMessage {
+        val webOptions = findWebOptions(originalQuery, gemmaSuggestions, criteria)
+        if (webOptions.isNotEmpty()) {
+            return successfulOptions(
+                text = "I searched online and found these options for you.",
+                options = webOptions,
+                originalQuery = originalQuery,
+            )
+        }
+        return if (returnFailure) noResultsMessage(originalQuery) else assistantMessage("", historyRequest = originalQuery)
+    }
+
+    /**
+     * The raw web-search fetch, without building a response — kept separate from [searchWeb] so
+     * a caller can race it against another lookup (e.g. the cache) and decide which result wins
+     * before committing to [successfulOptions]'s side effects (`shownCardKeys`,
+     * `pendingNextSource`). A successful live result is saved to the cache, but only once it
+     * actually matches the recorded context (whichever of country/province/variety/body/tannin/
+     * acidity Kotlin already knows from Q1-Q3 — not just "are these fields non-'Unknown'") and is
+     * confirmed to not already be covered by the Kaggle DB for that country/province/variety.
+     */
+    private suspend fun findWebOptions(
+        originalQuery: String,
+        gemmaSuggestions: List<WineSuggestion>,
+        criteria: WineSelectionCriteria = WineSelectionCriteria(),
+    ): List<WineSuggestion> {
         val webOptions = runCatchingSource {
             webSearch.search(
                 WineWebSearchRequest(
@@ -267,18 +498,75 @@ class KaggleConversationResponder(
                 .distinctBy { it.cardKey() }
         }
         if (webOptions.isNotEmpty()) {
-            webOptions.firstOrNull { it.hasExactSearchCriteria() }
-                ?.toCachedWineOption()
-                ?.let { option -> runCatchingCacheWrite { optionCache.save(option) } }
+            webOptions.firstOrNull { option ->
+                option.country.isResolved() && option.province.isResolved() && criteria.matches(option)
+            }?.let { option ->
+                runCatchingCacheWrite {
+                    val alreadyInKaggle = wineReviewRepository.findExact(
+                        country = option.country,
+                        province = option.province,
+                        variety = option.variety,
+                    ).isNotEmpty()
+                    if (!alreadyInKaggle) {
+                        optionCache.save(option.toCachedWineOption())
+                    }
+                }
+            }
         }
-        if (webOptions.isNotEmpty()) {
-            return successfulOptions(
-                text = "I searched online and found these options for you.",
-                options = webOptions,
-                originalQuery = originalQuery,
-            )
+        return webOptions
+    }
+
+    /**
+     * "I searched my database and found these matches" implies an exact match on the criteria
+     * the user actually specified. When the Kaggle keyword fallback (or any other path) surfaces
+     * cards that don't actually satisfy a resolved criterion — e.g. a search for country=China
+     * returning Italian/Portuguese/US wines because China has no rows in the dataset — the copy
+     * needs to say so instead of implying a genuine database hit.
+     */
+    private fun kaggleResultText(
+        options: List<WineSuggestion>,
+        criteria: WineSelectionCriteria,
+    ): String = if (options.all { criteria.matches(it) }) {
+        "I searched my database and found these matches from other wine enthusiasts."
+    } else {
+        "While I couldn’t find an exact match, I found some close alternatives that you might like."
+    }
+
+    private fun WineSelectionCriteria.matches(option: WineSuggestion): Boolean =
+        (wineType == null || option.wineType.equals(wineType, ignoreCase = true)) &&
+            (country == null || option.country.equals(country, ignoreCase = true)) &&
+            (province == null || option.province.equals(province, ignoreCase = true)) &&
+            (variety == null || option.variety.equals(variety, ignoreCase = true)) &&
+            (body == null || option.matchesAttribute(body, BODY_KEYWORDS)) &&
+            (tannin == null || option.matchesAttribute(tannin, TANNIN_KEYWORDS)) &&
+            (acidity == null || option.matchesAttribute(acidity, ACIDITY_KEYWORDS))
+
+    /**
+     * True if [expectedLabel] equals the option's own structured value for this attribute (e.g.
+     * Kaggle's precomputed `body` column), or — since a web-synthesized card's structured field
+     * isn't reliably populated — if the option's free text (review/web summary) contains one of
+     * the sommelier synonym phrases for that label (the same vocabulary Chat uses to parse a
+     * user's own Q3 answer; see [ChatFlow]'s BODY_KEYWORDS/TANNIN_KEYWORDS/ACIDITY_KEYWORDS).
+     */
+    private fun WineSuggestion.matchesAttribute(
+        expectedLabel: String,
+        keywordMap: Map<String, List<String>>,
+    ): Boolean {
+        val structuredValue = when (keywordMap) {
+            BODY_KEYWORDS -> body
+            TANNIN_KEYWORDS -> tannin
+            ACIDITY_KEYWORDS -> acidity
+            else -> "Unknown"
         }
-        return if (returnFailure) noResultsMessage(originalQuery) else assistantMessage("", historyRequest = originalQuery)
+        if (structuredValue.equals(expectedLabel, ignoreCase = true)) return true
+        val phrases = keywordMap[expectedLabel].orEmpty()
+        if (phrases.isEmpty()) return false
+        val freeText = listOf(webSummary, reviewSummary, summary)
+            .filter { it.isResolved() }
+            .joinToString(" ")
+            .lowercase()
+        if (freeText.isBlank()) return false
+        return phrases.any { phrase -> freeText.contains(phrase.lowercase()) }
     }
 
     private fun noResultsMessage(originalQuery: String): ChatMessage = assistantMessage(
@@ -487,8 +775,7 @@ class KaggleConversationResponder(
     private fun WineSuggestion.hasExactSearchCriteria(): Boolean =
         country.isResolved() && province.isResolved() && variety.isResolved()
 
-    private fun WineSuggestion.hasRequiredCardFields(): Boolean =
-        name.isResolved() && country.isResolved()
+    private fun WineSuggestion.hasRequiredCardFields(): Boolean = name.isResolved()
 
     private fun String.isResolved(): Boolean =
         isNotBlank() && !equals("Unknown", ignoreCase = true)
@@ -523,7 +810,7 @@ class KaggleConversationResponder(
         flavorNotes = flavorNotes.takeIf(List<String>::isNotEmpty)?.joinToString(", ") ?: "Unknown",
         suggestedPairing = suggestedPairing ?: "Unknown",
         webSummary = webSummary ?: "Unknown",
-        source = WineSuggestionSource.WEB_SEARCH,
+        source = WineSuggestionSource.CACHE,
     )
 
     private fun WineSuggestion.toCachedWineOption(): CachedWineOption = CachedWineOption(
@@ -547,13 +834,14 @@ class KaggleConversationResponder(
         followUpText: String? = null,
         nextSource: NextSource? = null,
         gemmaSuggestions: List<WineSuggestion> = emptyList(),
+        criteria: WineSelectionCriteria = WineSelectionCriteria(),
     ): ChatMessage {
         val contextualOptions = options.map { option ->
             option.copy(requestContext = option.requestContext ?: originalQuery)
         }
         shownCardKeys += contextualOptions.map { it.cardKey() }
         pendingNextSource = nextSource?.let {
-            PendingNextSource(originalQuery, gemmaSuggestions, it)
+            PendingNextSource(originalQuery, gemmaSuggestions, it, criteria)
         }
         return assistantMessage(
             text = text,
@@ -619,6 +907,9 @@ class KaggleConversationResponder(
         val originalQuery: String,
         val gemmaSuggestions: List<WineSuggestion>,
         val nextSource: NextSource,
+        // The recorded context (Kotlin's Q1-Q3 criteria) a follow-up web search should still be
+        // validated against — whichever fields are known must match, not just be non-"Unknown".
+        val criteria: WineSelectionCriteria = WineSelectionCriteria(),
     )
 
     private companion object {
@@ -627,6 +918,12 @@ class KaggleConversationResponder(
         const val ENTHUSIAST_QUESTION =
             "Would you like me to check for suggestions from wine enthusiasts in the database?"
         const val WEB_SEARCH_QUESTION = "Would you like me to run a broader web search?"
+        val DISPLAY_PRIORITY = listOf(
+            WineSuggestionSource.KAGGLE,
+            WineSuggestionSource.CACHE,
+            WineSuggestionSource.GEMMA,
+            WineSuggestionSource.WEB_SEARCH,
+        )
 
         val EMPTY_PROFILE = WineSuggestion(name = "Unknown", province = "Unknown")
         val AFFIRMATIVE_REPLIES = setOf(

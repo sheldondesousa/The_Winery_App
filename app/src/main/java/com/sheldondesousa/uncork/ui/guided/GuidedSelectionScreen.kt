@@ -8,13 +8,12 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,9 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -62,7 +59,8 @@ private fun FormField.options(): List<String> = when (this) {
     FormField.Sweetness -> GuidedOptions.sweetness
     FormField.Tannin -> GuidedOptions.tannin
     FormField.Body -> GuidedOptions.body
-    FormField.Acidity, FormField.Country, FormField.Province -> emptyList()
+    FormField.Acidity -> GuidedOptions.acidity
+    FormField.Country, FormField.Province -> emptyList()
 }
 
 private fun FormField.selected(selection: GuidedCriteria): Set<String> = when (this) {
@@ -74,14 +72,24 @@ private fun FormField.selected(selection: GuidedCriteria): Set<String> = when (t
     FormField.Country, FormField.Province -> emptySet()
 }
 
-private fun FormField.toggled(selection: GuidedCriteria, value: String): GuidedCriteria = when (this) {
-    FormField.Type -> selection.copy(wineType = selection.wineType.toggled(value))
-    FormField.Sweetness -> selection.copy(sweetness = selection.sweetness.toggled(value))
-    FormField.Tannin -> selection.copy(tannin = selection.tannin.toggled(value))
-    FormField.Body -> selection.copy(body = selection.body.toggled(value))
-    FormField.Acidity -> selection.copy(acidity = selection.acidity.toggled(value))
-    FormField.Country, FormField.Province -> selection
+/** Every field on this form is single-select: choosing a value (or "Any") replaces whatever was there before. */
+private fun FormField.selectedValue(selection: GuidedCriteria): String = when (this) {
+    FormField.Country -> selection.country
+    FormField.Province -> selection.province
+    else -> selected(selection).firstOrNull().orEmpty()
 }
+
+private fun FormField.select(selection: GuidedCriteria, value: String): GuidedCriteria = when (this) {
+    FormField.Type -> selection.copy(wineType = value.toSingleSelection())
+    FormField.Sweetness -> selection.copy(sweetness = value.toSingleSelection())
+    FormField.Tannin -> selection.copy(tannin = value.toSingleSelection())
+    FormField.Body -> selection.copy(body = value.toSingleSelection())
+    FormField.Acidity -> selection.copy(acidity = value.toSingleSelection())
+    FormField.Country -> selection.withCountry(value)
+    FormField.Province -> selection.copy(province = value)
+}
+
+private fun String.toSingleSelection(): Set<String> = if (isBlank()) emptySet() else setOf(this)
 
 private fun Set<String>.summaryText(labelFor: (String) -> String = { it }): String =
     if (isEmpty()) "Any" else sorted().joinToString(" / ") { labelFor(it) }
@@ -210,56 +218,59 @@ private fun FieldBottomSheet(
     sheetState: SheetState,
     onDismiss: () -> Unit,
 ) {
-    val selection = state.selection
+    val options = when (field) {
+        FormField.Country -> state.countries
+        FormField.Province -> state.provinces
+        else -> field.options()
+    }
+    val selectedValue = field.selectedValue(state.selection)
+    val labelFor: (String) -> String =
+        if (field == FormField.Body) { { it.removeSuffix("-Bodied") } } else { { it } }
+
+    fun select(value: String) {
+        state.selection = field.select(state.selection, value)
+        onDismiss()
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Parchment) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.5f)) {
-            if (field == FormField.Country || field == FormField.Province) {
-                val isCountry = field == FormField.Country
-                val options = if (isCountry) state.countries else state.provinces
-                val selected = if (isCountry) selection.country else selection.province
-                Text("Choose ${field.label.lowercase()}",
-                    fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
-                LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("${field.label.lowercase()}-options")) {
-                    item {
-                        TextButton(onClick = {
-                            state.selection = if (isCountry) state.selection.withCountry("")
-                                else state.selection.copy(province = "")
-                            onDismiss()
-                        }, modifier = Modifier.fillMaxWidth()) { Text("Any ${field.label.lowercase()}") }
-                    }
-                    items(options, key = { it }) { option ->
-                        Row(
-                            Modifier.fillMaxWidth().selectable(selected = option == selected, role = Role.RadioButton, onClick = {
-                                state.selection = if (isCountry) state.selection.withCountry(option)
-                                    else state.selection.copy(province = option)
-                                onDismiss()
-                            }).padding(horizontal = 24.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = option == selected, onClick = null)
-                            Text(option, modifier = Modifier.padding(start = 12.dp))
-                        }
-                    }
+            Text("Choose ${field.label.lowercase()}",
+                fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+            LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("${field.label.lowercase()}-options")) {
+                item {
+                    SingleSelectRow(
+                        label = "Any ${field.label.lowercase()}",
+                        selected = selectedValue.isEmpty(),
+                        onClick = { select("") },
+                    )
+                    HorizontalDivider(color = Hairline)
                 }
-                Spacer(Modifier.height(20.dp).navigationBarsPadding())
-            } else {
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
-                    Spacer(Modifier.height(12.dp))
-                    Choices(
-                        title = field.label,
-                        options = field.options(),
-                        selected = field.selected(selection),
-                        hint = if (field == FormField.Type) "select any that apply" else null,
-                        labelFor = if (field == FormField.Body) { { it.removeSuffix("-Bodied") } } else { { it } },
-                    ) { value -> state.selection = field.toggled(state.selection, value) }
-                    Spacer(Modifier.height(12.dp))
+                itemsIndexed(options, key = { _, option -> option }) { index, option ->
+                    if (index > 0) HorizontalDivider(color = Hairline)
+                    SingleSelectRow(
+                        label = labelFor(option),
+                        selected = option == selectedValue,
+                        onClick = { select(option) },
+                    )
                 }
-                Button(onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding()) { Text("Done") }
-                Spacer(Modifier.height(16.dp))
             }
+            Spacer(Modifier.height(20.dp).navigationBarsPadding())
         }
+    }
+}
+
+@Composable
+private fun SingleSelectRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .testTag("${label.lowercase()}-option")
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioDot(selected = selected)
+        Text(label, modifier = Modifier.padding(start = 8.dp), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -412,51 +423,14 @@ private fun FormTile(field: FormField, selection: GuidedCriteria, modifier: Modi
     }
 }
 
-/** Each weighted cell owns the only click target, including its whitespace. */
+/** Same 20dp indicator box as Choices' checkbox circle, drawn with radio (single-select) semantics instead of a tick. */
 @Composable
-internal fun Choices(
-    title: String,
-    options: List<String>,
-    selected: Set<String>,
-    hint: String? = null,
-    labelFor: (String) -> String = { it },
-    onToggle: (String) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryTitle(title)
-            hint?.let { Text(" · $it", color = InkSubtle, style = MaterialTheme.typography.bodySmall) }
-        }
-        options.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                row.forEach { value ->
-                    val checked = value in selected
-                    Row(
-                        Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp)
-                            .testTag("${title.lowercase()}-$value")
-                            .toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle(value) })
-                            .padding(vertical = 10.dp, horizontal = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Circular check matches the reference; checkbox semantics convey multi-select.
-                        Canvas(Modifier.size(20.dp)) {
-                            drawCircle(if (checked) Wine else InkMuted.copy(alpha = 0.45f),
-                                style = if (checked) androidx.compose.ui.graphics.drawscope.Fill else Stroke(1.5.dp.toPx()))
-                            if (checked) {
-                                val tick = Path().apply {
-                                    moveTo(size.width * 0.25f, size.height * 0.52f)
-                                    lineTo(size.width * 0.43f, size.height * 0.70f)
-                                    lineTo(size.width * 0.77f, size.height * 0.30f)
-                                }
-                                drawPath(tick, Color.White, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-                            }
-                        }
-                        Text(labelFor(value), color = Ink, modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
+private fun RadioDot(selected: Boolean) {
+    Canvas(Modifier.size(20.dp)) {
+        val color = if (selected) Wine else InkMuted.copy(alpha = 0.45f)
+        drawCircle(color, style = Stroke(1.5.dp.toPx()))
+        if (selected) {
+            drawCircle(color, radius = size.minDimension / 2 * 0.5f)
         }
     }
 }
@@ -494,12 +468,22 @@ private fun ResultSection(
                 if (result.cards.isEmpty()) Text("No matches for these selections.", color = InkSubtle)
                 result.cards.forEach { card ->
                     OutlinedCard(onClick = { onSuggestionClick(card) }, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(card.name, style = MaterialTheme.typography.titleMedium)
-                            Text("${card.country} · ${card.province} · ${card.variety}")
-                            Text(if (isModelSection) "Model-generated recommendation" else "Critic review", style = MaterialTheme.typography.labelMedium)
-                            card.rating?.let { Text("Critic score: $it") }
-                            Text("View profile", color = Wine)
+                        Row(
+                            Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(card.name, style = MaterialTheme.typography.titleMedium)
+                                Text("${card.country} · ${card.province} · ${card.variety}")
+                                Text(if (isModelSection) "Model-generated recommendation" else "Critic review", style = MaterialTheme.typography.labelMedium)
+                                card.rating?.let { Text("Critic score: $it") }
+                            }
+                            Text(
+                                text = "›",
+                                color = InkMuted,
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Light,
+                            )
                         }
                     }
                 }

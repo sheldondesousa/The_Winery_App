@@ -10,9 +10,9 @@ Complete the selected wine's full profile. Return exactly one compact JSON objec
   "variety": "string | Unknown",
   "country": "string | Unknown",
   "province": "string | Unknown",
-  "body": "light | medium | full | Unknown",
-  "tannin": "low | medium | high | Unknown",
-  "acidity": "low | medium | high | Unknown",
+  "body": "Light-Bodied | Medium-Bodied | Full-Bodied | Unknown",
+  "tannin": "Smooth | Moderate | Astringent | Unknown",
+  "acidity": "Soft | Crisp | Tart | Unknown",
   "flavor_notes": ["tag1", "tag2"],
   "suggested_pairing": "string | Unknown",
   "summary": "a few concise descriptive lines, under 200 characters"

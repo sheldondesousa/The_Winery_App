@@ -1,9 +1,5 @@
 package com.sheldondesousa.uncork.ui.guided
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.*
@@ -26,13 +22,13 @@ class GuidedSelectionScreenTest {
             UncorkTheme { GuidedSelectionScreen(state, {}, {}, {}) }
         }
         compose.onNodeWithText("Submit").assertIsNotEnabled()
+        // Every field is single-select: picking a value closes the sheet immediately, no Done button.
         compose.onNodeWithTag("type-tile").performScrollTo().performClick()
-        compose.onNodeWithText("Red").performClick().assertIsOn()
-        compose.onNodeWithText("Done").performClick()
+        compose.onNodeWithText("Red").performClick()
         compose.onNodeWithText("Submit").assertIsEnabled()
         compose.onNodeWithTag("type-tile").performScrollTo().performClick()
-        compose.onNodeWithText("Red").performClick().assertIsOff()
-        compose.onNodeWithText("Done").performClick()
+        compose.onNodeWithText("Red").assertIsSelected()
+        compose.onNodeWithText("Any type").performClick()
         compose.onNodeWithText("Submit").assertIsNotEnabled()
         compose.onNodeWithTag("country-tile").performScrollTo().performClick()
         compose.onNodeWithText("Choose country").assertIsDisplayed()
@@ -51,36 +47,19 @@ class GuidedSelectionScreenTest {
         compose.onNodeWithText("Submit").assertIsDisplayed()
         compose.runOnIdle { assertEquals("Italy", state.selection.country) }
     }
-    @Test fun threeEqualCellsToggleFromWhitespaceIndicatorAndLabelWithoutDoubleClicks() {
-        var selected by mutableStateOf(emptySet<String>())
-        var clicks = 0
-        compose.setContent {
-            UncorkTheme {
-                Choices("Type", listOf("Red", "White", "Sparkling", "Rosé", "Fortified"), selected) {
-                    clicks++
-                    selected = selected.toggled(it)
-                }
-            }
-        }
-        val red = compose.onNodeWithTag("type-Red")
-        val white = compose.onNodeWithTag("type-White")
-        val sparkling = compose.onNodeWithTag("type-Sparkling")
-        val redBounds = red.fetchSemanticsNode().boundsInRoot
-        val whiteBounds = white.fetchSemanticsNode().boundsInRoot
-        val widths = listOf(red, white, sparkling).map { it.fetchSemanticsNode().boundsInRoot.width }
-        org.junit.Assert.assertTrue(widths.max() - widths.min() <= 1f)
-        red.performTouchInput { click(Offset(redBounds.width - 2f, redBounds.height / 2f)) }
-        red.assertIsOn()
-        white.performTouchInput { click(Offset(10f, whiteBounds.height / 2f)) }
-        white.assertIsOn()
-        compose.onNodeWithText("Sparkling").performClick()
-        sparkling.assertIsOn()
-        red.performTouchInput { click(Offset(redBounds.width - 2f, redBounds.height / 2f)) }
-        red.assertIsOff()
-        compose.runOnIdle {
-            assertEquals(setOf("White", "Sparkling"), selected)
-            assertEquals(4, clicks)
-        }
-    }
 
+    @Test fun pickingANewValueReplacesTheOldOneRatherThanAddingToIt() {
+        lateinit var state: GuidedSelectionState
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            state = remember { GuidedSelectionState(scope, { emptyList() }, { GuidedResult.Complete(emptyList()) }) }
+            UncorkTheme { GuidedSelectionScreen(state, {}, {}, {}) }
+        }
+        compose.onNodeWithTag("tannin-tile").performScrollTo().performClick()
+        compose.onNodeWithText("Smooth").performClick()
+        compose.runOnIdle { assertEquals(setOf("Smooth"), state.selection.tannin) }
+        compose.onNodeWithTag("tannin-tile").performScrollTo().performClick()
+        compose.onNodeWithText("Astringent").performClick()
+        compose.runOnIdle { assertEquals(setOf("Astringent"), state.selection.tannin) }
+    }
 }

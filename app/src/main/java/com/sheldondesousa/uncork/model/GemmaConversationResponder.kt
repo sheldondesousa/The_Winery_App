@@ -15,6 +15,7 @@ import com.sheldondesousa.uncork.ui.conversation.ChatMessage
 import com.sheldondesousa.uncork.ui.conversation.ConversationStreamUpdate
 import com.sheldondesousa.uncork.ui.conversation.ConversationResponder
 import com.sheldondesousa.uncork.ui.conversation.MessageAuthor
+import com.sheldondesousa.uncork.ui.conversation.WineCardSynthesizer
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.guided.GuidedOptions
@@ -31,7 +32,7 @@ import java.io.File
 class GemmaConversationResponder(
     context: Context,
     private val modelFile: File,
-) : ConversationResponder, AutoCloseable {
+) : ConversationResponder, WineCardSynthesizer, AutoCloseable {
     private val appContext = context.applicationContext
     private val cacheDirectory = File(context.cacheDir, "litert-lm").apply { mkdirs() }
     private val requestMutex = Mutex()
@@ -196,9 +197,30 @@ class GemmaConversationResponder(
                     )
                     else -> return unmatchedFindWineAnswer(query, ChatFlowText.Q3_TASTE)
                 }
-                produceWineCards()
+                finalizePreferences()
             }
         }
+    }
+
+    /**
+     * The Q1-Q3 flow is complete: hand the fully-resolved [WinePreferences] back to the caller
+     * instead of calling Gemma here. This lets a wrapping responder (e.g. one that also queries
+     * a local database) start its own lookup from these recorded answers at the same moment it
+     * kicks off [synthesizeCards], rather than waiting for that model call to finish first.
+     */
+    private fun finalizePreferences(): ChatMessage {
+        val preferences = chatPreferences
+        // A "find a wine" cycle is one-shot: the next message starts fresh from the mode choice.
+        chatMode = ChatMode.Undecided
+        findWineStep = FindWineStep.Type
+        chatPreferences = WinePreferences()
+        return ChatMessage(
+            id = System.nanoTime(),
+            author = MessageAuthor.Assistant,
+            text = "",
+            coverageComplete = true,
+            resolvedPreferences = preferences,
+        )
     }
 
     /**
@@ -245,8 +267,12 @@ class GemmaConversationResponder(
         )
     }
 
-    private suspend fun produceWineCards(): ChatMessage {
-        val preferences = chatPreferences
+    override suspend fun synthesizeCards(
+        preferences: WinePreferences,
+        onUpdate: (ConversationStreamUpdate) -> Unit,
+    ): ChatMessage = requestMutex.withLock { produceWineCards(preferences) }
+
+    private suspend fun produceWineCards(preferences: WinePreferences): ChatMessage {
         val requestStartedAt = SystemClock.elapsedRealtime()
         val searchConversation = ensureEngine().createConversation(
             ConversationConfig(
@@ -300,11 +326,6 @@ class GemmaConversationResponder(
             "Gemma chat search parsed=${parsedSuggestions.size}, usable=${suggestions.size}, " +
                 "totalMs=$searchElapsedMs",
         )
-
-        // A "find a wine" cycle is one-shot: the next message starts fresh from the mode choice.
-        chatMode = ChatMode.Undecided
-        findWineStep = FindWineStep.Type
-        chatPreferences = WinePreferences()
 
         return ChatMessage(
             id = System.nanoTime(),
@@ -629,12 +650,10 @@ class GemmaConversationResponder(
 
         private fun String.toWineSuggestionOrNull(): WineSuggestion? = runCatching {
             val json = JSONObject(trim())
-            val name = json.requiredString("name")
-            val country = json.requiredString("country")
             WineSuggestion(
-                name = name,
+                name = json.knownString("name", fallback = "Unknown Wine"),
                 province = json.knownString("province"),
-                country = country,
+                country = json.knownString("country"),
                 wineType = json.knownString("type"),
                 winery = json.knownString("winery"),
                 variety = json.knownString("variety"),
@@ -659,18 +678,16 @@ class GemmaConversationResponder(
             }
         }.getOrDefault(emptyList())
 
-        private fun String.toWebSuggestions(): List<WineSuggestion> = runCatching {
-            val array = JSONArray(trim())
-            buildList {
+        private fun String.toWebSuggestions(): List<WineSuggestion> {
+            val array = runCatching { JSONArray(trim()) }.getOrNull() ?: return emptyList()
+            return buildList {
                 for (index in 0 until array.length()) {
                     val json = array.optJSONObject(index) ?: continue
-                    val name = json.requiredString("name")
-                    val country = json.requiredString("country")
-                    add(
+                    val suggestion = runCatching {
                         WineSuggestion(
-                            name = name,
+                            name = json.knownString("name", fallback = "Unknown Wine"),
                             winery = json.knownString("winery"),
-                            country = country,
+                            country = json.knownString("country"),
                             province = json.knownString("province"),
                             variety = json.knownString("variety"),
                             body = json.level("body"),
@@ -684,11 +701,12 @@ class GemmaConversationResponder(
                             webSummary = json.knownString("web_summary")
                                 .take(MAX_WEB_SUMMARY_CHARACTERS),
                             source = WineSuggestionSource.WEB_SEARCH,
-                        ),
-                    )
+                        )
+                    }.getOrNull()
+                    if (suggestion != null) add(suggestion)
                 }
             }
-        }.getOrDefault(emptyList())
+        }
 
         private fun List<WineSuggestion>.distinctSuggestions(): List<WineSuggestion> =
             distinctBy { suggestion ->
@@ -700,9 +718,6 @@ class GemmaConversationResponder(
                     suggestion.variety,
                 ).joinToString("|") { it.trim().lowercase() }
             }
-
-        private fun JSONObject.requiredString(key: String): String =
-            optString(key).trim().takeIf { it.isNotEmpty() } ?: error("Missing $key")
 
         private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String =
             optString(key).trim().takeIf { it.isNotEmpty() && !it.equals("null", true) } ?: fallback

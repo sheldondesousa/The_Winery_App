@@ -96,6 +96,7 @@ class ConversationSessionState {
     var errorMessage by mutableStateOf<String?>(null)
     var streamingText by mutableStateOf("")
     var streamingSuggestions by mutableStateOf(emptyList<WineSuggestion>())
+    var streamingSourceResults by mutableStateOf(emptyList<SourceResult>())
 }
 
 @Composable
@@ -125,30 +126,30 @@ fun ConversationRoute(
         state.errorMessage = null
         state.streamingText = ""
         state.streamingSuggestions = emptyList()
+        state.streamingSourceResults = emptyList()
 
-        val requestStartedAt = System.currentTimeMillis()
         scope.launch {
             runCatching {
                 responder.replyToUpdates(query) { update ->
                     state.streamingText = update.text
                     state.streamingSuggestions = update.suggestions
+                    state.streamingSourceResults = update.sourceResults
                 }
             }
                 .onSuccess { response ->
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
-                    val latencyMs = System.currentTimeMillis() - requestStartedAt
-                    val breakdown = if (BuildConfig.DEBUG) {
+                    state.streamingSourceResults = emptyList()
+                    val timeToFirstWordMs = if (BuildConfig.DEBUG) {
                         DebugLatencyLog.drain()
-                            .joinToString(", ") { (label, ms) -> "$label: %.1fs".format(ms / 1000f) }
-                            .takeIf(String::isNotBlank)
+                            .firstOrNull { (label, _) -> label.endsWith("time to first word") }
+                            ?.second
                     } else {
                         null
                     }
                     state.messages += response.copy(
                         followUpText = null,
-                        debugLatencyMs = if (BuildConfig.DEBUG) latencyMs else null,
-                        debugTimingBreakdown = breakdown,
+                        debugLatencyMs = timeToFirstWordMs,
                     )
                     response.followUpText
                         ?.takeIf { it.isNotBlank() }
@@ -164,6 +165,7 @@ fun ConversationRoute(
                 .onFailure {
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
+                    state.streamingSourceResults = emptyList()
                     state.errorMessage =
                         "I couldn’t finish that suggestion. Check your connection and try again."
                 }
@@ -184,6 +186,7 @@ fun ConversationRoute(
         errorMessage = state.errorMessage,
         streamingText = state.streamingText,
         streamingSuggestions = state.streamingSuggestions,
+        streamingSourceResults = state.streamingSourceResults,
         onDraftChange = { state.draft = it },
         onSend = ::submit,
         onQuickReplySelected = ::send,
@@ -201,6 +204,7 @@ private fun ConversationScreen(
     errorMessage: String?,
     streamingText: String,
     streamingSuggestions: List<WineSuggestion>,
+    streamingSourceResults: List<SourceResult>,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onQuickReplySelected: (String) -> Unit,
@@ -210,9 +214,15 @@ private fun ConversationScreen(
 ) {
     val listState = rememberLazyListState()
     BackHandler(onBack = onBack)
+    val hasStreamingContent = streamingText.isNotBlank() ||
+        streamingSuggestions.isNotEmpty() ||
+        streamingSourceResults.isNotEmpty()
 
-    LaunchedEffect(messages.size, isReplying, errorMessage, streamingText, streamingSuggestions.size) {
-        val extraRows = (if (streamingText.isNotBlank() || streamingSuggestions.isNotEmpty()) 1 else 0) +
+    LaunchedEffect(
+        messages.size, isReplying, errorMessage, streamingText,
+        streamingSuggestions.size, streamingSourceResults,
+    ) {
+        val extraRows = (if (hasStreamingContent) 1 else 0) +
             (if (isReplying) 1 else 0) +
             (if (errorMessage != null) 1 else 0)
         val finalIndex = messages.lastIndex + extraRows
@@ -260,7 +270,7 @@ private fun ConversationScreen(
                             onQuickReplySelected = onQuickReplySelected,
                         )
                     }
-                    if (streamingText.isNotBlank() || streamingSuggestions.isNotEmpty()) {
+                    if (hasStreamingContent) {
                         item(key = "streaming-response") {
                             MessageBubble(
                                 message = ChatMessage(
@@ -268,12 +278,13 @@ private fun ConversationScreen(
                                     author = MessageAuthor.Assistant,
                                     text = streamingText,
                                     suggestions = streamingSuggestions,
+                                    sourceResults = streamingSourceResults,
                                 ),
                                 onSuggestionClick = {},
                             )
                         }
                     }
-                    if (isReplying) {
+                    if (isReplying && !hasStreamingContent) {
                         item(key = "replying") { ReplyingIndicator() }
                     }
                     if (errorMessage != null) {
@@ -350,11 +361,9 @@ private fun MessageBubble(
                         fontSize = 16.sp,
                         lineHeight = 28.sp,
                     )
-                    message.debugLatencyMs?.let { latencyMs ->
-                        val breakdown = message.debugTimingBreakdown
+                    message.debugLatencyMs?.let { timeToFirstWordMs ->
                         Text(
-                            text = "⏱ %.1fs".format(latencyMs / 1000f) +
-                                if (breakdown != null) " ($breakdown)" else "",
+                            text = "⏱ time to first word: %.1fs".format(timeToFirstWordMs / 1000f),
                             color = InkMuted,
                             fontSize = 11.sp,
                             fontStyle = FontStyle.Italic,
@@ -372,22 +381,45 @@ private fun MessageBubble(
                             }
                         }
                     }
-                    val suggestions = message.wineSuggestions
-                    if (suggestions.isNotEmpty()) {
+                    if (message.sourceResults.isNotEmpty()) {
+                        // One section per source, in the order each actually resolved — a
+                        // section still in flight shows a loader, and one that resolved with
+                        // nothing says so, rather than silently vanishing.
                         Spacer(Modifier.height(16.dp))
-                        suggestions.forEachIndexed { index, suggestion ->
-                            if (index > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(Hairline),
-                                )
-                            }
-                            SuggestionLink(
-                                suggestion = suggestion,
-                                onClick = { onSuggestionClick(suggestion) },
+                        message.sourceResults.forEachIndexed { groupIndex, sourceResult ->
+                            if (groupIndex > 0) Spacer(Modifier.height(16.dp))
+                            SourceResultSection(
+                                sourceResult = sourceResult,
+                                onSuggestionClick = onSuggestionClick,
                             )
+                        }
+                    } else {
+                        val suggestions = message.wineSuggestions
+                        if (suggestions.isNotEmpty()) {
+                            Spacer(Modifier.height(16.dp))
+                            // One tag per source group, its cards falling below it — a card's
+                            // individual pill was replaced by a single response-level tag, since
+                            // every card in a given response already comes from the same source.
+                            val sourceGroups = suggestions.groupBy { it.source }
+                            sourceGroups.entries.forEachIndexed { groupIndex, (source, groupSuggestions) ->
+                                if (groupIndex > 0) Spacer(Modifier.height(16.dp))
+                                SourceLabel(source)
+                                Spacer(Modifier.height(8.dp))
+                                groupSuggestions.forEachIndexed { index, suggestion ->
+                                    if (index > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(1.dp)
+                                                .background(Hairline),
+                                        )
+                                    }
+                                    SuggestionLink(
+                                        suggestion = suggestion,
+                                        onClick = { onSuggestionClick(suggestion) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -396,25 +428,38 @@ private fun MessageBubble(
     }
 }
 
+// **bold** renders bold black; ##heading## renders burgundy (used for Q3's taste characteristics).
 private fun parseBoldMarkdown(source: String): AnnotatedString = buildAnnotatedString {
     var cursor = 0
 
     while (cursor < source.length) {
-        val opening = source.indexOf("**", cursor)
-        if (opening == -1) {
+        val boldOpening = source.indexOf("**", cursor).takeIf { it != -1 }
+        val headingOpening = source.indexOf("##", cursor).takeIf { it != -1 }
+        val marker = when {
+            boldOpening == null -> headingOpening
+            headingOpening == null -> boldOpening
+            else -> minOf(boldOpening, headingOpening)
+        }
+        if (marker == null) {
             append(source.substring(cursor))
             break
         }
+        val delimiter = source.substring(marker, marker + 2)
 
-        val closing = source.indexOf("**", opening + 2)
+        val closing = source.indexOf(delimiter, marker + 2)
         if (closing == -1) {
             append(source.substring(cursor))
             break
         }
 
-        append(source.substring(cursor, opening))
-        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-            append(source.substring(opening + 2, closing))
+        append(source.substring(cursor, marker))
+        val style = if (delimiter == "**") {
+            SpanStyle(fontWeight = FontWeight.Bold)
+        } else {
+            SpanStyle(color = Wine, fontWeight = FontWeight.Normal)
+        }
+        withStyle(style) {
+            append(source.substring(marker + 2, closing))
         }
         cursor = closing + 2
     }
@@ -498,6 +543,83 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit) {
             fontWeight = FontWeight.Light,
         )
     }
+}
+
+/**
+ * One source's section: its tag, a loader while still in flight, "No results found" if it
+ * resolved with nothing, or its cards. Mirrors Find's per-section Loading/Complete display,
+ * adapted to Chat's single scrolling bubble instead of two fixed side-by-side sections.
+ */
+@Composable
+private fun SourceResultSection(
+    sourceResult: SourceResult,
+    onSuggestionClick: (WineSuggestion) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SourceLabel(sourceResult.source)
+        if (sourceResult.status == SourceQueryStatus.LOADING) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                color = InkMuted,
+                strokeWidth = 1.5.dp,
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    when {
+        sourceResult.status == SourceQueryStatus.LOADING -> Text(
+            text = "Searching…",
+            color = InkMuted,
+            fontSize = 13.sp,
+            fontStyle = FontStyle.Italic,
+        )
+        sourceResult.suggestions.isEmpty() -> Text(
+            text = "No results found",
+            color = InkMuted,
+            fontSize = 13.sp,
+            fontStyle = FontStyle.Italic,
+        )
+        else -> sourceResult.suggestions.forEachIndexed { index, suggestion ->
+            if (index > 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Hairline),
+                )
+            }
+            SuggestionLink(
+                suggestion = suggestion,
+                onClick = { onSuggestionClick(suggestion) },
+            )
+        }
+    }
+}
+
+/**
+ * A single tag above a group of cards, distinguishing which of Gemma / Kaggle / the local
+ * cache / a live web search produced them — the same distinction Find surfaces via its
+ * "AI Sommelier" vs "Database" sections, one tag per group rather than per card.
+ */
+@Composable
+private fun SourceLabel(source: WineSuggestionSource) {
+    Text(
+        text = source.label(),
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Wine.copy(alpha = 0.10f))
+            .padding(horizontal = 9.dp, vertical = 4.dp),
+        color = Wine,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+}
+
+private fun WineSuggestionSource.label(): String = when (this) {
+    WineSuggestionSource.GEMMA -> "Gemma"
+    WineSuggestionSource.KAGGLE -> "Kaggle"
+    WineSuggestionSource.CACHE -> "Cache"
+    WineSuggestionSource.WEB_SEARCH -> "Web"
 }
 
 private fun String.isUsefulCardValue(): Boolean =
