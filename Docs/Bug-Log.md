@@ -1,9 +1,9 @@
 # Bug Log
 
 **Status:** Living document
-**Last updated:** 20 September 2026
+**Last updated:** 25 September 2026
 
-Every bug reported during this build session, in the order it came up. Scope is this session's work (web search reliability, the Find guided-selection redesign, and the Q3 taste question) — not a full historical defect list for the app.
+Every bug reported during this build session, in the order it came up. Scope is this session's work (web search reliability, the Find guided-selection redesign, the Q3 taste question, and — from entry 6 onward — the 25 September 2026 card-consistency/Gemma-hardening/`GuidedCriteria` cleanup, PR #19) — not a full historical defect list for the app.
 
 Each entry: what was reported, what the actual root cause turned out to be, and what changed to fix it.
 
@@ -76,3 +76,61 @@ Each entry: what was reported, what the actual root cause turned out to be, and 
 **Root cause:** Not a defect so much as two features built to different specs at different times — Country/Province were single-select by design, the other five fields were built as a multi-select checkbox grid ("select any that apply" was an explicit hint for Type).
 
 **Fix:** Unified all seven fields to single-select behavior: tapping a value replaces any prior selection and immediately closes the sheet; an "Any {field}" row was added to each of the five taste/type fields (matching Country/Province's existing pattern) so a field can still be cleared; the "Done" button was removed entirely. The old multi-select grid composable (`Choices`) was deleted as dead code, along with its now-obsolete Compose UI test, which was rewritten to match the new single-select-and-auto-dismiss flow.
+
+---
+
+## 6. The Profile Page's detail reload was calling Gemma a second time for no reason
+
+**Reported:** Asked why Gemma is responsible for generating a wine's detail profile at all, given the initial recommendation call already returns a full JSON object — specifically, why Kotlin couldn't just build the detail page directly from data the app already had, instead of triggering a second on-device inference call when a card is opened.
+
+**User impact:** Opening certain cards' detail page re-ran a full on-device Gemma call (`loadProfile()`, `profile_system_instruction.txt`) — a second multi-second inference, on top of the one that had already generated the card — purely to regenerate fields the first call had already supplied.
+
+**Investigation:** Comparing the two prompts' output schemas showed `body`/`tannin`/`acidity`/`flavor_notes`/`suggested_pairing` were already present from the first call; the only field the second call genuinely added was `summary`. Tracing every code path that creates a `WineSuggestion` showed every one of them (Chat's card search, Guided Selection) already sets `profileComplete = true` the moment a card is published — and the detail screen's own guard already skips the reload entirely when `profileComplete` is true or a real `summary` is already present. So the second Gemma call had already become unreachable dead code in the main flow before this was investigated; the only path that could still trigger it was a locally saved favorite from before the `profileComplete` field existed.
+
+**Fix:** Deleted `loadProfile()`, `profile_system_instruction.txt`, and its UI wiring (the `loadingProfile`/"Loading details…" state in `StageShowScreen.kt`, the lambda in `MainActivity.kt`) outright rather than leaving unreachable code in place. A pre-existing local favorite that never got a resolved summary now just displays `Unknown` for it instead of firing a stale reload.
+
+**Status:** Fixed and confirmed via compile plus a live reinstall.
+
+---
+
+## 7. Gemma-generated cards intermittently showed malformed identity fields
+
+**Reported:** In three parts, over the same session. First, a stray `:` character appearing right after the Variety line on a card. Second, `"name."` appearing where a real wine name should be. Third — caught via a screenshot of a live Find/Guided Selection results screen — a full hallucinated markdown citation link as a wine's name: `Domaine de la Romanée-! [75](https://en.wikipedia.org/wiki/Domaine_de_la_Romanée-75)`.
+
+**User impact:** Broken-looking or obviously-fake cards mixed in among otherwise normal recommendation cards, in both Chat search and Guided Selection, with no indication anything had gone wrong.
+
+**Root cause:** Three separate small-on-device-model failure modes, most likely made more likely by a same-session change requiring both Chat search and Guided Selection to name a real, known wine "from knowledge" — something a 2B-parameter on-device model can't always do reliably:
+
+- **7a.** A stray trailing punctuation mark left over from the JSON schema's own formatting (e.g. producing `"Merlot:"` for `variety`) — the shared parsers trimmed whitespace but never stripped trailing punctuation.
+- **7b.** The model echoing the JSON schema's own field key back as its answer (`"name."`) instead of naming an actual wine.
+- **7c.** The model fabricating a footnote/citation in markdown-link form — most likely pattern-matching a Wikipedia-style citation format from its training data — rather than admitting it doesn't know a specific bottle.
+
+**Fix:** Added defensive validation in both parsers (`GemmaConversationResponder`'s `knownString()`/`acceptCard()` for Chat search, `GuidedGemmaResponse`'s `field()`/`toSuggestion()` for Guided Selection): strip trailing `:`/`;`/`,` from every parsed string field; reject a card whose name, after trimming, literally equals `"name"` or `"wine name"`; reject a card whose name contains a markdown-link pattern or a bare URL. All three checks discard the card outright rather than trying to salvage the malformed value. As an independent backstop, both Chat's and Find's result lists also now filter out any card whose name is blank or `"Unknown"` immediately before rendering (PRD.md AC10j), regardless of why the name ended up unusable.
+
+**Status:** Fixed for the specific patterns observed. Since the underlying cause is inherent to a small on-device model being asked to name specific real-world entities, a new, unseen malformed pattern could still surface and would need the same treatment added.
+
+---
+
+## 8. Guided Selection's card dedup key could silently drop distinct wines
+
+**Reported:** Not directly reported — surfaced by a self-review requested by the user ("check cards just generated, identify how they align with card keys") after the Guided Selection prompt was changed to require a real wine name.
+
+**Root cause:** `GuidedGemmaResponse.parse()`'s duplicate-card filter keyed only on `variety`/`province`/`wineType`, from when Guided cards had no real Gemma-supplied name — Kotlin synthesized an identical `"Variety · Province"` placeholder for any two cards sharing those three fields, which made the old key equivalent to a name-based one by coincidence. Once the same-session change required Gemma to supply a real, distinct name per card, this stale key could silently collapse two genuinely different real wines sharing variety/province/type into a single displayed card, dropping a valid recommendation without any error.
+
+**Fix:** Added `name` to the dedup key, matching every other card-identity function already in the app (`GemmaConversationResponder.distinctSuggestions()`, `KaggleConversationResponder.cardKey()`, `FavoritesRepository.favoriteKey`).
+
+**Status:** Fixed. Not yet reproduced live on-device, since triggering it requires the specific coincidence of two real wines sharing all three of variety/province/type in the same response — plausible, but not something that had actually been observed to occur before the fix.
+
+---
+
+## 9. Find's Country/Province card text lost its styling mid-session
+
+**Reported:** "Previously the Country, Province was a smaller font with burgundy color" — noticed after the winery-removal edit to Guided Selection's result card.
+
+**User impact:** The Country/Province line on Find's result cards rendered in default black body text instead of the smaller, burgundy-colored style used everywhere else in the app for that same information (including Chat's equivalent card).
+
+**Root cause:** Earlier in the same session, the old single combined `"Country · Province · Variety"` line on the Guided Selection card was split into separate Name/Variety/Winery/Country-Province lines. The new Country/Province line was left with default text styling instead of carrying over the explicit styling the combined line never actually had in the first place — this card's Country/Province text had never been styled to match Chat's, and splitting the line surfaced the inconsistency.
+
+**Fix:** Restyled to `fontSize = 12.sp`, `color = Wine` (burgundy), `letterSpacing = 0.3.sp` — matching Chat's `SuggestionLink` exactly.
+
+**Status:** Fixed and confirmed via reinstall.
