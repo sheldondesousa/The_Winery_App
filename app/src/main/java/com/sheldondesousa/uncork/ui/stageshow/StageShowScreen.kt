@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,7 +111,6 @@ private enum class WineSource { AI, Kaggle }
 fun StageShowRoute(
     wine: StageWine,
     onBack: () -> Unit,
-    loadProfile: suspend (WineSuggestion) -> WineSuggestion = { it },
     initiallyFavorite: Boolean = false,
     onFavoriteChange: (WineSuggestion, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -120,29 +118,11 @@ fun StageShowRoute(
     BackHandler(onBack = onBack)
 
     var source by remember { mutableStateOf(WineSource.AI) }
-    var displayedWine by remember(wine) { mutableStateOf(wine) }
-    var loadingProfile by remember(wine) { mutableStateOf(true) }
     var isFavorite by remember(wine, initiallyFavorite) { mutableStateOf(initiallyFavorite) }
     val profile = if (source == WineSource.Kaggle) {
-        displayedWine.kaggle ?: displayedWine.ai
+        wine.kaggle ?: wine.ai
     } else {
-        displayedWine.ai
-    }
-
-    LaunchedEffect(wine) {
-        // Chat's own Gemma response already asks for (and usually gets) a summary on every
-        // card it returns — if it's already here, the full profile reload this triggers is a
-        // second ~10-30s on-device inference call purely to re-fetch something Chat already
-        // had, and "Loading details…" sits on screen the whole time for no reason. Only run it
-        // when the summary actually still needs filling in.
-        if (wine.ai.summary.isResolvedValue()) {
-            loadingProfile = false
-        } else {
-            val loaded = runCatching { loadProfile(wine.toWineSuggestion()) }
-                .getOrDefault(wine.toWineSuggestion())
-            displayedWine = wine.copy(ai = loaded.toStageWine().ai)
-            loadingProfile = false
-        }
+        wine.ai
     }
 
     Column(
@@ -231,11 +211,7 @@ fun StageShowRoute(
         when (profile.source) {
             WineSuggestionSource.GEMMA -> LongDetail(
                 "SUMMARY",
-                when {
-                    profile.summary.isResolvedValue() -> profile.summary
-                    loadingProfile -> "Loading details…"
-                    else -> "Unknown"
-                },
+                profile.summary.takeIf { it.isResolvedValue() } ?: "Unknown",
             )
             WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
             WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
@@ -275,7 +251,7 @@ fun StageShowRoute(
                 selected = isFavorite,
                 onClick = {
                     isFavorite = !isFavorite
-                    onFavoriteChange(displayedWine.toWineSuggestion(), isFavorite)
+                    onFavoriteChange(wine.toWineSuggestion(), isFavorite)
                 },
             )
         }

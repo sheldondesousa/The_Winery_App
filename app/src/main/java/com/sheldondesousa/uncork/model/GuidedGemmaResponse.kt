@@ -9,6 +9,10 @@ import org.json.JSONObject
 internal object GuidedGemmaResponse {
     private const val MAX_RECOMMENDATIONS = 3
 
+    // A weak on-device model occasionally hallucinates a citation/footnote, e.g. "Domaine X
+    // [75](https://en.wikipedia.org/...)" — a markdown link or bare URL is never a real wine name.
+    private val MARKDOWN_OR_URL_PATTERN = Regex("\\[[^\\]]*]\\([^)]*\\)|https?://|www\\.")
+
     fun parse(response: String, criteria: GuidedCriteria): List<WineSuggestion> {
         val text = response.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         require(text.startsWith("{") && text.endsWith("}")) { "Malformed Gemma response" }
@@ -17,7 +21,7 @@ internal object GuidedGemmaResponse {
         val cards = root.getJSONArray("recommendations")
         require(cards.length() <= MAX_RECOMMENDATIONS)
         val suggestions = (0 until cards.length()).map { index -> cards.getJSONObject(index).toSuggestion(criteria) }
-        return suggestions.distinctBy { it.variety to it.province to it.wineType }
+        return suggestions.distinctBy { it.name.lowercase() to it.variety to it.province to it.wineType }
     }
 
     private fun JSONObject.toSuggestion(criteria: GuidedCriteria): WineSuggestion {
@@ -25,10 +29,19 @@ internal object GuidedGemmaResponse {
         fun field(key: String): String {
             val value = card.get(key)
             require(value is String && value.isNotBlank()) { "Missing $key" }
-            return value.trim()
+            // A weak on-device model occasionally leaves a stray trailing punctuation mark
+            // (e.g. "Merlot:") from the schema formatting instead of a clean value.
+            return value.trim().trimEnd(':', ';', ',').trim()
         }
         criteria.constraints().forEach { (key, value) ->
-            require(value.any { field(key).equals(it, ignoreCase = true) }) { "Gemma contradicted $key" }
+            require(field(key).equals(value, ignoreCase = true)) { "Gemma contradicted $key" }
+        }
+        val name = field("name")
+        require(!name.trimEnd('.').equals("name", ignoreCase = true)) {
+            "Gemma echoed the name field instead of a real wine"
+        }
+        require(!MARKDOWN_OR_URL_PATTERN.containsMatchIn(name)) {
+            "Gemma hallucinated markup instead of a real wine name"
         }
         val country = field("country")
         val province = field("province")
@@ -53,8 +66,7 @@ internal object GuidedGemmaResponse {
             note.trim()
         }
         return WineSuggestion(
-            name = listOf(variety, province).filterNot { it.equals("Unknown", true) }
-                .joinToString(" · ").ifBlank { "$wineType wine" }, winery = "Unknown",
+            name = name, winery = "Unknown",
             country = country, province = province, variety = variety, wineType = wineType,
             body = body, tannin = tannin, acidity = acidity, sweetness = sweetness,
             flavorNotes = flavors.joinToString(", "), summary = summary,

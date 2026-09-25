@@ -10,44 +10,40 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class GuidedSelectionStateTest {
-    private val criteria = GuidedCriteria("France", "Bordeaux", setOf("Red"))
+    private val criteria = GuidedCriteria("France", "Bordeaux", "Red")
     private val card = WineSuggestion("Merlot", "Bordeaux", country = "France")
 
     @Test fun anySelectionIsEnoughAndCountryChangesClearProvince() {
         assertFalse(GuidedCriteria().valid)
         assertTrue(GuidedCriteria(country = "France").valid)
         assertTrue(GuidedCriteria(province = "Bordeaux").valid)
-        assertTrue(GuidedCriteria(wineType = setOf("Sparkling")).valid)
-        assertTrue(GuidedCriteria(tannin = setOf("Smooth")).valid)
-        assertTrue(GuidedCriteria(body = setOf("Full-Bodied")).valid)
-        assertTrue(GuidedCriteria(acidity = setOf("Crisp")).valid)
+        assertTrue(GuidedCriteria(wineType = "Sparkling").valid)
+        assertTrue(GuidedCriteria(tannin = "Smooth").valid)
+        assertTrue(GuidedCriteria(body = "Full-Bodied").valid)
+        assertTrue(GuidedCriteria(acidity = "Crisp").valid)
         assertTrue(criteria.valid)
         assertEquals("", criteria.withCountry("Italy").province)
         assertEquals(criteria, criteria.withCountry("France"))
         assertEquals(setOf("country", "province", "wine_type"), criteria.constraints().keys)
-        assertTrue(criteria.copy(body = setOf("Full-Bodied")).constraints().containsKey("body"))
-        assertFalse(criteria.copy(body = setOf("Impossible")).valid)
+        assertTrue(criteria.copy(body = "Full-Bodied").constraints().containsKey("body"))
+        assertFalse(criteria.copy(body = "Impossible").valid)
     }
 
-
-    @Test fun multipleValuesToggleIndependentlyAndCountIncludesLocationOnce() {
-        val selected = emptySet<String>().toggled("Red").toggled("White")
-        assertEquals(setOf("Red", "White"), selected)
-        assertEquals(setOf("White"), selected.toggled("Red"))
-        val criteria = GuidedCriteria(country = "France", province = "Bordeaux", wineType = selected,
-            sweetness = setOf("Bone-Dry", "Off-Dry"), tannin = setOf("Smooth", "Astringent"))
+    @Test fun eachSelectedFieldCountsOnceAndCountIncludesLocationOnce() {
+        val criteria = GuidedCriteria(country = "France", province = "Bordeaux", wineType = "Red",
+            sweetness = "Bone-Dry", tannin = "Smooth")
         assertTrue(criteria.valid)
-        assertEquals(7, criteria.filterCount)
-        assertEquals(listOf("Red", "White"), criteria.constraints()["wine_type"])
-        assertEquals(listOf("Bone-Dry", "Off-Dry"), criteria.constraints()["sweetness"])
+        assertEquals(4, criteria.filterCount)
+        assertEquals("Red", criteria.constraints()["wine_type"])
+        assertEquals("Bone-Dry", criteria.constraints()["sweetness"])
         assertEquals(0, GuidedCriteria().filterCount)
     }
 
     @Test fun sparseCriteriaExcludeUnselectedFieldsAndMapBodyLevels() {
-        assertEquals(mapOf("wine_type" to listOf("Rosé")), GuidedCriteria(wineType = setOf("Rosé")).constraints())
-        assertEquals(mapOf("body" to listOf("Light-Bodied")), GuidedCriteria(body = setOf("Light-Bodied")).constraints())
-        assertEquals(mapOf("body" to listOf("Full-Bodied")), GuidedCriteria(body = setOf("Full-Bodied")).constraints())
-        assertEquals(mapOf("acidity" to listOf("Tart")), GuidedCriteria(acidity = setOf("Tart")).constraints())
+        assertEquals(mapOf("wine_type" to "Rosé"), GuidedCriteria(wineType = "Rosé").constraints())
+        assertEquals(mapOf("body" to "Light-Bodied"), GuidedCriteria(body = "Light-Bodied").constraints())
+        assertEquals(mapOf("body" to "Full-Bodied"), GuidedCriteria(body = "Full-Bodied").constraints())
+        assertEquals(mapOf("acidity" to "Tart"), GuidedCriteria(acidity = "Tart").constraints())
         assertTrue(GuidedCriteria().constraints().isEmpty())
     }
 
@@ -68,14 +64,14 @@ class GuidedSelectionStateTest {
     }
 
     @Test fun bothSourcesReceiveOnlyTheSameSelectedCriteria() = runBlocking {
-        val received = mutableListOf<Map<String, List<String>>>()
+        val received = mutableListOf<Map<String, String>>()
         val state = GuidedSelectionState(this,
             { received += it.constraints(); emptyList() },
             { received += it.constraints(); GuidedResult.Complete(emptyList()) })
-        state.selection = GuidedCriteria(tannin = setOf("Smooth"))
+        state.selection = GuidedCriteria(tannin = "Smooth")
         state.search()
         yield()
-        assertEquals(listOf(mapOf("tannin" to listOf("Smooth")), mapOf("tannin" to listOf("Smooth"))), received)
+        assertEquals(listOf(mapOf("tannin" to "Smooth"), mapOf("tannin" to "Smooth")), received)
     }
 
     @Test fun searchShowsResultsAndBackToFormPreservesSelection() = runBlocking {
@@ -114,7 +110,7 @@ class GuidedSelectionStateTest {
         releaseGemma.complete(Unit)
         yield()
         assertEquals(GuidedResult.Error, state.gemma)
-        state.selection = criteria.copy(body = setOf("Full-Bodied"))
+        state.selection = criteria.copy(body = "Full-Bodied")
         state.retryGemma()
         state.retryGemma()
         yield()
@@ -152,7 +148,7 @@ class GuidedSelectionStateTest {
         state.selection = criteria
         state.search()
         yield()
-        state.selection = criteria.copy(body = setOf("Full-Bodied"))
+        state.selection = criteria.copy(body = "Full-Bodied")
         assertTrue(state.canSearch)
         state.search()
         yield()
@@ -161,6 +157,6 @@ class GuidedSelectionStateTest {
         yield()
         yield()
         assertEquals(GuidedResult.Complete(listOf(newer)), state.gemma)
-        assertEquals(setOf("Full-Bodied"), state.submitted?.body)
+        assertEquals("Full-Bodied", state.submitted?.body)
     }
 }

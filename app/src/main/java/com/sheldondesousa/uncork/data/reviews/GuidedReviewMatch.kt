@@ -28,23 +28,19 @@ data class GuidedReviewMatch(
         )
 
         private fun matchEvidence(
-            selected: Set<String>,
+            selected: String,
             evidence: Map<String, List<String>>,
             summary: String,
         ): String {
-            if (selected.isEmpty()) return "Unknown"
-            val matched = selected.filter { value ->
-                evidence.getValue(value).any { phrase -> summary.contains(phrase, ignoreCase = true) }
-            }
-            return matched.sorted().joinToString(" / ").ifBlank { "Unknown" }
+            if (selected.isBlank()) return "Unknown"
+            val matches = evidence.getValue(selected).any { phrase -> summary.contains(phrase, ignoreCase = true) }
+            return if (matches) selected else "Unknown"
         }
 
-        private fun matchType(selected: Set<String>, variety: String): String {
-            if (selected.isEmpty()) return "Unknown"
-            val matched = selected.filter { type ->
-                WineTypeVarietyMap.TYPE_TO_VARIETIES[type]?.any { it.equals(variety, ignoreCase = true) } == true
-            }
-            return matched.sorted().joinToString(" / ").ifBlank { "Unknown" }
+        private fun matchType(selected: String, variety: String): String {
+            if (selected.isBlank()) return "Unknown"
+            val matches = WineTypeVarietyMap.TYPE_TO_VARIETIES[selected]?.any { it.equals(variety, ignoreCase = true) } == true
+            return if (matches) selected else "Unknown"
         }
     }
 }

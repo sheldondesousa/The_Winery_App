@@ -23,20 +23,20 @@ class FindMappingContractTest {
     }
 
     @Test fun unknownLabelsFailInsteadOfSilentlyDroppingASelectedFilter() {
-        listOf(GuidedCriteria(), GuidedCriteria(tannin = setOf("High")),
-            GuidedCriteria(body = setOf("Full")), GuidedCriteria(wineType = setOf("Missing"))).forEach {
+        listOf(GuidedCriteria(), GuidedCriteria(tannin = "High"),
+            GuidedCriteria(body = "Full"), GuidedCriteria(wineType = "Missing")).forEach {
             assertTrue(runCatching { GuidedReviewQuery.from(it) }.isFailure)
         }
     }
 
-    @Test fun typeFilterUsesOnlyExactVarietiesAndUnionsWithoutDuplicates() {
-        val filter = GuidedWineTypeFilter.forTypes(setOf("Red", "Sparkling"))
+    @Test fun typeFilterUsesOnlyExactVarietiesForOneSelectedType() {
+        val filter = GuidedWineTypeFilter.forType("Red")
         assertFalse(filter.sql.contains("name"))
         assertFalse(filter.sql.contains("LIKE"))
-        assertTrue(filter.arguments.containsAll(listOf("Cabernet Sauvignon", "Shiraz", "Champagne Blend", "Sparkling Blend")))
+        assertTrue(filter.arguments.contains("Cabernet Sauvignon"))
         assertEquals(filter.arguments.distinct(), filter.arguments)
-        assertFalse(GuidedWineTypeFilter.forTypes(setOf("Sparkling")).arguments.contains("Chardonnay"))
-        assertTrue(GuidedWineTypeFilter.forTypes(setOf("Fortified")).arguments.contains("Port"))
+        assertFalse(GuidedWineTypeFilter.forType("Sparkling").arguments.contains("Chardonnay"))
+        assertTrue(GuidedWineTypeFilter.forType("Fortified").arguments.contains("Port"))
     }
 
     @Test fun sweetnessEvidenceRemovesAmbiguousWords() {
@@ -46,10 +46,10 @@ class FindMappingContractTest {
         assertTrue(evidence.none { it in setOf("rich", "tart", "dry", "sweet", "mild", "tannic") })
     }
 
-    @Test fun multipleLevelsIncludeEveryOptionWithoutAddingUnselectedFields() {
-        val query = GuidedReviewQuery.from(GuidedCriteria(tannin = setOf("Smooth", "Moderate")))
-        assertTrue(query.sql.contains("tannin IN"))
-        assertTrue(query.arguments.toList().containsAll(listOf("Smooth", "Moderate")))
+    @Test fun oneSelectedLevelMatchesThatColumnWithoutAddingUnselectedFields() {
+        val query = GuidedReviewQuery.from(GuidedCriteria(tannin = "Smooth"))
+        assertTrue(query.sql.contains("tannin=?"))
+        assertTrue(query.arguments.toList().contains("Smooth"))
         assertFalse(query.sql.contains("country="))
         assertFalse(query.sql.contains("variety "))
         assertFalse(query.sql.contains("description"))

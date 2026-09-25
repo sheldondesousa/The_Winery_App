@@ -551,16 +551,12 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit, modi
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Medium,
             )
-            suggestion.winery
-                .takeIf { it.isUsefulCardValue() }
-                ?.let { winery ->
-                    Text(
-                        text = winery,
-                        color = InkMuted,
-                        fontSize = 13.sp,
-                        letterSpacing = 0.3.sp,
-                    )
-                }
+            Text(
+                text = suggestion.variety.cardValueOrUnknown(),
+                color = InkMuted,
+                fontSize = 13.sp,
+                letterSpacing = 0.3.sp,
+            )
             Text(
                 text = listOf(suggestion.country, suggestion.province)
                     .joinToString(", ") { it.cardValueOrUnknown() },
@@ -595,14 +591,14 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit, modi
 /** A line separator between two consecutive search-type blocks (Kaggle, Cache, Gemma, …). */
 @Composable
 private fun SearchTypeDivider() {
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(24.dp))
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(1.dp)
-            .background(Hairline),
+            .height(0.75.dp)
+            .background(Wine),
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(24.dp))
 }
 
 /**
@@ -611,41 +607,53 @@ private fun SearchTypeDivider() {
  * than one shared border wrapping the label, text, and every card together.
  */
 @Composable
-private fun SourceResultCard(
+internal fun SourceResultCard(
     sourceResult: SourceResult,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onRetry: (() -> Unit)? = null,
 ) {
+    val displayedSuggestions = sourceResult.suggestions.filter { it.name.isUsefulCardValue() }
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SourceLabel(sourceResult.source)
             if (sourceResult.status == SourceQueryStatus.LOADING) {
-                // Gemma gets the same three-dots indicator Find's "AI Sommelier" section uses
-                // while its model call is in flight, instead of a generic spinner — the two
-                // on-device model lookups should read as the same kind of wait.
-                if (sourceResult.source == WineSuggestionSource.GEMMA) {
-                    ThreeDotsLoadingIndicator(dotSize = 6.dp, spacing = 4.dp)
-                } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(12.dp),
-                        color = InkMuted,
-                        strokeWidth = 1.5.dp,
-                    )
-                }
+                ThreeDotsLoadingIndicator(dotSize = 6.dp, spacing = 4.dp)
             }
         }
         Spacer(Modifier.height(8.dp))
         when {
-            sourceResult.status == SourceQueryStatus.LOADING -> Text(
-                text = if (sourceResult.source == WineSuggestionSource.GEMMA) {
-                    "Gemma is looking up its knowledge base…"
+            sourceResult.status == SourceQueryStatus.LOADING -> {
+                if (sourceResult.source == WineSuggestionSource.GEMMA) {
+                    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        displayedSuggestions.forEach { suggestion ->
+                            SuggestionCard(suggestion = suggestion, onClick = { onSuggestionClick(suggestion) })
+                        }
+                        repeat((3 - displayedSuggestions.size).coerceAtLeast(0)) { index ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, Hairline, RoundedCornerShape(10.dp))
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Wine,
+                                    strokeWidth = 1.5.dp,
+                                )
+                                Text(
+                                    text = "Preparing wine ${displayedSuggestions.size + index + 1}…",
+                                    color = InkMuted,
+                                    fontSize = 13.sp,
+                                )
+                            }
+                        }
+                    }
                 } else {
-                    "Searching…"
-                },
-                color = InkMuted,
-                fontSize = 13.sp,
-                fontStyle = FontStyle.Italic,
-            )
+                    Text("Searching…", color = InkMuted, fontSize = 13.sp, fontStyle = FontStyle.Italic)
+                }
+            }
             // A genuine failure (network error, or the request was interrupted, e.g. the user
             // switched away mid-search) — distinct from a search that ran fine and found
             // nothing. Offers a retry instead of quietly falling through to some other turn.
@@ -671,7 +679,7 @@ private fun SourceResultCard(
                     )
                 }
             }
-            sourceResult.suggestions.isEmpty() -> Text(
+            displayedSuggestions.isEmpty() -> Text(
                 text = "No results found",
                 color = InkMuted,
                 fontSize = 13.sp,
@@ -684,8 +692,8 @@ private fun SourceResultCard(
                     fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    sourceResult.suggestions.forEach { suggestion ->
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    displayedSuggestions.forEach { suggestion ->
                         SuggestionCard(
                             suggestion = suggestion,
                             onClick = { onSuggestionClick(suggestion) },
@@ -770,10 +778,10 @@ private fun ThreeDotsLoadingIndicator(
     }
 }
 
-private fun String.isUsefulCardValue(): Boolean =
+internal fun String.isUsefulCardValue(): Boolean =
     isNotBlank() && !equals("Unknown", ignoreCase = true)
 
-private fun String.cardValueOrUnknown(): String =
+internal fun String.cardValueOrUnknown(): String =
     takeIf { it.isUsefulCardValue() } ?: "Unknown"
 
 @Composable
@@ -904,4 +912,3 @@ private fun MessageComposer(
         }
     }
 }
-

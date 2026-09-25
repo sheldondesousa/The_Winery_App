@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -38,6 +37,7 @@ class GemmaConversationResponder(
     private val cacheDirectory = File(context.cacheDir, "litert-lm").apply { mkdirs() }
     private val requestMutex = Mutex()
     private var engine: Engine? = null
+    private var engineBackend = "uninitialized"
 
     // Only the "curious" free-chat mode keeps a persistent multi-turn conversation; the
     // deterministic Q1-Q3 flow never calls Gemma, and the final card search is a short-lived,
@@ -60,7 +60,6 @@ class GemmaConversationResponder(
 
     private val curiousChatInstruction: String by lazy { loadPrompt("curious_chat_instruction.txt") }
     private val chatSearchInstruction: String by lazy { loadPrompt("chat_search_instruction.txt") }
-    private val profileSystemInstruction: String by lazy { loadPrompt("profile_system_instruction.txt") }
     private val webResultSystemInstruction: String by lazy { loadPrompt("web_result_system_instruction.txt") }
     private val guidedInstruction: String by lazy {
         loadPrompt("guided_instruction.txt")
@@ -322,56 +321,133 @@ class GemmaConversationResponder(
     override suspend fun synthesizeCards(
         preferences: WinePreferences,
         onUpdate: (ConversationStreamUpdate) -> Unit,
-    ): ChatMessage = requestMutex.withLock { produceWineCards(preferences) }
+    ): ChatMessage {
+        val timing = GemmaTimingTrace(appContext.filesDir)
+        try {
+            return timing.measure("queue_wait_and_work") {
+                val queuedAt = SystemClock.elapsedRealtime()
+                requestMutex.withLock {
+                    timing.duration("queue_wait", SystemClock.elapsedRealtime() - queuedAt)
+                    timing.measure("card_search_total") { produceWineCards(preferences, timing, onUpdate) }
+                }
+            }
+        } catch (error: Throwable) {
+            timing.detail("failure", error.javaClass.simpleName)
+            throw error
+        } finally {
+            withContext(Dispatchers.IO + NonCancellable) { timing.save() }
+        }
+    }
 
-    private suspend fun produceWineCards(preferences: WinePreferences): ChatMessage {
+    private suspend fun produceWineCards(
+        preferences: WinePreferences,
+        timing: GemmaTimingTrace,
+        onUpdate: (ConversationStreamUpdate) -> Unit,
+    ): ChatMessage {
         val requestStartedAt = SystemClock.elapsedRealtime()
-        val searchConversation = ensureEngine().createConversation(
-            ConversationConfig(
-                systemInstruction = Contents.of(chatSearchInstruction),
-                samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.4),
-                maxOutputToken = 1_024,
-            ),
-        )
+        timing.detail("engine_reused", (engine != null).toString())
+        val searchEngine = timing.measure("engine_ready") { ensureEngine() }
+        timing.detail("backend", engineBackend)
+        val instruction = timing.measure("load_prompt") { chatSearchInstruction }
+        val prompt = timing.measure("prepare_preferences") { "Resolved preferences: ${preferences.toCompactJson()}" }
+        timing.detail("input_characters", (instruction.length + prompt.length).toString())
+        timing.detail("max_output_tokens", "1024")
+        val searchConversation = timing.measure("create_conversation") {
+            searchEngine.createConversation(
+                ConversationConfig(
+                    systemInstruction = Contents.of(instruction),
+                    samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.4),
+                    maxOutputToken = 1_024,
+                ),
+            )
+        }
+        val completedCards = mutableListOf<WineSuggestion>()
+        val cardStream = CompleteJsonObjects()
+        fun acceptCard(payload: String) {
+            if (completedCards.size >= RECOMMENDATION_COUNT) return
+            val card = payload.toWineSuggestionOrNull() ?: return
+            // Each published object is a finished profile; Unknown remains honest missing
+            // information and must not trigger another model call when the card is opened.
+            val profile = card.copy(profileComplete = true)
+            if (preferences.cardMismatchReasons(
+                    cardType = profile.wineType, cardCountry = profile.country,
+                    cardProvince = profile.province, cardBody = profile.body,
+                    cardTannin = profile.tannin, cardAcidity = profile.acidity,
+                    cardSweetness = profile.sweetness, cardVariety = profile.variety,
+                    cardFlavor = profile.preferenceFlavor, cardOccasion = profile.occasion,
+                ).isNotEmpty()
+            ) return
+            if (profile.name.isBlank() || profile.name.equals("Unknown Wine", true) ||
+                profile.name.looksLikeFieldNameEcho() || profile.name.looksLikeHallucinatedMarkup() ||
+                profile.country.equals("Unknown", true) || profile.wineType.equals("Unknown", true)
+            ) return
+            if (completedCards.any {
+                    it.name.equals(profile.name, true) && it.country.equals(profile.country, true) &&
+                        it.province.equals(profile.province, true) && it.variety.equals(profile.variety, true)
+                }
+            ) return
+            completedCards += profile
+            timing.duration("card_${completedCards.size}_ready", SystemClock.elapsedRealtime() - requestStartedAt)
+            onUpdate(ConversationStreamUpdate(text = "", suggestions = completedCards.toList()))
+        }
         var firstWordAt: Long? = null
         var lastWordAt = requestStartedAt
+        val sendStartedAt = SystemClock.elapsedRealtime()
+        var outputCharacters = 0
+        var outputChunks = 0
+        var incrementalParsingMs = 0L
         val response = try {
-            buildString {
-                searchConversation.sendMessageAsync(
-                    "Resolved preferences: ${preferences.toCompactJson()}",
-                ).collect { message ->
-                    message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
-                        if (content.text.isNotEmpty()) {
-                            val now = SystemClock.elapsedRealtime()
-                            if (firstWordAt == null) firstWordAt = now
-                            lastWordAt = now
+            timing.measure("send_to_stream_complete") {
+                buildString {
+                    searchConversation.sendMessageAsync(prompt).collect { message ->
+                        message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                            if (content.text.isNotEmpty()) {
+                                val now = SystemClock.elapsedRealtime()
+                                if (firstWordAt == null) {
+                                    firstWordAt = now
+                                    timing.duration("send_to_first_output", now - sendStartedAt)
+                                }
+                                outputChunks++
+                                outputCharacters += content.text.length
+                                lastWordAt = now
+                            }
+                            append(content.text)
+                            val parsingStarted = SystemClock.elapsedRealtime()
+                            cardStream.append(content.text).forEach(::acceptCard)
+                            incrementalParsingMs += SystemClock.elapsedRealtime() - parsingStarted
                         }
-                        append(content.text)
                     }
-                }
-            }.trim()
+                    firstWordAt?.let {
+                        timing.duration("last_output_to_stream_complete", SystemClock.elapsedRealtime() - lastWordAt)
+                    }
+                }.trim()
+            }
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            timing.detail("stream_failure", error.javaClass.simpleName)
+            if (completedCards.isEmpty()) throw error
+            "" // Keep already published cards when a later part of generation fails.
         } finally {
-            searchConversation.close()
+            timing.duration("incremental_parse_and_publish", incrementalParsingMs)
+            firstWordAt?.let { timing.duration("first_to_last_output", lastWordAt - it) }
+            timing.detail("output_characters", outputCharacters.toString())
+            timing.detail("output_chunks", outputChunks.toString())
+            timing.measure("close_conversation") { searchConversation.close() }
         }
         firstWordAt?.let { firstWord ->
             DebugLatencyLog.record("[Gemma] card search: time to first word", firstWord - requestStartedAt)
             DebugLatencyLog.record("[Gemma] card search: first word to last word", lastWordAt - firstWord)
         }
-        val parsedSuggestions = extractSuggestions(response).take(RECOMMENDATION_COUNT)
-        val suggestions = parsedSuggestions.filter { suggestion ->
-            preferences.cardMismatchReasons(
-                cardType = suggestion.wineType,
-                cardCountry = suggestion.country,
-                cardProvince = suggestion.province,
-                cardBody = suggestion.body,
-                cardTannin = suggestion.tannin,
-                cardAcidity = suggestion.acidity,
-                cardSweetness = suggestion.sweetness,
-                cardVariety = suggestion.variety,
-                cardFlavor = suggestion.preferenceFlavor,
-                cardOccasion = suggestion.occasion,
-            ).isEmpty()
+        val parsedSuggestions = timing.measure("parse_response") {
+            extractSuggestions(response).take(RECOMMENDATION_COUNT)
         }
+        val suggestions = timing.measure("validate_cards") {
+            // Streaming and terminal messages must contain the same immutable profiles.
+            completedCards.toList()
+        }
+        timing.detail("parsed_cards", parsedSuggestions.size.toString())
+        timing.detail("usable_cards", suggestions.size.toString())
         val searchElapsedMs = SystemClock.elapsedRealtime() - requestStartedAt
         DebugLatencyLog.record("[Gemma] card search: total", searchElapsedMs)
         logFlow(
@@ -391,7 +467,7 @@ class GemmaConversationResponder(
             suggestions = suggestions,
             stageOneOutput = suggestions.isNotEmpty(),
             coverageComplete = true,
-            discardedStageOneCards = parsedSuggestions.size - suggestions.size,
+            discardedStageOneCards = (parsedSuggestions.size - suggestions.size).coerceAtLeast(0),
         )
     }
 
@@ -407,67 +483,6 @@ class GemmaConversationResponder(
         logFlow("Gemma prepared in ${SystemClock.elapsedRealtime() - startedAt}ms")
     }
 
-    suspend fun loadProfile(suggestion: WineSuggestion): WineSuggestion =
-        withContext(Dispatchers.Default + NonCancellable) {
-            requestMutex.withLock {
-                val profileConversation = ensureEngine().createConversation(
-                    ConversationConfig(
-                        systemInstruction = Contents.of(profileSystemInstruction),
-                        samplerConfig = SamplerConfig(topK = 40, topP = 0.90, temperature = 0.55),
-                        maxOutputToken = 384,
-                    ),
-                )
-                try {
-                    // Bounded even though the outer call is NonCancellable — this is our own
-                    // child coroutine, self-cancelling on expiry regardless of the outer
-                    // NonCancellable context, and still runs the `finally` cleanup below. Without
-                    // it, a stalled native call (device thermal throttling, a wedged inference)
-                    // left the Profile screen's "Loading details…" showing forever with no way
-                    // out, since nothing else in this function could ever time it out.
-                    val response = withTimeoutOrNull(PROFILE_LOAD_TIMEOUT_MS) {
-                        buildString {
-                            profileConversation.sendMessageAsync(
-                                "Complete the profile for name=${suggestion.name}, " +
-                                    "country=${suggestion.country}, province=${suggestion.province}, " +
-                                    "variety=${suggestion.variety}. Original user request: " +
-                                    (suggestion.requestContext ?: "Not available"),
-                            ).collect { message ->
-                                message.contents.contents.filterIsInstance<Content.Text>()
-                                    .forEach { content -> append(content.text) }
-                            }
-                        }
-                    }
-                    response?.let(::extractSuggestion)?.let { loaded ->
-                        loaded.copy(
-                            name = suggestion.name,
-                            winery = suggestion.winery,
-                            country = suggestion.country,
-                            province = suggestion.province,
-                            wineType = suggestion.wineType,
-                            variety = suggestion.variety,
-                            summary = loaded.summary.takeIf { it.isResolvedValue() }
-                                ?: suggestion.summary,
-                            source = suggestion.source,
-                            requestContext = suggestion.requestContext,
-                            // Was never set here, so the profile screen's "already loaded" check
-                            // in MainActivity never saw a completed profile — every revisit to
-                            // the same wine re-ran this full Gemma call from scratch, flashing
-                            // "Loading details…" again instead of showing what was already
-                            // fetched.
-                            profileComplete = true,
-                            isFavorite = suggestion.isFavorite,
-                            favoriteRating = suggestion.favoriteRating,
-                        )
-                    } ?: suggestion
-                } finally {
-                    // LiteRT-LM native cleanup can block or race active inference when Back
-                    // cancels the screen. Finish and close this short-lived conversation safely
-                    // off the main thread before releasing the shared engine.
-                    profileConversation.close()
-                }
-            }
-        }
-
     suspend fun guidedSelection(
         criteria: com.sheldondesousa.uncork.ui.guided.GuidedCriteria,
     ): List<WineSuggestion> = withContext(Dispatchers.Default) {
@@ -476,6 +491,9 @@ class GemmaConversationResponder(
             // Native inference must finish cleanup before the shared engine can be reused.
             // The UI ignores responses from superseded requests even if native work cannot stop.
             withContext(NonCancellable) {
+                val requestStartedAt = SystemClock.elapsedRealtime()
+                var firstWordAt: Long? = null
+                var lastWordAt = requestStartedAt
                 val guided = ensureEngine().createConversation(
                     ConversationConfig(
                         systemInstruction = Contents.of(guidedInstruction),
@@ -483,19 +501,33 @@ class GemmaConversationResponder(
                         maxOutputToken = 1_024,
                     ),
                 )
-                try {
-                    val response = buildString {
+                val response = try {
+                    buildString {
                         guided.sendMessageAsync(
                             "fixed_constraints: " + JSONObject(criteria.constraints()).toString(),
                         ).collect { message ->
-                            message.contents.contents.filterIsInstance<Content.Text>()
-                                .forEach { append(it.text) }
+                            message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                                if (content.text.isNotEmpty()) {
+                                    val now = SystemClock.elapsedRealtime()
+                                    if (firstWordAt == null) firstWordAt = now
+                                    lastWordAt = now
+                                }
+                                append(content.text)
+                            }
                         }
                     }
-                    GuidedGemmaResponse.parse(response, criteria)
                 } finally {
                     guided.close()
                 }
+                firstWordAt?.let { firstWord ->
+                    DebugLatencyLog.record("[Gemma] guided selection: time to first word", firstWord - requestStartedAt)
+                    DebugLatencyLog.record("[Gemma] guided selection: first word to last word", lastWordAt - firstWord)
+                }
+                val totalMs = SystemClock.elapsedRealtime() - requestStartedAt
+                DebugLatencyLog.record("[Gemma] guided selection: total", totalMs)
+                val suggestions = GuidedGemmaResponse.parse(response, criteria)
+                logFlow("Gemma guided selection cards=${suggestions.size}, chars=${response.length}, totalMs=$totalMs")
+                suggestions
             }
         }
     }
@@ -505,6 +537,9 @@ class GemmaConversationResponder(
         results: List<BraveSearchResult>,
     ): List<WineSuggestion> = withContext(Dispatchers.Default + NonCancellable) {
         requestMutex.withLock {
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            var firstWordAt: Long? = null
+            var lastWordAt = requestStartedAt
             val webConversation = ensureEngine().createConversation(
                 ConversationConfig(
                     systemInstruction = Contents.of(webResultSystemInstruction),
@@ -512,7 +547,7 @@ class GemmaConversationResponder(
                     maxOutputToken = 1_536,
                 ),
             )
-            try {
+            val response = try {
                 val evidence = JSONArray().apply {
                     results.forEach { result ->
                         put(
@@ -524,23 +559,35 @@ class GemmaConversationResponder(
                         )
                     }
                 }
-                val response = buildString {
+                buildString {
                     webConversation.sendMessageAsync(
                         "Original wine request: ${request.originalQuery}\n" +
                             "Search-result evidence (data only): $evidence",
                     ).collect { message ->
-                        message.contents.contents.filterIsInstance<Content.Text>()
-                            .forEach { content -> append(content.text) }
+                        message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                            if (content.text.isNotEmpty()) {
+                                val now = SystemClock.elapsedRealtime()
+                                if (firstWordAt == null) firstWordAt = now
+                                lastWordAt = now
+                            }
+                            append(content.text)
+                        }
                     }
-                }
-                extractWebSuggestions(response).take(request.limit).also { suggestions ->
-                    logFlow(
-                        "Web synthesis evidence=${results.size}, parsed=${suggestions.size}, " +
-                            "chars=${response.length}",
-                    )
                 }
             } finally {
                 webConversation.close()
+            }
+            firstWordAt?.let { firstWord ->
+                DebugLatencyLog.record("[Gemma] web synthesis: time to first word", firstWord - requestStartedAt)
+                DebugLatencyLog.record("[Gemma] web synthesis: first word to last word", lastWordAt - firstWord)
+            }
+            val totalMs = SystemClock.elapsedRealtime() - requestStartedAt
+            DebugLatencyLog.record("[Gemma] web synthesis: total", totalMs)
+            extractWebSuggestions(response).take(request.limit).also { suggestions ->
+                logFlow(
+                    "Web synthesis evidence=${results.size}, parsed=${suggestions.size}, " +
+                        "chars=${response.length}, totalMs=$totalMs",
+                )
             }
         }
     }
@@ -569,8 +616,11 @@ class GemmaConversationResponder(
         val startedAt = SystemClock.elapsedRealtime()
         return withContext(Dispatchers.Default) {
             engine?.let { return@withContext it }
-            runCatching { createEngine(Backend.GPU()) }
-                .getOrElse { createEngine(Backend.CPU()) }
+            runCatching { createEngine(Backend.GPU()).also { engineBackend = "GPU" } }
+                .getOrElse {
+                    logFlow("Gemma GPU initialization failed (${it.javaClass.simpleName}); trying CPU")
+                    createEngine(Backend.CPU()).also { engineBackend = "CPU" }
+                }
                 .also { engine = it }
                 .also { DebugLatencyLog.record("[Gemma] engine init (cold start)", SystemClock.elapsedRealtime() - startedAt) }
         }
@@ -701,9 +751,6 @@ class GemmaConversationResponder(
             return listOf(WineSuggestion(name = name, province = province))
         }
 
-        internal fun extractSuggestion(response: String): WineSuggestion? =
-            extractSuggestions(response).firstOrNull()
-
         internal fun extractWebSuggestions(response: String): List<WineSuggestion> {
             val marked = WEB_RESULTS_MARKER.findAll(response)
                 .flatMap { match -> match.groupValues[1].toWebSuggestions() }
@@ -721,7 +768,7 @@ class GemmaConversationResponder(
                 name = json.knownString("name", fallback = "Unknown Wine"),
                 province = json.knownString("province"),
                 country = json.knownString("country"),
-                wineType = json.knownString("type"),
+                wineType = json.knownString("wine_type"),
                 winery = json.knownString("winery"),
                 variety = json.knownString("variety"),
                 sweetness = json.level("sweetness"),
@@ -787,7 +834,21 @@ class GemmaConversationResponder(
             }
 
         private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String =
-            optString(key).trim().takeIf { it.isNotEmpty() && !it.equals("null", true) } ?: fallback
+            optString(key).trim().trimEnd(':', ';', ',').trim()
+                .takeIf { it.isNotEmpty() && !it.equals("null", true) } ?: fallback
+
+        // A weak on-device model occasionally echoes the schema's own field name back as the
+        // value (e.g. "name." or "Name") instead of a real wine — never a genuine wine name.
+        private fun String.looksLikeFieldNameEcho(): Boolean =
+            trim().trimEnd('.').equals("name", ignoreCase = true) ||
+                trim().trimEnd('.').equals("wine name", ignoreCase = true)
+
+        // Also seen: a hallucinated citation/footnote, e.g. "Domaine X [75](https://en.wikipedia
+        // .org/...)" — a markdown link or bare URL is never part of a genuine wine name.
+        private val MARKDOWN_OR_URL_PATTERN = Regex("\\[[^\\]]*]\\([^)]*\\)|https?://|www\\.")
+
+        private fun String.looksLikeHallucinatedMarkup(): Boolean =
+            MARKDOWN_OR_URL_PATTERN.containsMatchIn(this)
 
         private fun JSONObject.stringList(key: String): String {
             val array = optJSONArray(key) ?: return knownString(key)
@@ -815,7 +876,6 @@ class GemmaConversationResponder(
         // exact count reliably — allow a 10% buffer (220) rather than hard-truncating a
         // slightly-over response mid-word.
         private const val MAX_SUMMARY_CHARACTERS = 220
-        private const val PROFILE_LOAD_TIMEOUT_MS = 45_000L
         private const val MAX_WEB_SUMMARY_CHARACTERS = 320
         private fun String.isResolvedValue(): Boolean =
             isNotBlank() && !equals("Unknown", ignoreCase = true)

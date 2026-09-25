@@ -12,7 +12,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
-import kotlinx.coroutines.awaitCancellation
 import org.junit.Rule
 import org.junit.Test
 
@@ -61,7 +60,6 @@ class StageShowScreenTest {
                         ),
                     ),
                     onBack = {},
-                    loadProfile = { awaitCancellation() },
                 )
             }
         }

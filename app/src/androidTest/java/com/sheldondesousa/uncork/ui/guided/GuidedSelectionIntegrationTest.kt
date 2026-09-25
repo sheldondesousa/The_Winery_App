@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class GuidedSelectionIntegrationTest {
-    private val criteria = GuidedCriteria("France", "Bordeaux", setOf("Red"))
+    private val criteria = GuidedCriteria("France", "Bordeaux", "Red")
 
     @Test fun rankingNullsExactFiltersAndClassifiedColumns() {
         SQLiteDatabase.create(null).use { db ->
@@ -44,9 +44,9 @@ class GuidedSelectionIntegrationTest {
                 }
             }
             assertEquals(listOf(4, 2, 3), ids(criteria))
-            val filtered = criteria.copy(body = setOf("Full-Bodied"), tannin = setOf("Moderate"), acidity = setOf("Tart"))
+            val filtered = criteria.copy(body = "Full-Bodied", tannin = "Moderate", acidity = "Tart")
             assertEquals(listOf(2, 3, 1), ids(filtered))
-            assertTrue(ids(criteria.copy(body = setOf("Light-Bodied"))).isEmpty())
+            assertTrue(ids(criteria.copy(body = "Light-Bodied")).isEmpty())
             // A zero score still ranks ahead of null points regardless of winery.
             db.execSQL("UPDATE wine_reviews SET points=0 WHERE id=3")
             assertEquals(listOf(2, 3, 1), ids(filtered))
@@ -77,35 +77,35 @@ class GuidedSelectionIntegrationTest {
                     buildList { while (cursor.moveToNext()) add(cursor.getInt(0)) }
                 }
             }
-            assertEquals(listOf(1, 2, 5), ids(GuidedCriteria(wineType = setOf("Red", "White"))))
-            assertEquals(listOf(5), ids(GuidedCriteria(wineType = setOf("Red", "White"), sweetness = setOf("Sweet"))))
-            assertEquals(listOf(1), ids(GuidedCriteria(wineType = setOf("Red"))))
-            assertEquals(listOf(2, 5), ids(GuidedCriteria(wineType = setOf("White"))))
-            assertEquals(listOf(3), ids(GuidedCriteria(wineType = setOf("Sparkling"))))
-            assertEquals(listOf(4), ids(GuidedCriteria(wineType = setOf("Rosé"))))
-            assertEquals(listOf(5), ids(GuidedCriteria(sweetness = setOf("Sweet"))))
-            assertEquals(listOf(6), ids(GuidedCriteria(wineType = setOf("Fortified"))))
+            assertEquals(listOf(1), ids(GuidedCriteria(wineType = "Red")))
+            assertEquals(listOf(2, 5), ids(GuidedCriteria(wineType = "White")))
+            assertEquals(listOf(3), ids(GuidedCriteria(wineType = "Sparkling")))
+            assertEquals(listOf(4), ids(GuidedCriteria(wineType = "Rosé")))
+            assertEquals(listOf(5), ids(GuidedCriteria(wineType = "White", sweetness = "Sweet")))
+            assertEquals(listOf(5), ids(GuidedCriteria(sweetness = "Sweet")))
+            assertEquals(listOf(6), ids(GuidedCriteria(wineType = "Fortified")))
             assertEquals(listOf(1, 2, 3), ids(GuidedCriteria(country = "France")))
             assertEquals(listOf(1, 2, 3), ids(GuidedCriteria(province = "Bordeaux")))
-            assertEquals(listOf(1, 2, 3), ids(GuidedCriteria(body = setOf("Light-Bodied"))))
-            assertTrue(ids(GuidedCriteria(body = setOf("Full-Bodied"))).isEmpty())
-            assertTrue(ids(GuidedCriteria(wineType = setOf("Red"), country = "Italy")).isEmpty())
+            assertEquals(listOf(1, 2, 3), ids(GuidedCriteria(body = "Light-Bodied")))
+            assertTrue(ids(GuidedCriteria(body = "Full-Bodied")).isEmpty())
+            assertTrue(ids(GuidedCriteria(wineType = "Red", country = "Italy")).isEmpty())
         }
     }
 
     @Test fun gemmaConstraintsEmptyMalformedAndProfileRoundTrip() {
-        val response = """{"recommendations":[{"sweetness":"Bone-Dry","wine_type":"Red","country":"France","province":"Bordeaux","variety":"Merlot","body":"Full-Bodied","tannin":"Moderate","acidity":"Soft","flavor_notes":["plum","spice"],"summary":"A model-generated Merlot profile."}]}"""
-        val selected = criteria.copy(body = setOf("Full-Bodied"))
+        val response = """{"recommendations":[{"name":"Château Something","sweetness":"Bone-Dry","wine_type":"Red","country":"France","province":"Bordeaux","variety":"Merlot","body":"Full-Bodied","tannin":"Moderate","acidity":"Soft","flavor_notes":["plum","spice"],"summary":"A model-generated Merlot profile."}]}"""
+        val selected = criteria.copy(body = "Full-Bodied")
         val card = GuidedGemmaResponse.parse(response, selected).single()
+        assertEquals("Château Something", card.name)
         assertTrue(card.profileComplete)
         assertNull(card.rating)
         assertEquals("Unknown", card.winery)
         assertEquals("Unknown", card.reviewSummary)
         assertEquals(card.copy(isFavorite = true), card.toStageWine().toWineSuggestion())
         assertEquals("Bone-Dry", GuidedGemmaResponse.parse(response,
-            GuidedCriteria(wineType = setOf("Red", "White"), sweetness = setOf("Bone-Dry", "Off-Dry"))).single().sweetness)
-        assertTrue(runCatching { GuidedGemmaResponse.parse(response, GuidedCriteria(sweetness = setOf("Sweet"))) }.isFailure)
-        val typeOnly = GuidedGemmaResponse.parse(response, GuidedCriteria(wineType = setOf("Red"))).single()
+            GuidedCriteria(wineType = "Red", sweetness = "Bone-Dry")).single().sweetness)
+        assertTrue(runCatching { GuidedGemmaResponse.parse(response, GuidedCriteria(sweetness = "Sweet")) }.isFailure)
+        val typeOnly = GuidedGemmaResponse.parse(response, GuidedCriteria(wineType = "Red")).single()
         assertEquals("Merlot", typeOnly.variety)
         assertEquals("Bordeaux", typeOnly.province)
         assertTrue(GuidedGemmaResponse.parse("""{"recommendations":[]}""", criteria).isEmpty())

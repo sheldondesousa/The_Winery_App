@@ -173,9 +173,9 @@ class GemmaConversationResponderTest {
             These three Italian reds should give you a useful range.
             [WINE_CARDS]
             [
-              {"name":"Barolo","type":"red","variety":"Nebbiolo","country":"Italy","province":"Piedmont","flavor":"rose","occasion":"dinner","summary":"A structured Nebbiolo with floral aromas and firm tannin."},
-              {"name":"Brunello di Montalcino","type":"red","variety":"Sangiovese","country":"Italy","province":"Tuscany","summary":"A full-bodied Tuscan red with savory cherry character."},
-              {"name":"Etna Rosso","type":"red","variety":"Nerello Mascalese","country":"Italy","province":"Sicily","summary":"An elegant volcanic red with bright fruit and mineral notes."}
+              {"name":"Barolo","wine_type":"red","variety":"Nebbiolo","country":"Italy","province":"Piedmont","flavor":"rose","occasion":"dinner","summary":"A structured Nebbiolo with floral aromas and firm tannin."},
+              {"name":"Brunello di Montalcino","wine_type":"red","variety":"Sangiovese","country":"Italy","province":"Tuscany","summary":"A full-bodied Tuscan red with savory cherry character."},
+              {"name":"Etna Rosso","wine_type":"red","variety":"Nerello Mascalese","country":"Italy","province":"Sicily","summary":"An elegant volcanic red with bright fruit and mineral notes."}
             ]
             [/WINE_CARDS]
         """.trimIndent()
@@ -219,7 +219,7 @@ class GemmaConversationResponderTest {
             [/WINE_PROFILE]
         """.trimIndent()
 
-        val suggestion = GemmaConversationResponder.extractSuggestion(response)
+        val suggestion = GemmaConversationResponder.extractSuggestions(response).firstOrNull()
 
         assertNotNull(suggestion)
         assertEquals("Barolo", suggestion?.name)
@@ -263,7 +263,7 @@ class GemmaConversationResponderTest {
             [/WINE_PROFILE]
         """.trimIndent()
 
-        val suggestion = GemmaConversationResponder.extractSuggestion(response)
+        val suggestion = GemmaConversationResponder.extractSuggestions(response).firstOrNull()
 
         assertNotNull(suggestion)
         assertEquals("A dependable red blend", suggestion?.name)
@@ -281,7 +281,7 @@ class GemmaConversationResponderTest {
             [/WINE_PROFILE]
         """.trimIndent()
 
-        val suggestion = GemmaConversationResponder.extractSuggestion(response)
+        val suggestion = GemmaConversationResponder.extractSuggestions(response).firstOrNull()
 
         assertEquals("red cherry, rose petal, tar", suggestion?.flavorNotes)
     }
@@ -291,9 +291,9 @@ class GemmaConversationResponderTest {
         val response = """
             These are three crisp options to explore.
             [
-              {"name":"Chablis","type":"white","variety":"Chardonnay","country":"France","province":"Burgundy"},
-              {"name":"Sancerre","type":"white","variety":"Sauvignon Blanc","country":"France","province":"Loire"},
-              {"name":"Soave Classico","type":"white","variety":"Garganega","country":"Italy","province":"Veneto"}
+              {"name":"Chablis","wine_type":"white","variety":"Chardonnay","country":"France","province":"Burgundy"},
+              {"name":"Sancerre","wine_type":"white","variety":"Sauvignon Blanc","country":"France","province":"Loire"},
+              {"name":"Soave Classico","wine_type":"white","variety":"Garganega","country":"Italy","province":"Veneto"}
             ]
         """.trimIndent()
 

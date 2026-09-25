@@ -151,13 +151,6 @@ class MainActivity : ComponentActivity() {
                         StageShowRoute(
                             wine = wine,
                             onBack = { stageWine = null },
-                            loadProfile = { suggestion ->
-                                if (suggestion.source == WineSuggestionSource.GEMMA && !suggestion.profileComplete) {
-                                    gemmaResponder.loadProfile(suggestion)
-                                } else {
-                                    suggestion
-                                }
-                            },
                             initiallyFavorite = favoritesRepository.contains(wine.toWineSuggestion()),
                             onFavoriteChange = { suggestion, selected ->
                                 favorites = if (selected) {

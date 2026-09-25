@@ -41,6 +41,8 @@ import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
 import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
+import com.sheldondesousa.uncork.ui.conversation.cardValueOrUnknown
+import com.sheldondesousa.uncork.ui.conversation.isUsefulCardValue
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -63,45 +65,31 @@ private fun FormField.options(): List<String> = when (this) {
     FormField.Country, FormField.Province -> emptyList()
 }
 
-private fun FormField.selected(selection: GuidedCriteria): Set<String> = when (this) {
+/** Every field on this form is single-select: choosing a value (or "Any") replaces whatever was there before. */
+private fun FormField.selectedValue(selection: GuidedCriteria): String = when (this) {
     FormField.Type -> selection.wineType
     FormField.Sweetness -> selection.sweetness
     FormField.Tannin -> selection.tannin
     FormField.Body -> selection.body
     FormField.Acidity -> selection.acidity
-    FormField.Country, FormField.Province -> emptySet()
-}
-
-/** Every field on this form is single-select: choosing a value (or "Any") replaces whatever was there before. */
-private fun FormField.selectedValue(selection: GuidedCriteria): String = when (this) {
     FormField.Country -> selection.country
     FormField.Province -> selection.province
-    else -> selected(selection).firstOrNull().orEmpty()
 }
 
 private fun FormField.select(selection: GuidedCriteria, value: String): GuidedCriteria = when (this) {
-    FormField.Type -> selection.copy(wineType = value.toSingleSelection())
-    FormField.Sweetness -> selection.copy(sweetness = value.toSingleSelection())
-    FormField.Tannin -> selection.copy(tannin = value.toSingleSelection())
-    FormField.Body -> selection.copy(body = value.toSingleSelection())
-    FormField.Acidity -> selection.copy(acidity = value.toSingleSelection())
+    FormField.Type -> selection.copy(wineType = value)
+    FormField.Sweetness -> selection.copy(sweetness = value)
+    FormField.Tannin -> selection.copy(tannin = value)
+    FormField.Body -> selection.copy(body = value)
+    FormField.Acidity -> selection.copy(acidity = value)
     FormField.Country -> selection.withCountry(value)
     FormField.Province -> selection.copy(province = value)
 }
 
-private fun String.toSingleSelection(): Set<String> = if (isBlank()) emptySet() else setOf(this)
-
-private fun Set<String>.summaryText(labelFor: (String) -> String = { it }): String =
-    if (isEmpty()) "Any" else sorted().joinToString(" / ") { labelFor(it) }
-
-private fun FormField.summary(selection: GuidedCriteria): String = when (this) {
-    FormField.Type -> selection.wineType.summaryText()
-    FormField.Sweetness -> selection.sweetness.summaryText()
-    FormField.Tannin -> selection.tannin.summaryText()
-    FormField.Body -> selection.body.summaryText { it.removeSuffix("-Bodied") }
-    FormField.Acidity -> selection.acidity.summaryText()
-    FormField.Country -> selection.country.ifBlank { "Any" }
-    FormField.Province -> selection.province.ifBlank { "Any" }
+private fun FormField.summary(selection: GuidedCriteria): String {
+    val value = selectedValue(selection)
+    if (value.isBlank()) return "Any"
+    return if (this == FormField.Body) value.removeSuffix("-Bodied") else value
 }
 
 @Composable
@@ -304,7 +292,7 @@ private fun GuidedResultsScreen(
             if (submitted != null && submitted != state.selection) {
                 Text("Selections changed. Go back and search again to update results.", color = Wine)
             }
-            ResultSection("AI Sommelier", state.gemma, onSuggestionClick, isModelSection = true,
+            ResultSection("AI Sommelier", state.gemma, onSuggestionClick,
                 onRetry = state::retryGemma, onModelSetup = onModelSetup)
             ResultSection("Database", state.database, onSuggestionClick)
         }
@@ -312,12 +300,12 @@ private fun GuidedResultsScreen(
 }
 
 private fun GuidedCriteria.tags(): List<String> = buildList {
-    if (wineType.isNotEmpty()) add(wineType.sorted().joinToString(" / "))
+    if (wineType.isNotBlank()) add(wineType)
     if (country.isNotBlank() || province.isNotBlank()) add(locationLabel)
-    if (sweetness.isNotEmpty()) add("Sweetness: ${sweetness.sorted().joinToString(" / ")}")
-    if (tannin.isNotEmpty()) add("Tannin: ${tannin.sorted().joinToString(" / ")}")
-    if (body.isNotEmpty()) add("Body: ${body.sorted().joinToString(" / ")}")
-    if (acidity.isNotEmpty()) add("Acidity: ${acidity.sorted().joinToString(" / ")}")
+    if (sweetness.isNotBlank()) add("Sweetness: $sweetness")
+    if (tannin.isNotBlank()) add("Tannin: $tannin")
+    if (body.isNotBlank()) add("Body: $body")
+    if (acidity.isNotBlank()) add("Acidity: $acidity")
 }
 
 @Composable
@@ -440,7 +428,6 @@ private fun ResultSection(
     title: String,
     result: GuidedResult,
     onSuggestionClick: (WineSuggestion) -> Unit,
-    isModelSection: Boolean = false,
     onRetry: () -> Unit = {},
     onModelSetup: () -> Unit = {},
 ) {
@@ -462,11 +449,12 @@ private fun ResultSection(
                 }
             }
             is GuidedResult.Complete -> {
+                val displayedCards = result.cards.filter { it.name.isUsefulCardValue() }
                 if (result.usedProvinceFallback) {
                     Text("Some results do not have an exact match.", color = InkSubtle)
                 }
-                if (result.cards.isEmpty()) Text("No matches for these selections.", color = InkSubtle)
-                result.cards.forEach { card ->
+                if (displayedCards.isEmpty()) Text("No matches for these selections.", color = InkSubtle)
+                displayedCards.forEach { card ->
                     OutlinedCard(onClick = { onSuggestionClick(card) }, modifier = Modifier.fillMaxWidth()) {
                         Row(
                             Modifier.padding(16.dp),
@@ -474,8 +462,13 @@ private fun ResultSection(
                         ) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(card.name, style = MaterialTheme.typography.titleMedium)
-                                Text("${card.country} · ${card.province} · ${card.variety}")
-                                Text(if (isModelSection) "Model-generated recommendation" else "Critic review", style = MaterialTheme.typography.labelMedium)
+                                Text(card.variety.cardValueOrUnknown())
+                                Text(
+                                    text = "${card.country.cardValueOrUnknown()}, ${card.province.cardValueOrUnknown()}",
+                                    color = Wine,
+                                    fontSize = 12.sp,
+                                    letterSpacing = 0.3.sp,
+                                )
                                 card.rating?.let { Text("Critic score: $it") }
                             }
                             Text(
