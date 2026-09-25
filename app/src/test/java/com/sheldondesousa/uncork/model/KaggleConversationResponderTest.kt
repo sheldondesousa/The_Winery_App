@@ -89,10 +89,15 @@ class KaggleConversationResponderTest {
         val response = responder.replyTo("Full body")
 
         // Gemma and Kaggle both genuinely run (like Find's "AI Sommelier" + "Database"
-        // sections), but Kaggle keeps "database first" priority for the winning text/suggestion
-        // regardless of which one happens to resolve first in the race.
+        // sections), but Kaggle keeps "database first" priority for the winning suggestion
+        // regardless of which one happens to resolve first in the race. There's no blanket
+        // top-of-bubble text any more — each search-type card carries its own tag and text.
         assertEquals(listOf("Wine One", "Wine Two"), response.suggestions.map { it.name })
-        assertTrue(response.text.contains("other wine enthusiasts"))
+        assertEquals("", response.text)
+        assertEquals(
+            listOf("Wine One", "Wine Two"),
+            response.sourceResults.single { it.source == WineSuggestionSource.KAGGLE }.suggestions.map { it.name },
+        )
         assertEquals(
             WineSelectionCriteria(wineType = "red", country = "Italy", province = "Piedmont"),
             dataSource.selectionPoolLookups.single(),
@@ -140,11 +145,11 @@ class KaggleConversationResponderTest {
 
         val response = responder.replyTo("Full body")
 
-        // Cache wins the "database first" priority for the summary text/suggestion — Gemma also
+        // Cache wins the "database first" priority for the summary suggestion — Gemma also
         // genuinely ran (with real cards) and Kaggle genuinely missed, but neither outranks a
-        // real cache hit.
+        // real cache hit. No blanket top-of-bubble text any more — the cache's own card says so.
         assertEquals("Cached Barolo", response.suggestions.single().name)
-        assertTrue(response.text.contains("saved from an earlier web search"))
+        assertEquals("", response.text)
         assertEquals(
             WineSelectionCriteria(wineType = "red", country = "Italy", province = "Piedmont"),
             matchedCriteria,
@@ -206,6 +211,122 @@ class KaggleConversationResponderTest {
         assertEquals(WineSuggestionSource.WEB_SEARCH, webResponse.suggestions.single().source)
         // The follow-up web query used Gemma's own resolved cards as search hints.
         assertEquals(GEMMA_OPTIONS.map { it.name }, webRequest?.gemmaSuggestions?.map { it.name })
+    }
+
+    @Test
+    fun gemmaStaysListedAsLoadingWhenTheWebSearchQuestionIsPublishedMidTurn() = runBlocking {
+        // Regression: the mid-turn publish (fired once Kaggle/cache settle, before Gemma is
+        // necessarily done) built its sourceResults from progress.results, which only returns
+        // already-resolved sources — so a still-running Gemma was silently dropped from the list
+        // entirely at exactly that moment, making its loading card vanish from the UI instead of
+        // continuing to show as loading.
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+        val gemma = FakeCardSynthesizingGemma(
+            cards = GEMMA_OPTIONS,
+            preferences = recordedPreferences,
+            synthesisDelayMs = 50,
+        )
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = FakeWineReviewDataSource(selectionPoolResults = REVIEWS),
+        )
+        val updates = mutableListOf<ConversationStreamUpdate>()
+
+        responder.replyToUpdates("Full body", updates::add)
+
+        val webQuestionUpdate = updates.first { it.followUpText != null }
+        assertTrue(
+            "Gemma missing from mid-turn sourceResults: ${webQuestionUpdate.sourceResults.map { it.source }}",
+            webQuestionUpdate.sourceResults.any { it.source == WineSuggestionSource.GEMMA },
+        )
+    }
+
+    @Test
+    fun webSearchFailureShowsARetryInsteadOfFallingThroughToTheModeChoiceApology() = runBlocking {
+        // Regression: a network failure (or the request being interrupted, e.g. the user
+        // switching tabs mid-search) was indistinguishable from "ran and found nothing", and
+        // either way left the pending state cleared — so the user's next message was treated as
+        // a brand-new top-level turn, producing the confusing "I'm sorry I couldn't quite catch
+        // that. Hi, I'm UnCork..." mode-choice apology instead of a sane retry affordance.
+        val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+        val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+        var searchAttempts = 0
+        val webSearch = WineWebSearchDataSource {
+            searchAttempts++
+            if (searchAttempts == 1) throw java.io.IOException("no network")
+            listOf(WineSuggestion(name = "Online Barolo", country = "Italy", province = "Piedmont"))
+        }
+        val responder = KaggleConversationResponder(
+            gemmaResponder = gemma,
+            wineReviewRepository = FakeWineReviewDataSource(),
+            webSearch = webSearch,
+        )
+        responder.replyTo("Full body")
+
+        val failedResponse = responder.replyTo("yes")
+
+        assertTrue(failedResponse.suggestions.isEmpty())
+        assertEquals(
+            listOf(WineSuggestionSource.WEB_SEARCH to SourceQueryStatus.FAILED),
+            failedResponse.sourceResults.map { it.source to it.status },
+        )
+
+        // A subsequent "try again" (or "yes") resumes the same pending web search rather than
+        // falling through to a fresh top-level turn.
+        val retriedResponse = responder.replyTo("Try Again")
+
+        assertEquals("Online Barolo", retriedResponse.suggestions.singleOrNull()?.name)
+        assertEquals(2, searchAttempts)
+    }
+
+    @Test
+    fun shortAffirmativeRepliesToTheWebSearchQuestionAllRunTheSearch() = runBlocking {
+        // Regression: "Y" (and its siblings) used to fail isAffirmativeReply, fall through the
+        // pending-web-search branch entirely, and get treated as a brand-new message to Gemma —
+        // producing "I'm sorry I couldn't quite catch that" followed by the mode-choice greeting
+        // instead of running the web search.
+        for (reply in listOf("Y", "y", "Yup", "Go", "Yeah", "Ya")) {
+            val webSearch = WineWebSearchDataSource {
+                listOf(WineSuggestion(name = "Online Barolo", country = "Italy", province = "Piedmont"))
+            }
+            val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+            val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+            val responder = KaggleConversationResponder(
+                gemmaResponder = gemma,
+                wineReviewRepository = FakeWineReviewDataSource(),
+                webSearch = webSearch,
+            )
+            responder.replyTo("Full body")
+
+            val webResponse = responder.replyTo(reply)
+
+            assertEquals("reply: $reply", "Online Barolo", webResponse.suggestions.singleOrNull()?.name)
+            assertEquals("reply: $reply", WineSuggestionSource.WEB_SEARCH, webResponse.suggestions.single().source)
+        }
+    }
+
+    @Test
+    fun shortNegativeRepliesToTheWebSearchQuestionAllDeclineIt() = runBlocking {
+        for (reply in listOf("N", "n", "Na", "Nope", "Nah")) {
+            var webSearchCalled = false
+            val webSearch = WineWebSearchDataSource {
+                webSearchCalled = true
+                emptyList()
+            }
+            val recordedPreferences = WinePreferences(type = "red", country = "Italy", province = "Piedmont")
+            val gemma = FakeCardSynthesizingGemma(cards = GEMMA_OPTIONS, preferences = recordedPreferences)
+            val responder = KaggleConversationResponder(
+                gemmaResponder = gemma,
+                wineReviewRepository = FakeWineReviewDataSource(),
+                webSearch = webSearch,
+            )
+            responder.replyTo("Full body")
+
+            val declineResponse = responder.replyTo(reply)
+
+            assertTrue("reply: $reply", declineResponse.text.contains("keep those recommendations"))
+            assertTrue("reply: $reply", !webSearchCalled)
+        }
     }
 
     @Test
@@ -1122,6 +1243,7 @@ class KaggleConversationResponderTest {
     private inner class FakeCardSynthesizingGemma(
         private val cards: List<WineSuggestion>,
         private val preferences: WinePreferences,
+        private val synthesisDelayMs: Long = 0,
     ) : ConversationResponder, WineCardSynthesizer {
         var receivedPreferences: WinePreferences? = null
 
@@ -1142,6 +1264,7 @@ class KaggleConversationResponderTest {
             preferences: WinePreferences,
             onUpdate: (ConversationStreamUpdate) -> Unit,
         ): ChatMessage {
+            if (synthesisDelayMs > 0) kotlinx.coroutines.delay(synthesisDelayMs)
             receivedPreferences = preferences
             return gemmaMessage(cards, coverageComplete = true)
         }

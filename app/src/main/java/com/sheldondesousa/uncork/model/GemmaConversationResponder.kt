@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -47,6 +48,12 @@ class GemmaConversationResponder(
     private var chatMode = ChatMode.Undecided
     private var findWineStep = FindWineStep.Type
     private var chatPreferences = WinePreferences()
+
+    // A step the user explicitly declined ("no preference", "skip", ...) stays UNKNOWN in
+    // chatPreferences by design — that's indistinguishable from "not yet asked" on the
+    // WinePreferences fields alone, so advanceFindWine needs this separate record to avoid
+    // re-asking the same question forever.
+    private val declinedSteps = mutableSetOf<FindWineStep>()
 
     private fun loadPrompt(assetName: String): String =
         appContext.assets.open("prompts/$assetName").bufferedReader().use { it.readText() }
@@ -92,6 +99,7 @@ class GemmaConversationResponder(
                 chatMode = ChatMode.FindWine
                 findWineStep = FindWineStep.Type
                 chatPreferences = WinePreferences()
+                declinedSteps.clear()
                 plainMessage(ChatFlowText.questionFor(findWineStep))
             }
             null -> plainMessage(ChatFlowText.apology(ChatFlowText.MODE_CHOICE))
@@ -105,6 +113,7 @@ class GemmaConversationResponder(
             chatMode = ChatMode.FindWine
             findWineStep = FindWineStep.Type
             chatPreferences = WinePreferences()
+            declinedSteps.clear()
             return plainMessage("Sure — let's find you a wine.\n\n${ChatFlowText.questionFor(findWineStep)}")
         }
 
@@ -162,33 +171,39 @@ class GemmaConversationResponder(
             FindWineStep.Type -> {
                 val matched = matchWineType(query)
                 when {
-                    noPreference -> chatPreferences = chatPreferences.copy(type = WinePreferences.UNKNOWN)
+                    noPreference -> {
+                        chatPreferences = chatPreferences.copy(type = WinePreferences.UNKNOWN)
+                        declinedSteps += FindWineStep.Type
+                    }
                     matched != null -> chatPreferences = chatPreferences.copy(type = matched)
                     else -> return unmatchedFindWineAnswer(query, ChatFlowText.Q1_TYPE)
                 }
-                findWineStep = FindWineStep.Country
-                plainMessage(ChatFlowText.Q2_COUNTRY)
+                if (!noPreference) applyOpportunisticMatches(query)
+                advanceFindWine()
             }
             FindWineStep.Country -> {
                 val matched = matchLocation(query)
                 when {
-                    noPreference -> chatPreferences = chatPreferences.copy(
-                        country = WinePreferences.UNKNOWN,
-                        province = WinePreferences.UNKNOWN,
-                    )
+                    noPreference -> {
+                        chatPreferences = chatPreferences.copy(
+                            country = WinePreferences.UNKNOWN,
+                            province = WinePreferences.UNKNOWN,
+                        )
+                        declinedSteps += FindWineStep.Country
+                    }
                     matched != null -> chatPreferences = chatPreferences.copy(
                         country = matched.country,
                         province = matched.province,
                     )
                     else -> return unmatchedFindWineAnswer(query, ChatFlowText.Q2_COUNTRY)
                 }
-                findWineStep = FindWineStep.Taste
-                plainMessage(ChatFlowText.Q3_TASTE)
+                if (!noPreference) applyOpportunisticMatches(query)
+                advanceFindWine()
             }
             FindWineStep.Taste -> {
                 val matched = matchTaste(query)
                 when {
-                    noPreference -> Unit
+                    noPreference -> declinedSteps += FindWineStep.Taste
                     !matched.isEmpty -> chatPreferences = chatPreferences.copy(
                         body = matched.body ?: chatPreferences.body,
                         tannin = matched.tannin ?: chatPreferences.tannin,
@@ -197,9 +212,45 @@ class GemmaConversationResponder(
                     )
                     else -> return unmatchedFindWineAnswer(query, ChatFlowText.Q3_TASTE)
                 }
-                finalizePreferences()
+                advanceFindWine()
             }
         }
+    }
+
+    /**
+     * A reply can answer more than one Q1-Q3 question at once (e.g. "French Red" to Q1 also
+     * answers Q2). After the step the user was actually asked resolves, every other still-open
+     * step's matcher also runs against the same reply — any hit is folded in as a bonus, a miss
+     * is not an error (the corresponding question is simply asked normally later).
+     */
+    private fun applyOpportunisticMatches(query: String) {
+        if (FindWineStep.Country !in declinedSteps && !chatPreferences.isStepResolved(FindWineStep.Country)) {
+            matchLocation(query)?.let {
+                chatPreferences = chatPreferences.copy(country = it.country, province = it.province)
+            }
+        }
+        if (FindWineStep.Taste !in declinedSteps && !chatPreferences.isStepResolved(FindWineStep.Taste)) {
+            val taste = matchTaste(query)
+            if (!taste.isEmpty) {
+                chatPreferences = chatPreferences.copy(
+                    body = taste.body ?: chatPreferences.body,
+                    tannin = taste.tannin ?: chatPreferences.tannin,
+                    acidity = taste.acidity ?: chatPreferences.acidity,
+                    sweetness = taste.sweetness ?: chatPreferences.sweetness,
+                )
+            }
+        }
+    }
+
+    /** Advances to the first still-open Q1-Q3 step, skipping any already resolved by a
+     * compound answer or explicitly declined with "no preference" — or finalizes immediately
+     * once none remain. */
+    private fun advanceFindWine(): ChatMessage {
+        val next = FindWineStep.entries.firstOrNull {
+            it !in declinedSteps && !chatPreferences.isStepResolved(it)
+        } ?: return finalizePreferences()
+        findWineStep = next
+        return plainMessage(ChatFlowText.questionFor(next))
     }
 
     /**
@@ -214,6 +265,7 @@ class GemmaConversationResponder(
         chatMode = ChatMode.Undecided
         findWineStep = FindWineStep.Type
         chatPreferences = WinePreferences()
+        declinedSteps.clear()
         return ChatMessage(
             id = System.nanoTime(),
             author = MessageAuthor.Assistant,
@@ -366,18 +418,26 @@ class GemmaConversationResponder(
                     ),
                 )
                 try {
-                    val response = buildString {
-                        profileConversation.sendMessageAsync(
-                            "Complete the profile for name=${suggestion.name}, " +
-                                "country=${suggestion.country}, province=${suggestion.province}, " +
-                                "variety=${suggestion.variety}. Original user request: " +
-                                (suggestion.requestContext ?: "Not available"),
-                        ).collect { message ->
-                            message.contents.contents.filterIsInstance<Content.Text>()
-                                .forEach { content -> append(content.text) }
+                    // Bounded even though the outer call is NonCancellable — this is our own
+                    // child coroutine, self-cancelling on expiry regardless of the outer
+                    // NonCancellable context, and still runs the `finally` cleanup below. Without
+                    // it, a stalled native call (device thermal throttling, a wedged inference)
+                    // left the Profile screen's "Loading details…" showing forever with no way
+                    // out, since nothing else in this function could ever time it out.
+                    val response = withTimeoutOrNull(PROFILE_LOAD_TIMEOUT_MS) {
+                        buildString {
+                            profileConversation.sendMessageAsync(
+                                "Complete the profile for name=${suggestion.name}, " +
+                                    "country=${suggestion.country}, province=${suggestion.province}, " +
+                                    "variety=${suggestion.variety}. Original user request: " +
+                                    (suggestion.requestContext ?: "Not available"),
+                            ).collect { message ->
+                                message.contents.contents.filterIsInstance<Content.Text>()
+                                    .forEach { content -> append(content.text) }
+                            }
                         }
                     }
-                    extractSuggestion(response)?.let { loaded ->
+                    response?.let(::extractSuggestion)?.let { loaded ->
                         loaded.copy(
                             name = suggestion.name,
                             winery = suggestion.winery,
@@ -389,6 +449,12 @@ class GemmaConversationResponder(
                                 ?: suggestion.summary,
                             source = suggestion.source,
                             requestContext = suggestion.requestContext,
+                            // Was never set here, so the profile screen's "already loaded" check
+                            // in MainActivity never saw a completed profile — every revisit to
+                            // the same wine re-ran this full Gemma call from scratch, flashing
+                            // "Loading details…" again instead of showing what was already
+                            // fetched.
+                            profileComplete = true,
                             isFavorite = suggestion.isFavorite,
                             favoriteRating = suggestion.favoriteRating,
                         )
@@ -536,6 +602,7 @@ class GemmaConversationResponder(
         chatMode = ChatMode.Undecided
         findWineStep = FindWineStep.Type
         chatPreferences = WinePreferences()
+        declinedSteps.clear()
     }
 
     private fun String.withoutRepeatedConversationOpener(recordUsage: Boolean): String {
@@ -744,7 +811,11 @@ class GemmaConversationResponder(
         }
 
         private const val RECOMMENDATION_COUNT = 3
-        private const val MAX_SUMMARY_CHARACTERS = 199
+        // The prompt asks Gemma for a summary "under 200 characters", but models don't hit an
+        // exact count reliably — allow a 10% buffer (220) rather than hard-truncating a
+        // slightly-over response mid-word.
+        private const val MAX_SUMMARY_CHARACTERS = 220
+        private const val PROFILE_LOAD_TIMEOUT_MS = 45_000L
         private const val MAX_WEB_SUMMARY_CHARACTERS = 320
         private fun String.isResolvedValue(): Boolean =
             isNotBlank() && !equals("Unknown", ignoreCase = true)
