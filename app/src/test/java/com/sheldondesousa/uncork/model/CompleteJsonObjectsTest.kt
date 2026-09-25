@@ -58,4 +58,18 @@ class CompleteJsonObjectsTest {
             assertEquals("raw_array", stream.startMode)
         }
     }
+
+    @Test
+    fun extractsRecommendationsFromTheFindStyleJsonEnvelope() {
+        val stream = CompleteJsonObjects()
+        val response =
+            """{"recommendations":[{"name":"First"},{"name":"Second","country":"France"}]}"""
+
+        assertEquals(
+            listOf("""{"name":"First"}""", """{"name":"Second","country":"France"}"""),
+            response.flatMap { stream.append(it.toString()) },
+        )
+        assertEquals("raw_array", stream.startMode)
+        assertEquals(0, stream.unfinishedObjectDepth)
+    }
 }

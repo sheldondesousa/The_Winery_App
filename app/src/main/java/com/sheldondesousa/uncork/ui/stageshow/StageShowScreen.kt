@@ -21,7 +21,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -113,16 +115,30 @@ fun StageShowRoute(
     onBack: () -> Unit,
     initiallyFavorite: Boolean = false,
     onFavoriteChange: (WineSuggestion, Boolean) -> Unit = { _, _ -> },
+    loadDetails: (suspend (WineSuggestion) -> WineSuggestion)? = null,
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = onBack)
 
     var source by remember { mutableStateOf(WineSource.AI) }
     var isFavorite by remember(wine, initiallyFavorite) { mutableStateOf(initiallyFavorite) }
+    var displayedWine by remember(wine) { mutableStateOf(wine) }
+    var detailsLoading by remember(wine, loadDetails) {
+        mutableStateOf(loadDetails != null && !wine.ai.profileComplete)
+    }
+    LaunchedEffect(wine) {
+        if (loadDetails != null && !wine.ai.profileComplete) {
+            val enriched = runCatching { loadDetails(wine.toWineSuggestion()) }.getOrNull()
+            if (enriched != null) {
+                displayedWine = displayedWine.copy(ai = enriched.toStageWine().ai)
+            }
+            detailsLoading = false
+        }
+    }
     val profile = if (source == WineSource.Kaggle) {
-        wine.kaggle ?: wine.ai
+        displayedWine.kaggle ?: displayedWine.ai
     } else {
-        wine.ai
+        displayedWine.ai
     }
 
     Column(
@@ -156,13 +172,24 @@ fun StageShowRoute(
             lineHeight = 46.sp,
             fontWeight = FontWeight.Medium,
         )
-        Text(
-            text = profile.winery,
-            modifier = Modifier.padding(top = 8.dp),
-            color = InkMuted,
-            fontSize = 17.sp,
-            lineHeight = 23.sp,
-        )
+        if (detailsLoading && !profile.winery.isResolvedValue()) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .requiredSize(16.dp)
+                    .semantics { contentDescription = "Loading WINERY" },
+                color = Wine,
+                strokeWidth = 1.5.dp,
+            )
+        } else {
+            Text(
+                text = profile.winery,
+                modifier = Modifier.padding(top = 8.dp),
+                color = InkMuted,
+                fontSize = 17.sp,
+                lineHeight = 23.sp,
+            )
+        }
         if (source == WineSource.Kaggle && profile.verified) {
             Text(
                 text = "VERIFIED WINERY",
@@ -184,7 +211,7 @@ fun StageShowRoute(
             lineHeight = 23.sp,
         )
 
-        if (wine.kaggle != null) {
+        if (displayedWine.kaggle != null) {
             Spacer(Modifier.height(28.dp))
             SourceSelector(
                 selected = source,
@@ -199,26 +226,30 @@ fun StageShowRoute(
                 add("VARIETY" to profile.variety)
                 add("COUNTRY" to profile.country)
                 add("PROVINCE" to profile.province)
-                if (profile.sweetness != "Unknown") add("SWEETNESS" to profile.sweetness)
+                if (detailsLoading || profile.sweetness != "Unknown") {
+                    add("SWEETNESS" to profile.sweetness)
+                }
                 add("BODY" to profile.body.removeSuffix("-Bodied"))
                 add("TANNIN" to profile.tannin)
                 add("ACIDITY" to profile.acidity)
                 profile.rating?.let { add("RATING" to it.toString()) }
             },
+            loading = detailsLoading,
         )
-        LongDetail("FLAVOR NOTES", profile.flavorNotes)
+        LongDetail("FLAVOR NOTES", profile.flavorNotes, detailsLoading)
 
         when (profile.source) {
             WineSuggestionSource.GEMMA -> LongDetail(
                 "SUMMARY",
                 profile.summary.takeIf { it.isResolvedValue() } ?: "Unknown",
+                detailsLoading,
             )
             WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
             WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
             WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
         }
 
-        LongDetail("SUGGESTED PAIRING", profile.suggestedPairing)
+        LongDetail("SUGGESTED PAIRING", profile.suggestedPairing, detailsLoading)
 
         Spacer(Modifier.height(28.dp))
         Text(
@@ -251,7 +282,7 @@ fun StageShowRoute(
                 selected = isFavorite,
                 onClick = {
                     isFavorite = !isFavorite
-                    onFavoriteChange(wine.toWineSuggestion(), isFavorite)
+                    onFavoriteChange(displayedWine.toWineSuggestion(), isFavorite)
                 },
             )
         }
@@ -356,7 +387,7 @@ private fun SourceOption(label: String, selected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun ShortDetailsGrid(details: List<Pair<String, String>>) {
+private fun ShortDetailsGrid(details: List<Pair<String, String>>, loading: Boolean = false) {
     details.chunked(2).forEach { rowDetails ->
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -366,6 +397,7 @@ private fun ShortDetailsGrid(details: List<Pair<String, String>>) {
                 DetailCell(
                     label = label,
                     value = value,
+                    loading = loading && label !in INITIAL_CARD_FIELDS && !value.isResolvedValue(),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -378,6 +410,7 @@ private fun ShortDetailsGrid(details: List<Pair<String, String>>) {
 private fun DetailCell(
     label: String,
     value: String,
+    loading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val unknown = value.equals("Unknown", ignoreCase = true)
@@ -391,22 +424,36 @@ private fun DetailCell(
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 1.8.sp,
         )
-        Text(
-            text = value,
-            modifier = Modifier.padding(top = 7.dp),
-            color = if (unknown) InkMuted else Ink,
-            fontSize = 15.sp,
-            lineHeight = 28.sp,
-            fontStyle = if (unknown) FontStyle.Italic else FontStyle.Normal,
-        )
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(top = 10.dp)
+                    .requiredSize(16.dp)
+                    .semantics { contentDescription = "Loading $label" },
+                color = Wine,
+                strokeWidth = 1.5.dp,
+            )
+        } else {
+            Text(
+                text = value,
+                modifier = Modifier.padding(top = 7.dp),
+                color = if (unknown) InkMuted else Ink,
+                fontSize = 15.sp,
+                lineHeight = 28.sp,
+                fontStyle = if (unknown) FontStyle.Italic else FontStyle.Normal,
+            )
+        }
     }
 }
 
 @Composable
-private fun LongDetail(label: String, value: String) {
+private fun LongDetail(label: String, value: String, loading: Boolean = false) {
     DetailCell(
         label = label,
         value = value,
+        loading = loading && !value.isResolvedValue(),
         modifier = Modifier.fillMaxWidth(),
     )
 }
+
+private val INITIAL_CARD_FIELDS = setOf("VARIETY", "COUNTRY", "PROVINCE")

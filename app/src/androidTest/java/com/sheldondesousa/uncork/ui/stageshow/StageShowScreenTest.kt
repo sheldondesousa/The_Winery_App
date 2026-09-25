@@ -11,13 +11,42 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
+import kotlinx.coroutines.awaitCancellation
 import org.junit.Rule
 import org.junit.Test
 
 class StageShowScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun rendersKnownCardDataWhileMissingDetailsLoad() {
+        composeRule.setContent {
+            UncorkTheme {
+                StageShowRoute(
+                    wine = WineSuggestion(
+                        name = "Château Margaux",
+                        country = "France",
+                        province = "Bordeaux",
+                        variety = "Cabernet Sauvignon",
+                    ).toStageWine(),
+                    onBack = {},
+                    loadDetails = { awaitCancellation() },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Château Margaux").assertIsDisplayed()
+        composeRule.onNodeWithText("France").assertIsDisplayed()
+        composeRule.onNodeWithText("Bordeaux").assertIsDisplayed()
+        composeRule.onNodeWithText("Cabernet Sauvignon").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Loading WINERY").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Loading BODY").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Loading FLAVOR NOTES").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Loading SUMMARY").assertIsDisplayed()
+    }
 
     @Test
     fun showsWineDetailsWithoutPersistentNavigation() {

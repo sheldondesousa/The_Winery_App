@@ -62,3 +62,19 @@ adb shell run-as com.sheldondesousa.uncork cat files/diagnostics/gemma-timings.p
 The previous file exists only after rotation. A build containing this instrumentation
 must be installed and a new Chat card search completed before records are available.
 Existing historical runs cannot be reconstructed from these new checks.
+
+## Stage Show pending-detail timing
+
+Opening an incomplete Gemma card also saves one metadata-only record to
+`files/diagnostics/stage-show-timings.log`. `pending_data_load_ms` is the complete time from
+starting the on-tap request until the page can stop all pending-field loaders. It includes
+`queue_wait_ms`, which captures any wait for another Gemma request, and `gemma_details_ms`, which
+captures the detail conversation itself. The record also includes pending, resolved, and
+unresolved field counts, completion status, and a privacy-safe failure class when applicable.
+
+Read the saved records without changing app data:
+
+```sh
+adb shell run-as com.sheldondesousa.uncork cat files/diagnostics/stage-show-timings.log
+adb shell run-as com.sheldondesousa.uncork cat files/diagnostics/stage-show-timings.previous.log
+```

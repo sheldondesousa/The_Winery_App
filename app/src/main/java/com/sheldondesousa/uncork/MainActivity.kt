@@ -151,6 +151,10 @@ class MainActivity : ComponentActivity() {
                         StageShowRoute(
                             wine = wine,
                             onBack = { stageWine = null },
+                            loadDetails = if (
+                                wine.ai.source == WineSuggestionSource.GEMMA &&
+                                !wine.ai.profileComplete
+                            ) gemmaResponder::enrichWineDetails else null,
                             initiallyFavorite = favoritesRepository.contains(wine.toWineSuggestion()),
                             onFavoriteChange = { suggestion, selected ->
                                 favorites = if (selected) {

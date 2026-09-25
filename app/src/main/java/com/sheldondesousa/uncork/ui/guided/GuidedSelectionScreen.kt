@@ -39,9 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.ui.components.WineResultCard
 import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
-import com.sheldondesousa.uncork.ui.conversation.cardValueOrUnknown
 import com.sheldondesousa.uncork.ui.conversation.isUsefulCardValue
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
@@ -455,30 +455,7 @@ private fun ResultSection(
                 }
                 if (displayedCards.isEmpty()) Text("No matches for these selections.", color = InkSubtle)
                 displayedCards.forEach { card ->
-                    OutlinedCard(onClick = { onSuggestionClick(card) }, modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(card.name, style = MaterialTheme.typography.titleMedium)
-                                Text(card.variety.cardValueOrUnknown())
-                                Text(
-                                    text = "${card.country.cardValueOrUnknown()}, ${card.province.cardValueOrUnknown()}",
-                                    color = Wine,
-                                    fontSize = 12.sp,
-                                    letterSpacing = 0.3.sp,
-                                )
-                                card.rating?.let { Text("Critic score: $it") }
-                            }
-                            Text(
-                                text = "›",
-                                color = InkMuted,
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Light,
-                            )
-                        }
-                    }
+                    WineResultCard(wine = card, onClick = { onSuggestionClick(card) })
                 }
             }
         }

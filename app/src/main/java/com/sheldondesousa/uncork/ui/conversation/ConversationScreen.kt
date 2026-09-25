@@ -78,6 +78,7 @@ import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.ui.components.WineResultCard
 import com.sheldondesousa.uncork.model.ChatFlowText
 import com.sheldondesousa.uncork.model.DebugLatencyLog
 import com.sheldondesousa.uncork.BuildConfig
@@ -535,59 +536,6 @@ private val LeftRuleShape = RoundedCornerShape(
     bottomStart = 1.dp,
 )
 
-@Composable
-private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = suggestion.name.ifBlank { "Unknown" },
-                color = Ink,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = suggestion.variety.cardValueOrUnknown(),
-                color = InkMuted,
-                fontSize = 13.sp,
-                letterSpacing = 0.3.sp,
-            )
-            Text(
-                text = listOf(suggestion.country, suggestion.province)
-                    .joinToString(", ") { it.cardValueOrUnknown() },
-                modifier = Modifier.padding(top = 4.dp),
-                color = Wine,
-                fontSize = 12.sp,
-                letterSpacing = 0.3.sp,
-            )
-            if (suggestion.isFavorite) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = suggestion.favoriteRating?.let { "$it / 10" } ?: "Favorited",
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Wine.copy(alpha = 0.10f))
-                        .padding(horizontal = 9.dp, vertical = 4.dp),
-                    color = Wine,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-        Text(
-            text = "›",
-            color = InkMuted,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Light,
-        )
-    }
-}
-
 /** A line separator between two consecutive search-type blocks (Kaggle, Cache, Gemma, …). */
 @Composable
 private fun SearchTypeDivider() {
@@ -708,14 +656,7 @@ internal fun SourceResultCard(
 /** A single wine suggestion, containerized in its own bordered card. */
 @Composable
 private fun SuggestionCard(suggestion: WineSuggestion, onClick: () -> Unit) {
-    SuggestionLink(
-        suggestion = suggestion,
-        onClick = onClick,
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, Hairline, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 4.dp),
-    )
+    WineResultCard(wine = suggestion, onClick = onClick)
 }
 
 /**

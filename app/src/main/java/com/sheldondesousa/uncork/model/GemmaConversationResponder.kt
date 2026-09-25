@@ -60,6 +60,7 @@ class GemmaConversationResponder(
 
     private val curiousChatInstruction: String by lazy { loadPrompt("curious_chat_instruction.txt") }
     private val chatSearchInstruction: String by lazy { loadPrompt("chat_search_instruction.txt") }
+    private val wineDetailInstruction: String by lazy { loadPrompt("wine_detail_instruction.txt") }
     private val webResultSystemInstruction: String by lazy { loadPrompt("web_result_system_instruction.txt") }
     private val guidedInstruction: String by lazy {
         loadPrompt("guided_instruction.txt")
@@ -358,13 +359,13 @@ class GemmaConversationResponder(
                 "Omit those fields from every generated card."
         }
         timing.detail("input_characters", (instruction.length + prompt.length).toString())
-        timing.detail("max_output_tokens", "1024")
+        timing.detail("max_output_tokens", INITIAL_CARD_MAX_OUTPUT_TOKENS.toString())
         val searchConversation = timing.measure("create_conversation") {
             searchEngine.createConversation(
                 ConversationConfig(
                     systemInstruction = Contents.of(instruction),
                     samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.4),
-                    maxOutputToken = 1_024,
+                    maxOutputToken = INITIAL_CARD_MAX_OUTPUT_TOKENS,
                 ),
             )
         }
@@ -386,9 +387,9 @@ class GemmaConversationResponder(
                 rejectCard(candidateKey, listOf("extra_complete_object"))
                 return false
             }
-            // Each published object is a finished profile; Unknown remains honest missing
-            // information and must not trigger another model call when the card is opened.
-            val profile = preferences.mergeIntoGemmaCard(card).copy(profileComplete = true)
+            // Publish the compact card immediately. The detail screen asks Gemma for the
+            // remaining profile fields only if the user opens this recommendation.
+            val profile = preferences.mergeIntoGemmaCard(card).copy(profileComplete = false)
             val reasons = preferences.cardMismatchReasons(
                     cardType = profile.wineType, cardCountry = profile.country,
                     cardProvince = profile.province, cardBody = profile.body,
@@ -410,7 +411,6 @@ class GemmaConversationResponder(
                 profile.name.looksLikeHallucinatedMarkup() -> reasons += "name_contains_markup"
             }
             if (profile.country.equals("Unknown", true)) reasons += "unknown_country"
-            if (profile.wineType.equals("Unknown", true)) reasons += "unknown_type"
             if (completedCards.any {
                     it.name.equals(profile.name, true) && it.country.equals(profile.country, true) &&
                         it.province.equals(profile.province, true) && it.variety.equals(profile.variety, true)
@@ -543,6 +543,87 @@ class GemmaConversationResponder(
         author = MessageAuthor.Assistant,
         text = text,
     )
+
+    suspend fun enrichWineDetails(card: WineSuggestion): WineSuggestion = withContext(Dispatchers.Default) {
+        val timing = StageShowTimingTrace(appContext.filesDir)
+        val loadStartedAt = SystemClock.elapsedRealtime()
+        val pendingBefore = card.pendingDetailFieldCount()
+        timing.detail("source", card.source.name)
+        timing.detail("pending_fields", pendingBefore.toString())
+        try {
+            val queuedAt = SystemClock.elapsedRealtime()
+            val enriched = requestMutex.withLock {
+                timing.duration("queue_wait", SystemClock.elapsedRealtime() - queuedAt)
+                if (card.profileComplete || card.source != WineSuggestionSource.GEMMA) return@withLock card
+                val known = card.toKnownDetailJson()
+                val conversation = ensureEngine().createConversation(
+                    ConversationConfig(
+                        systemInstruction = Contents.of(wineDetailInstruction),
+                        samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.35),
+                        maxOutputToken = DETAIL_MAX_OUTPUT_TOKENS,
+                    ),
+                )
+                val startedAt = SystemClock.elapsedRealtime()
+                var firstOutputAt: Long? = null
+                var lastOutputAt = startedAt
+                val response = try {
+                    buildString {
+                        conversation.sendMessageAsync("Known wine data: $known").collect { message ->
+                            message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                                if (content.text.isNotEmpty()) {
+                                    val now = SystemClock.elapsedRealtime()
+                                    if (firstOutputAt == null) firstOutputAt = now
+                                    lastOutputAt = now
+                                }
+                                append(content.text)
+                            }
+                        }
+                    }
+                } finally {
+                    conversation.close()
+                }
+                firstOutputAt?.let { first ->
+                    DebugLatencyLog.record("[Gemma] wine details: time to first word", first - startedAt)
+                    DebugLatencyLog.record("[Gemma] wine details: first word to last word", lastOutputAt - first)
+                }
+                DebugLatencyLog.record(
+                    "[Gemma] wine details: total",
+                    SystemClock.elapsedRealtime() - startedAt,
+                )
+                timing.duration("gemma_details", SystemClock.elapsedRealtime() - startedAt)
+                mergeGeneratedDetails(card, response)
+            }
+            val pendingAfter = enriched.pendingDetailFieldCount()
+            timing.detail("resolved_fields", (pendingBefore - pendingAfter).coerceAtLeast(0).toString())
+            timing.detail("unresolved_fields", pendingAfter.toString())
+            timing.detail("profile_complete", enriched.profileComplete.toString())
+            timing.detail("success", enriched.profileComplete.toString())
+            enriched
+        } catch (error: Throwable) {
+            timing.detail("success", "false")
+            timing.detail("failure", error.javaClass.simpleName)
+            throw error
+        } finally {
+            timing.duration("pending_data_load", SystemClock.elapsedRealtime() - loadStartedAt)
+            withContext(Dispatchers.IO + NonCancellable) { timing.save() }
+        }
+    }
+
+    private fun WineSuggestion.pendingDetailFieldCount(): Int = listOf(
+        winery, wineType, sweetness, body, tannin, acidity,
+        flavorNotes, suggestedPairing, summary,
+    ).count { !it.isResolvedValue() }
+
+    private fun WineSuggestion.toKnownDetailJson(): String = JSONObject().apply {
+        put("name", name)
+        listOf(
+            "winery" to winery, "wine_type" to wineType, "country" to country,
+            "province" to province, "variety" to variety, "sweetness" to sweetness,
+            "body" to body, "tannin" to tannin, "acidity" to acidity,
+            "flavor_notes" to flavorNotes, "suggested_pairing" to suggestedPairing,
+            "summary" to summary,
+        ).forEach { (key, value) -> if (value.isResolvedValue()) put(key, value) }
+    }.toString()
 
     suspend fun prepare() {
         val startedAt = SystemClock.elapsedRealtime()
@@ -763,6 +844,10 @@ class GemmaConversationResponder(
             pattern = "\\[WINE_PROFILE](.+?)\\[/WINE_PROFILE]",
             options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
+        private val WINE_DETAILS_MARKER = Regex(
+            pattern = "\\[WINE_DETAILS](.+?)\\[/WINE_DETAILS]",
+            options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
         private val WEB_RESULTS_MARKER = Regex(
             pattern = "\\[WEB_RESULTS](.+?)\\[/WEB_RESULTS]",
             options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
@@ -827,6 +912,30 @@ class GemmaConversationResponder(
                 .flatMap { match -> match.value.toWebSuggestions() }
                 .toList()
                 .distinctSuggestions()
+        }
+
+        internal fun mergeGeneratedDetails(
+            original: WineSuggestion,
+            response: String,
+        ): WineSuggestion {
+            val payload = WINE_DETAILS_MARKER.find(response)?.groupValues?.get(1)
+                ?: JSON_OBJECT.find(response)?.value
+                ?: return original
+            val details = payload.toWineSuggestionOrNull() ?: return original
+            fun keepKnown(current: String, generated: String): String =
+                if (current.isResolvedValue()) current else generated
+            return original.copy(
+                winery = keepKnown(original.winery, details.winery),
+                wineType = keepKnown(original.wineType, details.wineType),
+                sweetness = keepKnown(original.sweetness, details.sweetness),
+                body = keepKnown(original.body, details.body),
+                tannin = keepKnown(original.tannin, details.tannin),
+                acidity = keepKnown(original.acidity, details.acidity),
+                flavorNotes = keepKnown(original.flavorNotes, details.flavorNotes),
+                suggestedPairing = keepKnown(original.suggestedPairing, details.suggestedPairing),
+                summary = keepKnown(original.summary, details.summary),
+                profileComplete = true,
+            )
         }
 
         private fun String.toWineSuggestionOrNull(): WineSuggestion? = runCatching {
@@ -904,7 +1013,9 @@ class GemmaConversationResponder(
 
         private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String =
             optString(resolvedCardKey(key) ?: key).trim().trimEnd(':', ';', ',').trim()
-                .takeIf { it.isNotEmpty() && !it.equals("null", true) } ?: fallback
+                .takeIf {
+                    it.isNotEmpty() && !it.equals("null", true) && !it.equals("none", true)
+                } ?: fallback
 
         /** Prefer the canonical key when present, then accept a recognised Gemma key alias. */
         private fun JSONObject.resolvedCardKey(canonicalKey: String): String? {
@@ -952,6 +1063,8 @@ class GemmaConversationResponder(
         }
 
         private const val RECOMMENDATION_COUNT = 3
+        private const val INITIAL_CARD_MAX_OUTPUT_TOKENS = 384
+        private const val DETAIL_MAX_OUTPUT_TOKENS = 512
         // The prompt asks Gemma for a summary "under 200 characters", but models don't hit an
         // exact count reliably — allow a 10% buffer (220) rather than hard-truncating a
         // slightly-over response mid-word.
