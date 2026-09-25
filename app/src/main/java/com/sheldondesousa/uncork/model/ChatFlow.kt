@@ -132,6 +132,9 @@ internal fun matchWineType(reply: String): String? {
     return matches.singleOrNull()
 }
 
+/** Canonical app value for a generated type alias, using the same vocabulary as Q1. */
+internal fun canonicalWineType(value: String): String? = matchWineType(value)
+
 /** Whether the given Q1-Q3 step already has a recorded answer (matched or explicitly declined). */
 internal fun WinePreferences.isStepResolved(step: FindWineStep): Boolean = when (step) {
     FindWineStep.Type -> type != WinePreferences.UNKNOWN
@@ -190,6 +193,23 @@ internal fun matchLocation(reply: String): LocationMatch? {
     }
     val alias = COUNTRY_ALIASES.entries.firstOrNull { (phrase, _) -> normalized.containsPhrase(phrase) }
     return alias?.let { LocationMatch(country = it.value, province = WinePreferences.UNKNOWN) }
+}
+
+/** Exact/alias country normalization for structured model output. */
+internal fun canonicalCountry(value: String): String? {
+    val normalized = value.chatNormalized()
+    WineRegions.catalog.keys.firstOrNull { it.chatNormalized() == normalized }?.let { return it }
+    if (normalized == "us") return "United States"
+    return COUNTRY_ALIASES.entries
+        .firstOrNull { (alias, _) -> alias.chatNormalized() == normalized }
+        ?.value
+}
+
+/** Canonical catalog spelling/capitalization for a generated province. */
+internal fun canonicalProvince(value: String): String? {
+    val normalized = value.chatNormalized()
+    return WineRegions.catalog.values.asSequence().flatten()
+        .firstOrNull { it.chatNormalized() == normalized }
 }
 
 internal data class TasteMatch(
@@ -268,16 +288,23 @@ private val SWEETNESS_KEYWORDS = linkedMapOf(
     ),
 )
 
+private fun canonicalTasteValue(value: String, aliases: Map<String, List<String>>): String? {
+    val normalized = value.chatNormalized()
+    return aliases.entries.firstOrNull { (standard, keywords) ->
+        standard.chatNormalized() == normalized || keywords.any { normalized.containsPhrase(it) }
+    }?.key
+}
+
+internal fun canonicalBody(value: String): String? = canonicalTasteValue(value, BODY_KEYWORDS)
+internal fun canonicalTannin(value: String): String? = canonicalTasteValue(value, TANNIN_KEYWORDS)
+internal fun canonicalAcidity(value: String): String? = canonicalTasteValue(value, ACIDITY_KEYWORDS)
+internal fun canonicalSweetness(value: String): String? = canonicalTasteValue(value, SWEETNESS_KEYWORDS)
+
 internal fun matchTaste(reply: String): TasteMatch {
-    val normalized = reply.chatNormalized()
-    fun <T> firstMatch(keywordMap: Map<T, List<String>>): T? =
-        keywordMap.entries.firstOrNull { (_, keywords) ->
-            keywords.any(normalized::containsPhrase)
-        }?.key
     return TasteMatch(
-        body = firstMatch(BODY_KEYWORDS),
-        tannin = firstMatch(TANNIN_KEYWORDS),
-        acidity = firstMatch(ACIDITY_KEYWORDS),
-        sweetness = firstMatch(SWEETNESS_KEYWORDS),
+        body = canonicalBody(reply),
+        tannin = canonicalTannin(reply),
+        acidity = canonicalAcidity(reply),
+        sweetness = canonicalSweetness(reply),
     )
 }
