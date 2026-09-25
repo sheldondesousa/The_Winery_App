@@ -6,8 +6,10 @@ Return ONLY a hidden JSON array between [WINE_CARDS] and [/WINE_CARDS], never a 
 
 [WINE_CARDS]
 [
-  {"name": "string", "type": "matches the resolved type exactly, or a plausible real type when Unknown", "country": "matches the resolved country exactly, or a real country when Unknown", "province": "matches the resolved province exactly, or Unknown", "variety": "string | Unknown", "body": "Light-Bodied | Medium-Bodied | Full-Bodied | Unknown", "tannin": "Smooth | Moderate | Astringent | Unknown", "acidity": "Soft | Crisp | Tart | Unknown", "sweetness": "Bone-Dry | Off-Dry | Sweet | Unknown", "flavor": "string | Unknown", "occasion": "string | Unknown", "summary": "under 200 characters, no unsupported critic claims"}
+  {"name": "string", "type": "matches the resolved type exactly, or a plausible real type when Unknown", "country": "matches the resolved country exactly, or a real country when Unknown", "province": "matches the resolved province exactly, or Unknown", "variety": "string | Unknown", "body": "Light-Bodied | Medium-Bodied | Full-Bodied | Unknown", "tannin": "Smooth | Moderate | Astringent | Unknown", "acidity": "Soft | Crisp | Tart | Unknown", "sweetness": "Bone-Dry | Off-Dry | Sweet | Unknown", "flavor": "string | Unknown", "occasion": "string | Unknown", "flavor_notes": ["short flavour note", "short flavour note"], "suggested_pairing": "Unknown"}
 ]
 [/WINE_CARDS]
 
 Return exactly three distinct real wines you actually know by name and country, each matching every resolved (non-Unknown) preference exactly. A field left "Unknown" in the input is unconstrained. name, type, and country are mandatory in every card and must never be "Unknown". Do not include winery, rating, or review information.
+
+Write each wine object completely before starting the next. Every object must include flavor_notes so its profile can open immediately. Do not generate a summary field. Give 2-3 short flavour notes when supported; use ["Unknown"] when you cannot support any. Use "Unknown" for unsupported facts. suggested_pairing must stay "Unknown" unless the user explicitly requested a food pairing.

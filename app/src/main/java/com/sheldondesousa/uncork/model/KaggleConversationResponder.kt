@@ -219,18 +219,23 @@ class KaggleConversationResponder(
             // Kaggle (then the cache) is awaited before moving on. Gemma often takes far longer
             // than either local lookup, and Kaggle/cache results shouldn't sit inert behind it.
             val gemmaDeferred = async {
+                var streamedSuggestions = emptyList<WineSuggestion>()
+                fun eligible(cards: List<WineSuggestion>) = cards
+                    .filter { it.hasRequiredCardFields() }
+                    .filterNot { it.cardKey() in shownCardKeys }
+                    .distinctBy { it.cardKey() }
+                    .take(TARGET_OPTION_COUNT)
                 val cardsResponse = try {
-                    synthesizer.synthesizeCards(preferences) {}
+                    synthesizer.synthesizeCards(preferences) { update ->
+                        streamedSuggestions = eligible(update.suggestions)
+                        progress.partial(WineSuggestionSource.GEMMA, streamedSuggestions)
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Throwable) {
                     null
                 }
-                val suggestions = cardsResponse?.wineSuggestions.orEmpty()
-                    .filter { it.hasRequiredCardFields() }
-                    .filterNot { it.cardKey() in shownCardKeys }
-                    .distinctBy { it.cardKey() }
-                    .take(TARGET_OPTION_COUNT)
+                val suggestions = eligible(cardsResponse?.wineSuggestions ?: streamedSuggestions)
                 progress.resolve(WineSuggestionSource.GEMMA, suggestions)
                 suggestions
             }
@@ -286,40 +291,40 @@ class KaggleConversationResponder(
      * that resolves with zero suggestions still gets a [SourceQueryStatus.COMPLETE] entry (an
      * empty list) so "No results found" can be shown rather than the source silently vanishing.
      */
-    private class SourceProgress(private val onUpdate: (ConversationStreamUpdate) -> Unit) {
-        private val lock = Mutex()
+    internal class SourceProgress(private val onUpdate: (ConversationStreamUpdate) -> Unit) {
+        private val lock = Any()
         private val resolved = mutableListOf<SourceResult>()
         private var loading = listOf<WineSuggestionSource>()
+        private val partialCards = mutableMapOf<WineSuggestionSource, List<WineSuggestion>>()
 
-        val results: List<SourceResult> get() = resolved.toList()
+        val results: List<SourceResult> get() = synchronized(lock) { resolved.toList() }
 
-        // Unlike [results] (resolved sources only — right for the terminal message, built once
-        // everything has settled), this also includes any source still in flight as a LOADING
-        // entry — needed for a manual mid-turn publish that fires before every source is done,
-        // so a still-loading card (e.g. Gemma) isn't dropped from the list it publishes.
         val resultsWithLoading: List<SourceResult>
-            get() = resolved + loading.map { SourceResult(it, SourceQueryStatus.LOADING) }
+            get() = synchronized(lock) {
+                resolved + loading.map {
+                    SourceResult(it, SourceQueryStatus.LOADING, partialCards[it].orEmpty())
+                }
+            }
 
-        suspend fun startLoading(vararg sources: WineSuggestionSource) {
-            lock.withLock { loading = loading + sources }
+        fun startLoading(vararg sources: WineSuggestionSource) = synchronized(lock) {
+            loading = (loading + sources).distinct()
             publish()
         }
 
-        suspend fun resolve(source: WineSuggestionSource, suggestions: List<WineSuggestion>) {
-            lock.withLock {
-                resolved += SourceResult(source, SourceQueryStatus.COMPLETE, suggestions)
-                loading = loading - source
-            }
+        fun partial(source: WineSuggestionSource, suggestions: List<WineSuggestion>) = synchronized(lock) {
+            partialCards[source] = suggestions.toList()
+            publish()
+        }
+
+        fun resolve(source: WineSuggestionSource, suggestions: List<WineSuggestion>) = synchronized(lock) {
+            resolved += SourceResult(source, SourceQueryStatus.COMPLETE, suggestions)
+            loading = loading - source
+            partialCards.remove(source)
             publish()
         }
 
         private fun publish() {
-            onUpdate(
-                ConversationStreamUpdate(
-                    text = "",
-                    sourceResults = resolved + loading.map { SourceResult(it, SourceQueryStatus.LOADING) },
-                ),
-            )
+            onUpdate(ConversationStreamUpdate(text = "", sourceResults = resultsWithLoading))
         }
     }
 

@@ -134,8 +134,9 @@ fun StageShowRoute(
         // card it returns — if it's already here, the full profile reload this triggers is a
         // second ~10-30s on-device inference call purely to re-fetch something Chat already
         // had, and "Loading details…" sits on screen the whole time for no reason. Only run it
-        // when the summary actually still needs filling in.
-        if (wine.ai.summary.isResolvedValue()) {
+        // when an older, incomplete card still needs its summary. Streamed full profiles
+        // are final even when a fact is honestly Unknown; never queue another model call.
+        if (wine.ai.profileComplete || wine.ai.summary.isResolvedValue()) {
             loadingProfile = false
         } else {
             val loaded = runCatching { loadProfile(wine.toWineSuggestion()) }
