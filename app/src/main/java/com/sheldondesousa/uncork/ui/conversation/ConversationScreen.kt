@@ -551,16 +551,12 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit, modi
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Medium,
             )
-            suggestion.winery
-                .takeIf { it.isUsefulCardValue() }
-                ?.let { winery ->
-                    Text(
-                        text = winery,
-                        color = InkMuted,
-                        fontSize = 13.sp,
-                        letterSpacing = 0.3.sp,
-                    )
-                }
+            Text(
+                text = suggestion.variety.cardValueOrUnknown(),
+                color = InkMuted,
+                fontSize = 13.sp,
+                letterSpacing = 0.3.sp,
+            )
             Text(
                 text = listOf(suggestion.country, suggestion.province)
                     .joinToString(", ") { it.cardValueOrUnknown() },
@@ -616,6 +612,7 @@ internal fun SourceResultCard(
     onSuggestionClick: (WineSuggestion) -> Unit,
     onRetry: (() -> Unit)? = null,
 ) {
+    val displayedSuggestions = sourceResult.suggestions.filter { it.name.isUsefulCardValue() }
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SourceLabel(sourceResult.source)
@@ -628,10 +625,10 @@ internal fun SourceResultCard(
             sourceResult.status == SourceQueryStatus.LOADING -> {
                 if (sourceResult.source == WineSuggestionSource.GEMMA) {
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                        sourceResult.suggestions.forEach { suggestion ->
+                        displayedSuggestions.forEach { suggestion ->
                             SuggestionCard(suggestion = suggestion, onClick = { onSuggestionClick(suggestion) })
                         }
-                        repeat((3 - sourceResult.suggestions.size).coerceAtLeast(0)) { index ->
+                        repeat((3 - displayedSuggestions.size).coerceAtLeast(0)) { index ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -646,7 +643,7 @@ internal fun SourceResultCard(
                                     strokeWidth = 1.5.dp,
                                 )
                                 Text(
-                                    text = "Preparing wine ${sourceResult.suggestions.size + index + 1}…",
+                                    text = "Preparing wine ${displayedSuggestions.size + index + 1}…",
                                     color = InkMuted,
                                     fontSize = 13.sp,
                                 )
@@ -682,7 +679,7 @@ internal fun SourceResultCard(
                     )
                 }
             }
-            sourceResult.suggestions.isEmpty() -> Text(
+            displayedSuggestions.isEmpty() -> Text(
                 text = "No results found",
                 color = InkMuted,
                 fontSize = 13.sp,
@@ -696,7 +693,7 @@ internal fun SourceResultCard(
                 )
                 Spacer(Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    sourceResult.suggestions.forEach { suggestion ->
+                    displayedSuggestions.forEach { suggestion ->
                         SuggestionCard(
                             suggestion = suggestion,
                             onClick = { onSuggestionClick(suggestion) },
@@ -781,10 +778,10 @@ private fun ThreeDotsLoadingIndicator(
     }
 }
 
-private fun String.isUsefulCardValue(): Boolean =
+internal fun String.isUsefulCardValue(): Boolean =
     isNotBlank() && !equals("Unknown", ignoreCase = true)
 
-private fun String.cardValueOrUnknown(): String =
+internal fun String.cardValueOrUnknown(): String =
     takeIf { it.isUsefulCardValue() } ?: "Unknown"
 
 @Composable

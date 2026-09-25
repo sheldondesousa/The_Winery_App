@@ -76,7 +76,7 @@ class WineReviewRepositoryTest {
         repository.prepare()
 
         val result = repository.findGuided(
-            GuidedCriteria(country = "Australia", wineType = setOf("Red"), body = setOf("Full-Bodied")),
+            GuidedCriteria(country = "Australia", wineType = "Red", body = "Full-Bodied"),
         )
         assertTrue(result.reviews.isNotEmpty())
         assertTrue(result.reviews.all { it.wineType == "Red" })

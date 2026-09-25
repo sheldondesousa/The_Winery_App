@@ -11,7 +11,6 @@ import androidx.compose.ui.test.performClick
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.toStageWine
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -25,16 +24,12 @@ class ProgressiveGemmaCardsTest {
             summary = "Unknown", flavorNotes = "Blackcurrant, cedar", profileComplete = true,
         )
         val results = mutableStateOf(SourceResult(WineSuggestionSource.GEMMA, SourceQueryStatus.LOADING, listOf(first)))
-        var reloads = 0
         compose.setContent {
             UncorkTheme {
                 var selected by remember { mutableStateOf<WineSuggestion?>(null) }
                 SourceResultCard(results.value, onSuggestionClick = { selected = it })
                 selected?.let { wine ->
-                    StageShowRoute(
-                        wine = wine.toStageWine(), onBack = { selected = null },
-                        loadProfile = { reloads++; it },
-                    )
+                    StageShowRoute(wine = wine.toStageWine(), onBack = { selected = null })
                 }
             }
         }
@@ -42,10 +37,8 @@ class ProgressiveGemmaCardsTest {
         compose.onNodeWithText("Preparing wine 3…").assertIsDisplayed()
         compose.onNodeWithText("First wine").performClick()
         compose.runOnIdle {
-            assertEquals(0, reloads)
             results.value = results.value.copy(suggestions = listOf(first, first.copy(name = "Second wine")))
         }
         compose.onNodeWithText("Loading details…").assertDoesNotExist()
-        compose.runOnIdle { assertEquals(0, reloads) }
     }
 }

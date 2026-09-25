@@ -2,7 +2,7 @@ package com.sheldondesousa.uncork.data.reviews
 
 import com.sheldondesousa.uncork.ui.guided.GuidedCriteria
 
-/** OR within each selected field, AND across fields; solely user criteria, never Gemma output. */
+/** Every field is a single selected value, AND across fields; solely user criteria, never Gemma output. */
 internal data class GuidedReviewQuery(
     val sql: String,
     val arguments: Array<String>,
@@ -20,17 +20,16 @@ internal data class GuidedReviewQuery(
             }
             exact("country", criteria.country)
             if (!dropProvince) exact("province", criteria.province)
-            if (criteria.wineType.isNotEmpty()) {
-                val filter = GuidedWineTypeFilter.forTypes(criteria.wineType)
+            if (criteria.wineType.isNotBlank()) {
+                val filter = GuidedWineTypeFilter.forType(criteria.wineType)
                 if (filter.arguments.isEmpty()) return GuidedReviewQuery("", emptyArray(), knownEmpty = true)
                 clauses += filter.sql
                 arguments += filter.arguments
             }
-            fun evidence(values: Set<String>, phrases: Map<String, List<String>>) {
-                if (values.isEmpty()) return
-                val matches = values.sorted().flatMap { value ->
-                    phrases.getValue(value).also { require(it.isNotEmpty()) { "Missing Find evidence for $value" } }
-                }.distinct()
+            fun evidence(value: String, phrases: Map<String, List<String>>) {
+                if (value.isBlank()) return
+                val matches = phrases.getValue(value)
+                    .also { require(it.isNotEmpty()) { "Missing Find evidence for $value" } }
                 clauses += matches.joinToString(" OR ", "(", ")") {
                     "review_summary LIKE ? COLLATE NOCASE ESCAPE '\\'"
                 }
@@ -38,11 +37,10 @@ internal data class GuidedReviewQuery(
                     "%" + phrase.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
                 }
             }
-            fun classified(column: String, values: Set<String>, labels: List<String>) {
-                if (values.isEmpty()) return
-                require(values.all { it in labels }) { "Unknown Find label for $column" }
-                clauses += values.sorted().joinToString(",", "$column IN (", ") COLLATE NOCASE") { "?" }
-                arguments += values.sorted()
+            fun classified(column: String, value: String, labels: List<String>) {
+                if (value.isBlank()) return
+                require(value in labels) { "Unknown Find label for $column" }
+                exact(column, value)
             }
             classified("tannin", criteria.tannin, FindPhraseEvidence.TANNIN_LABELS)
             classified("acidity", criteria.acidity, FindPhraseEvidence.ACIDITY_LABELS)

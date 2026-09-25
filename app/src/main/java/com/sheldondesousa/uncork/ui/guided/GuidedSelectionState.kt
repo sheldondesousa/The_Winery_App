@@ -23,46 +23,47 @@ object GuidedOptions {
     }
 }
 
+/** Every field is single-select: the Find form lets you pick at most one value per question. */
 data class GuidedCriteria(
     val country: String = "",
     val province: String = "",
-    val wineType: Set<String> = emptySet(),
-    val tannin: Set<String> = emptySet(),
-    val acidity: Set<String> = emptySet(),
-    val body: Set<String> = emptySet(),
-    val sweetness: Set<String> = emptySet(),
+    val wineType: String = "",
+    val tannin: String = "",
+    val acidity: String = "",
+    val body: String = "",
+    val sweetness: String = "",
 ) {
-    val filterCount: Int get() = wineType.size + tannin.size + acidity.size + body.size +
-        sweetness.size + (if (country.isNotBlank() || province.isNotBlank()) 1 else 0)
+    val filterCount: Int get() = listOf(wineType, tannin, acidity, body, sweetness).count(String::isNotBlank) +
+        (if (country.isNotBlank() || province.isNotBlank()) 1 else 0)
     val valid: Boolean get() = filterCount > 0 &&
-        wineType.all { it in GuidedOptions.types } &&
-        tannin.all { it in GuidedOptions.tannin } && acidity.all { it in GuidedOptions.acidity } &&
-        body.all { it in GuidedOptions.body } && sweetness.all { it in GuidedOptions.sweetness }
+        (wineType.isBlank() || wineType in GuidedOptions.types) &&
+        (tannin.isBlank() || tannin in GuidedOptions.tannin) &&
+        (acidity.isBlank() || acidity in GuidedOptions.acidity) &&
+        (body.isBlank() || body in GuidedOptions.body) &&
+        (sweetness.isBlank() || sweetness in GuidedOptions.sweetness)
     fun withCountry(value: String) = if (value == country) this else copy(country = value, province = "")
-    fun constraints(): Map<String, List<String>> = buildMap {
-        if (wineType.isNotEmpty()) put("wine_type", wineType.sorted())
-        country.takeIf(String::isNotBlank)?.let { put("country", listOf(it)) }
-        province.takeIf(String::isNotBlank)?.let { put("province", listOf(it)) }
-        if (sweetness.isNotEmpty()) put("sweetness", sweetness.sorted())
-        if (tannin.isNotEmpty()) put("tannin", tannin.sorted())
-        if (acidity.isNotEmpty()) put("acidity", acidity.sorted())
-        if (body.isNotEmpty()) put("body", body.sorted())
+    fun constraints(): Map<String, String> = buildMap {
+        wineType.takeIf(String::isNotBlank)?.let { put("wine_type", it) }
+        country.takeIf(String::isNotBlank)?.let { put("country", it) }
+        province.takeIf(String::isNotBlank)?.let { put("province", it) }
+        sweetness.takeIf(String::isNotBlank)?.let { put("sweetness", it) }
+        tannin.takeIf(String::isNotBlank)?.let { put("tannin", it) }
+        acidity.takeIf(String::isNotBlank)?.let { put("acidity", it) }
+        body.takeIf(String::isNotBlank)?.let { put("body", it) }
     }
     val locationLabel: String get() = listOf(
         country.ifBlank { "Any country" },
         province.ifBlank { "Any province" },
     ).joinToString(" · ")
     val description: String get() = buildList {
-        if (wineType.isNotEmpty()) add(wineType.sorted().joinToString(" / "))
+        if (wineType.isNotBlank()) add(wineType)
         if (country.isNotBlank() || province.isNotBlank()) add(locationLabel)
-        if (sweetness.isNotEmpty()) add("Sweetness: ${sweetness.sorted().joinToString(" / ")}")
-        if (tannin.isNotEmpty()) add("Tannin: ${tannin.sorted().joinToString(" / ")}")
-        if (body.isNotEmpty()) add("Body: ${body.sorted().joinToString(" / ")}")
-        if (acidity.isNotEmpty()) add("Acidity: ${acidity.sorted().joinToString(" / ")}")
+        if (sweetness.isNotBlank()) add("Sweetness: $sweetness")
+        if (tannin.isNotBlank()) add("Tannin: $tannin")
+        if (body.isNotBlank()) add("Body: $body")
+        if (acidity.isNotBlank()) add("Acidity: $acidity")
     }.joinToString(" · ")
 }
-
-internal fun Set<String>.toggled(value: String): Set<String> = if (value in this) this - value else this + value
 
 sealed interface GuidedResult {
     data object Idle : GuidedResult
