@@ -37,6 +37,21 @@ prove that the model hit its token limit. A failure records its exception class;
 unfinished stages may be absent, while entered timed stages record elapsed time
 even on failure or cancellation.
 
+Rejected complete objects add a privacy-safe field such as
+`candidate_1_rejected=country_mismatch,invalid_type`. The reason codes never
+contain generated values. `complete_objects` counts finished streamed JSON
+objects, `rejected_cards` counts rejected complete objects, and
+`missing_complete_objects` counts how many of the requested three never became
+a complete streamed object. Possible codes include preference-field mismatch,
+invalid or unknown required fields, invalid name forms, duplicate cards, JSON
+parse failure, and extra objects after three accepted cards.
+`recovered_final_cards` counts valid cards missed by progressive extraction but
+recovered from the complete response before the final result is shown. Rejected
+recovery candidates use keys such as `final_candidate_1_rejected`.
+`stream_parser_start` reports whether progressive parsing found the requested
+marker or a markerless raw array. `stream_parser_final_depth` is nonzero when
+generation ended inside an unfinished object.
+
 Read saved records without changing app data:
 
 ```sh
