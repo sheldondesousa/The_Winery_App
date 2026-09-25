@@ -9,6 +9,18 @@ import org.junit.Test
 
 class ChatFlowTest {
     @Test
+    fun generatedAliasesNormalizeToCanonicalAppValues() {
+        assertEquals("red", canonicalWineType("Red wine"))
+        assertEquals("United States", canonicalCountry("US"))
+        assertEquals("France", canonicalCountry("French"))
+        assertEquals("Bordeaux", canonicalProvince("bordeaux"))
+        assertEquals("Full-Bodied", canonicalBody("rich"))
+        assertEquals("Smooth", canonicalTannin("silky"))
+        assertEquals("Crisp", canonicalAcidity("fresh acid"))
+        assertEquals("Off-Dry", canonicalSweetness("semi sweet"))
+    }
+
+    @Test
     fun chinaMatchesBecauseItIsInTheRegionCatalog() {
         assertNotNull("China is a WineRegions.catalog key, so Q2 should match it", matchLocation("China"))
         assertEquals("China", matchLocation("China")?.country)

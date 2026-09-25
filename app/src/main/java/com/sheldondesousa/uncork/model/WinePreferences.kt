@@ -67,6 +67,33 @@ data class WinePreferences(
         put("occasion", occasion)
     }.toString()
 
+    /** Fields Kotlin can add after generation, so Gemma does not need to repeat them per card. */
+    fun resolvedGemmaCardFields(): List<String> = buildList {
+        if (type.takeIfResolved() != null) add("wine_type")
+        if (country.takeIfResolved() != null) add("country")
+        if (province.takeIfResolved() != null) add("province")
+        if (variety.takeIfResolved() != null) add("variety")
+        if (body.takeIfResolved() != null) add("body")
+        if (tannin.takeIfResolved() != null) add("tannin")
+        if (acidity.takeIfResolved() != null) add("acidity")
+        if (sweetness.takeIfResolved() != null) add("sweetness")
+        if (flavor.takeIfResolved() != null) add("flavor")
+    }
+
+    /** Recorded preferences are authoritative constraints and replace duplicated model output. */
+    fun mergeIntoGemmaCard(card: WineSuggestion): WineSuggestion = card.copy(
+        wineType = type.takeIfResolved() ?: card.wineType,
+        country = country.takeIfResolved() ?: card.country,
+        province = province.takeIfResolved() ?: card.province,
+        variety = variety.takeIfResolved() ?: card.variety,
+        body = body.takeIfResolved() ?: card.body,
+        tannin = tannin.takeIfResolved() ?: card.tannin,
+        acidity = acidity.takeIfResolved() ?: card.acidity,
+        sweetness = sweetness.takeIfResolved() ?: card.sweetness,
+        preferenceFlavor = flavor.takeIfResolved() ?: card.preferenceFlavor,
+        occasion = occasion.takeIfResolved() ?: card.occasion,
+    )
+
     fun acceptsCard(
         cardType: String,
         cardCountry: String,

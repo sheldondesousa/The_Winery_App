@@ -33,4 +33,29 @@ class CompleteJsonObjectsTest {
         assertEquals(listOf("{\"name\":\"Ready\"}"), stream.append("[{\"name\":\"Ready\"},{\"name\":\"Unfinished"))
         assertTrue(stream.append("").isEmpty())
     }
+
+    @Test
+    fun ignoresAnUnmatchedPreambleObjectBeforeTheCardMarker() {
+        val stream = CompleteJsonObjects()
+        assertTrue(stream.append("Unwanted preamble {\"unfinished\":true ").isEmpty())
+        assertEquals(
+            listOf("{\"name\":\"Recovered\"}"),
+            stream.append("[WINE_CARDS][{\"name\":\"Recovered\"}][/WINE_CARDS]"),
+        )
+        assertEquals("marker", stream.startMode)
+        assertEquals(0, stream.unfinishedObjectDepth)
+    }
+
+    @Test
+    fun supportsAMarkerlessRawArrayAcrossChunkBoundaries() {
+        val input = "Some prose [  {\"name\":\"First\"},{\"name\":\"Second\"}]"
+        for (split in 0..input.length) {
+            val stream = CompleteJsonObjects()
+            assertEquals(
+                listOf("{\"name\":\"First\"}", "{\"name\":\"Second\"}"),
+                stream.append(input.take(split)) + stream.append(input.drop(split)),
+            )
+            assertEquals("raw_array", stream.startMode)
+        }
+    }
 }

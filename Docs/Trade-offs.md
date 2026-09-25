@@ -1,9 +1,9 @@
 # Trade-offs Log
 
 **Status:** Living document
-**Last updated:** 20 September 2026
+**Last updated:** 25 September 2026
 
-Scope: decisions with a real cost on one side, made either during this build session (web search reliability, Chat's Q3 taste question, and the Find bottom sheet redesign) or earlier and already committed to in [PRD.md](PRD.md). This is not a full project history — it covers what was directly worked on and verified, not every historical commit.
+Scope: decisions with a real cost on one side, made either during this build session (web search reliability, Chat's Q3 taste question, the Find bottom sheet redesign, and — from the "Card consistency and Gemma-hardening" section onward — the 25 September 2026 PR #19 cleanup) or earlier and already committed to in [PRD.md](PRD.md). This is not a full project history — it covers what was directly worked on and verified, not every historical commit.
 
 Each entry states what was chosen, what was given up, and why.
 
@@ -55,13 +55,46 @@ Each entry states what was chosen, what was given up, and why.
 **Why:** Explicit user direction: Country and Province's single-select-and-close pattern was judged correct, and the inconsistency with the other five fields (which required a separate "Done" tap and stayed open for multiple picks) was the actual bug being fixed, not a feature to preserve selectively.
 
 ### 8. Kept `GuidedCriteria`'s underlying storage as `Set<String>` rather than migrating to a single `String`
+**Status: superseded 25 September 2026 — see the "Card consistency and Gemma-hardening" section below.**
+
 **Chose:** Left the data model (`wineType: Set<String>`, etc.) unchanged; only the UI now ever writes 0 or 1 value into it.
 **Gave up:** A fully accurate data model — the type still technically allows multiple values, which no longer reflects real UI behavior, so a future reader of `GuidedCriteria` could be misled.
 **Why:** Downstream code (`filterCount`, `tags()`, `constraints()`, the database query builder) already handles a `Set<String>` generically and correctly with 0 or 1 elements. Migrating the type to `String` would have touched the query layer, the unit tests exercising multi-value sets (`GuidedSelectionStateTest`), and potentially the search backend's contract — a much larger, riskier change for a UI-only bug fix.
 
+**What changed:** the misleading type stopped being a passive risk and became an active one once `guided_instruction.txt` needed correcting (a user directly asked "the user can select only one value per question," and the prompt genuinely said "OR within a field") — a prompt correction alone would have been describing behavior the code's own types still contradicted. At that point the migration was no longer "a much larger, riskier change for a UI-only bug fix"; it was the fix for a real correctness bug (the stale union-matching prompt language) plus the schema-consistency work already underway in the same session. Done in full (state, SQL query builder, type filter, review matching, UI, Gemma validation), including deleting the now-truly-dead `toggled()` helper this entry originally left in place. See PRD.md GS-AC7/GS-AC8 and Bug-Log.md #7 for what motivated it.
+
 ### 9. One shared row-rendering composable instead of two independently styled lists
 **Chose:** Country/Province and the other five fields now render through the exact same `SingleSelectRow` composable rather than two separately maintained implementations.
 **Gave up:** Nothing significant — this was a straight improvement. Noted here because it was itself a response to two rounds of the same font/height/indicator-size bug appearing from having two parallel implementations that drifted apart. The trade-off is really upstream: maintaining two look-alike UI paths cost more (in bugs) than it saved (in flexibility neither path actually used).
+
+---
+
+## Card consistency and Gemma-hardening (25 September 2026, PR #19)
+
+### 10. Deleted the dead second-stage profile-reload call instead of leaving it as a safety net
+**Chose:** Remove `loadProfile()` and `profile_system_instruction.txt` entirely, rather than leaving the unreachable code in place "just in case."
+**Gave up:** A one-time backfill path for pre-existing local favorites saved before the `profileComplete` field existed — those will now permanently show `Unknown` for `summary` instead of ever healing on next visit, however rare that case is.
+**Why:** Every current card-creation path already sets `profileComplete = true`, so the call had already become dead code; per this project's own no-dead-code convention, unreachable code that isn't a documented product decision should be deleted, not kept "for later." The alternative (special-casing the healing behavior for just that one legacy scenario) was judged not worth the complexity for a cosmetic, local-only, one-time edge case.
+
+### 11. Rejected malformed Gemma output outright rather than trying to salvage it
+**Chose:** When a card's name is a schema-echo (`"name."`) or contains hallucinated markdown/URL markup, discard the whole card rather than attempting to strip the bad part and keep the rest.
+**Gave up:** A recoverable card in cases where only the name was bad but other fields (variety, country, attributes) might have been usable — e.g. the hallucinated-citation card in Bug-Log.md #7 still had a real variety, country, and province.
+**Why:** A wine card's name is its primary identity; a card salvaged from a corrupted name has no reliable way to confirm the rest of the payload is trustworthy either, and silently displaying a recommendation next to a repaired-but-possibly-wrong name risks looking more authoritative than it is. Rejecting outright is simpler to reason about and matches the existing precedent (`"Unknown Wine"` was already rejected the same way before this session).
+
+### 12. Added a UI-level name filter as a second, independent line of defense
+**Chose:** Filter out any card with a blank/`"Unknown"` name at render time (PRD.md AC10j), even though the parsers already reject such cards before they're ever published.
+**Gave up:** A small amount of simplicity — this is deliberately redundant with the parser-side checks (Bug-Log.md #7), rather than trusting a single point of validation.
+**Why:** Not every path that produces a `WineSuggestion` goes through the hardened parsers (e.g. a pre-existing local favorite, or a future source added without updating every validation site). A cheap, source-agnostic display-time backstop is worth keeping even though it should, in the current code, never actually trigger.
+
+### 13. Required Guided Selection to name a real wine, accepting more hallucination risk
+**Chose:** Change `guided_instruction.txt` so Guided Selection asks for a real, known wine name "from knowledge," matching Chat's card-search prompt, instead of describing a plausible style/category with no named bottle.
+**Gave up:** Some of the earlier design's safety margin — asking a small on-device model to name a specific real-world entity is inherently more hallucination-prone than asking it to describe a category (this is very likely part of why Bug-Log.md #7's malformed-name failures surfaced when they did).
+**Why:** Direct user instruction, for card-display consistency between Chat and Find — the two surfaces are meant to feel like the same product. The added hardening in trade-offs #11-12 exists specifically to absorb the extra risk this decision introduced, rather than leaving Guided Selection's cards unprotected against it.
+
+### 14. Kept four separate Gemma prompts instead of merging them into one
+**Chose:** After aligning field names and the real-name requirement between `chat_search_instruction.txt` and `guided_instruction.txt`, left them as two separate prompt files (plus `curious_chat_instruction.txt` and `web_result_system_instruction.txt`) rather than merging any of them.
+**Gave up:** A smaller number of prompt files to maintain, and a single source of truth for "produce wine cards."
+**Why:** Chat search and Guided Selection receive genuinely different input shapes (a flat, always-fully-populated preferences object vs. a sparse, single-value-per-selected-field constraint map) and use different validation strictness (permissive best-effort parsing vs. strict `require()`-per-field). Encoding both input modes and both validation philosophies into one prompt would mean the model has to infer which mode it's in from the input shape alone — exactly the kind of added ambiguity that a small on-device model handles poorly, as this session's own hardening work (Bug-Log.md #7) already demonstrated at the current level of complexity.
 
 ---
 

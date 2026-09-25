@@ -6,10 +6,10 @@ Return ONLY a hidden JSON array between [WINE_CARDS] and [/WINE_CARDS], never a 
 
 [WINE_CARDS]
 [
-  {"name": "string", "wine_type": "matches the resolved type exactly, or a plausible real type when Unknown", "country": "matches the resolved country exactly, or a real country when Unknown", "province": "matches the resolved province exactly, or Unknown", "variety": "string | Unknown", "body": "Light-Bodied | Medium-Bodied | Full-Bodied | Unknown", "tannin": "Smooth | Moderate | Astringent | Unknown", "acidity": "Soft | Crisp | Tart | Unknown", "sweetness": "Bone-Dry | Off-Dry | Sweet | Unknown", "flavor": "string | Unknown", "occasion": "string | Unknown", "flavor_notes": ["short flavour note", "short flavour note"], "suggested_pairing": "Unknown"}
+  {"name": "string", "wine_type": "matches the resolved type exactly, or a plausible real type when Unknown", "country": "matches the resolved country exactly, or a real country when Unknown", "province": "matches the resolved province exactly, or Unknown", "variety": "string | Unknown", "body": "Light-Bodied | Medium-Bodied | Full-Bodied | Unknown", "tannin": "Smooth | Moderate | Astringent | Unknown", "acidity": "Soft | Crisp | Tart | Unknown", "sweetness": "Bone-Dry | Off-Dry | Sweet | Unknown", "flavor": "string | Unknown"}
 ]
 [/WINE_CARDS]
 
-Return exactly three distinct real wines you actually know by name and country, each matching every resolved (non-Unknown) preference exactly. A field left "Unknown" in the input is unconstrained. name, wine_type, and country are mandatory in every card and must never be "Unknown". Do not include winery, rating, or review information.
+Return exactly three distinct real wines you actually know by name and country, each matching every resolved (non-Unknown) preference exactly. A field left "Unknown" in the input is unconstrained. Kotlin supplies every field listed under "Fields supplied by the app"; omit those keys from every generated object. Generate the remaining schema fields. name is always mandatory. wine_type and country are mandatory and must never be "Unknown" only when they are not supplied by the app. Do not include winery, rating, or review information.
 
-Write each wine object completely before starting the next. Every object must include flavor_notes so its profile can open immediately. Do not generate a summary field. Give 2-3 short flavour notes when supported; use ["Unknown"] when you cannot support any. Use "Unknown" for unsupported facts. suggested_pairing must stay "Unknown" unless the user explicitly requested a food pairing.
+Write each wine object completely before starting the next. Use "Unknown" for unsupported facts. Do not generate summary, occasion, flavor_notes, or suggested_pairing fields.
