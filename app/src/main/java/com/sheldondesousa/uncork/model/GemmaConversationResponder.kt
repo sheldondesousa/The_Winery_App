@@ -18,7 +18,6 @@ import com.sheldondesousa.uncork.ui.conversation.MessageAuthor
 import com.sheldondesousa.uncork.ui.conversation.WineCardSynthesizer
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
-import com.sheldondesousa.uncork.ui.guided.GuidedOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.collect
@@ -62,13 +61,6 @@ class GemmaConversationResponder(
     private val chatSearchInstruction: String by lazy { loadPrompt("chat_search_instruction.txt") }
     private val wineDetailInstruction: String by lazy { loadPrompt("wine_detail_instruction.txt") }
     private val webResultSystemInstruction: String by lazy { loadPrompt("web_result_system_instruction.txt") }
-    private val guidedInstruction: String by lazy {
-        loadPrompt("guided_instruction.txt")
-            .replace("{{SWEETNESS}}", GuidedOptions.sweetness.joinToString())
-            .replace("{{BODY}}", GuidedOptions.body.joinToString())
-            .replace("{{TANNIN}}", GuidedOptions.tannin.joinToString())
-            .replace("{{ACIDITY}}", GuidedOptions.acidity.joinToString())
-    }
 
     override suspend fun replyTo(query: String): ChatMessage =
         replyToUpdates(query) {}
@@ -633,51 +625,24 @@ class GemmaConversationResponder(
 
     suspend fun guidedSelection(
         criteria: com.sheldondesousa.uncork.ui.guided.GuidedCriteria,
-    ): List<WineSuggestion> = withContext(Dispatchers.Default) {
+        onUpdate: (List<WineSuggestion>) -> Unit = {},
+    ): List<WineSuggestion> {
         require(criteria.valid)
-        requestMutex.withLock {
-            // Native inference must finish cleanup before the shared engine can be reused.
-            // The UI ignores responses from superseded requests even if native work cannot stop.
-            withContext(NonCancellable) {
-                val requestStartedAt = SystemClock.elapsedRealtime()
-                var firstWordAt: Long? = null
-                var lastWordAt = requestStartedAt
-                val guided = ensureEngine().createConversation(
-                    ConversationConfig(
-                        systemInstruction = Contents.of(guidedInstruction),
-                        samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.35),
-                        maxOutputToken = 1_024,
-                    ),
-                )
-                val response = try {
-                    buildString {
-                        guided.sendMessageAsync(
-                            "fixed_constraints: " + JSONObject(criteria.constraints()).toString(),
-                        ).collect { message ->
-                            message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
-                                if (content.text.isNotEmpty()) {
-                                    val now = SystemClock.elapsedRealtime()
-                                    if (firstWordAt == null) firstWordAt = now
-                                    lastWordAt = now
-                                }
-                                append(content.text)
-                            }
-                        }
-                    }
-                } finally {
-                    guided.close()
-                }
-                firstWordAt?.let { firstWord ->
-                    DebugLatencyLog.record("[Gemma] guided selection: time to first word", firstWord - requestStartedAt)
-                    DebugLatencyLog.record("[Gemma] guided selection: first word to last word", lastWordAt - firstWord)
-                }
-                val totalMs = SystemClock.elapsedRealtime() - requestStartedAt
-                DebugLatencyLog.record("[Gemma] guided selection: total", totalMs)
-                val suggestions = GuidedGemmaResponse.parse(response, criteria)
-                logFlow("Gemma guided selection cards=${suggestions.size}, chars=${response.length}, totalMs=$totalMs")
-                suggestions
-            }
+        val preferences = WinePreferences(
+            type = criteria.wineType.ifBlank { WinePreferences.UNKNOWN },
+            country = criteria.country.ifBlank { WinePreferences.UNKNOWN },
+            province = criteria.province.ifBlank { WinePreferences.UNKNOWN },
+            sweetness = criteria.sweetness.ifBlank { WinePreferences.UNKNOWN },
+            tannin = criteria.tannin.ifBlank { WinePreferences.UNKNOWN },
+            acidity = criteria.acidity.ifBlank { WinePreferences.UNKNOWN },
+            body = criteria.body.ifBlank { WinePreferences.UNKNOWN },
+        )
+        fun attachRequestContext(cards: List<WineSuggestion>): List<WineSuggestion> = cards.map { card ->
+            card.copy(requestContext = criteria.description, profileComplete = false)
         }
+        return synthesizeCards(preferences) { update ->
+            onUpdate(attachRequestContext(update.suggestions))
+        }.suggestions.let(::attachRequestContext)
     }
 
     suspend fun synthesizeWebResults(

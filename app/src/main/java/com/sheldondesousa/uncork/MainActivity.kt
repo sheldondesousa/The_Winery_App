@@ -93,7 +93,9 @@ class MainActivity : ComponentActivity() {
                 val guidedState = remember {
                     GuidedSelectionState(
                         scope = guidedScope,
-                        gemmaSearch = gemmaResponder::guidedSelection,
+                        gemmaSearch = { criteria, onUpdate ->
+                            gemmaResponder.guidedSelection(criteria, onUpdate)
+                        },
                         databaseSearch = { criteria ->
                             val result = wineReviewRepository.findGuided(criteria)
                             GuidedResult.Complete(

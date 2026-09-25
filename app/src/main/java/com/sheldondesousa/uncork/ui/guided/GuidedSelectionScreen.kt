@@ -1,11 +1,5 @@
 package com.sheldondesousa.uncork.ui.guided
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -24,9 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -39,10 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
-import com.sheldondesousa.uncork.ui.components.WineResultCard
 import com.sheldondesousa.uncork.ui.conversation.AppTab
+import com.sheldondesousa.uncork.ui.conversation.SourceQueryStatus
+import com.sheldondesousa.uncork.ui.conversation.SourceResult
+import com.sheldondesousa.uncork.ui.conversation.SourceResultCard
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
-import com.sheldondesousa.uncork.ui.conversation.isUsefulCardValue
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -292,9 +286,18 @@ private fun GuidedResultsScreen(
             if (submitted != null && submitted != state.selection) {
                 Text("Selections changed. Go back and search again to update results.", color = Wine)
             }
-            ResultSection("AI Sommelier", state.gemma, onSuggestionClick,
-                onRetry = state::retryGemma, onModelSetup = onModelSetup)
-            ResultSection("Database", state.database, onSuggestionClick)
+            GuidedSourceSection(
+                source = WineSuggestionSource.GEMMA,
+                result = state.gemma,
+                onSuggestionClick = onSuggestionClick,
+                onRetry = state::retryGemma,
+                onModelSetup = onModelSetup,
+            )
+            GuidedSourceSection(
+                source = WineSuggestionSource.KAGGLE,
+                result = state.database,
+                onSuggestionClick = onSuggestionClick,
+            )
         }
     }
 }
@@ -318,31 +321,6 @@ private fun CriteriaTag(text: String) {
         modifier = Modifier.background(Wine.copy(alpha = 0.12f), CircleShape)
             .padding(horizontal = 12.dp, vertical = 6.dp),
     )
-}
-
-/** Three dots pulsing in sequence, in place of a Material progress bar's default track color. */
-@Composable
-private fun ThreeDotsLoadingIndicator(modifier: Modifier = Modifier, dotColor: Color = Wine) {
-    val transition = rememberInfiniteTransition(label = "loading-dots")
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        repeat(3) { index ->
-            val scale by transition.animateFloat(
-                initialValue = 0.4f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 600, delayMillis = index * 150, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-                label = "dot-$index-scale",
-            )
-            Box(
-                Modifier.size(10.dp)
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
-                    .clip(CircleShape)
-                    .background(dotColor),
-            )
-        }
-    }
 }
 
 @Composable
@@ -424,8 +402,8 @@ private fun RadioDot(selected: Boolean) {
 }
 
 @Composable
-private fun ResultSection(
-    title: String,
+private fun GuidedSourceSection(
+    source: WineSuggestionSource,
     result: GuidedResult,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onRetry: () -> Unit = {},
@@ -433,31 +411,24 @@ private fun ResultSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HorizontalDivider()
-        Text(title, style = MaterialTheme.typography.titleLarge, color = Wine,
-            modifier = Modifier.semantics { heading() })
-        when (result) {
-            GuidedResult.Idle -> Unit
-            GuidedResult.Loading -> {
-                ThreeDotsLoadingIndicator()
-                Text("Searching $title…", color = InkSubtle)
-            }
-            GuidedResult.Error -> {
-                Text("$title could not complete this search. Retry or open model setup if the model is unavailable.", color = Ink)
-                Row {
-                    TextButton(onClick = onRetry) { Text("Retry") }
-                    TextButton(onClick = onModelSetup) { Text("Model setup") }
-                }
-            }
-            is GuidedResult.Complete -> {
-                val displayedCards = result.cards.filter { it.name.isUsefulCardValue() }
-                if (result.usedProvinceFallback) {
-                    Text("Some results do not have an exact match.", color = InkSubtle)
-                }
-                if (displayedCards.isEmpty()) Text("No matches for these selections.", color = InkSubtle)
-                displayedCards.forEach { card ->
-                    WineResultCard(wine = card, onClick = { onSuggestionClick(card) })
-                }
-            }
+        if (result is GuidedResult.Complete && result.usedProvinceFallback) {
+            Text("Some results do not have an exact match.", color = InkSubtle)
+        }
+        val sourceResult = when (result) {
+            GuidedResult.Idle -> null
+            is GuidedResult.Loading -> SourceResult(source, SourceQueryStatus.LOADING, result.cards)
+            GuidedResult.Error -> SourceResult(source, SourceQueryStatus.FAILED)
+            is GuidedResult.Complete -> SourceResult(source, SourceQueryStatus.COMPLETE, result.cards)
+        }
+        sourceResult?.let {
+            SourceResultCard(
+                sourceResult = it,
+                onSuggestionClick = onSuggestionClick,
+                onRetry = if (result == GuidedResult.Error) onRetry else null,
+            )
+        }
+        if (result == GuidedResult.Error && source == WineSuggestionSource.GEMMA) {
+            TextButton(onClick = onModelSetup) { Text("Model setup") }
         }
     }
 }

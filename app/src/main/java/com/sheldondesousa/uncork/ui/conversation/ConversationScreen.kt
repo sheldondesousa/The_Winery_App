@@ -607,7 +607,7 @@ internal fun SourceResultCard(
             // nothing. Offers a retry instead of quietly falling through to some other turn.
             sourceResult.status == SourceQueryStatus.FAILED -> {
                 Text(
-                    text = "Web Search could not be completed",
+                    text = "${sourceResult.source.label()} could not be completed",
                     color = InkMuted,
                     fontSize = 13.sp,
                     fontStyle = FontStyle.Italic,

@@ -102,7 +102,7 @@ class GuidedSelectionStateTest {
         state.selection = criteria
         state.search()
         yield()
-        assertEquals(GuidedResult.Loading, state.gemma)
+        assertEquals(GuidedResult.Loading(), state.gemma)
         assertEquals(GuidedResult.Complete(listOf(card)), state.database)
         assertFalse(state.canSearch)
         state.search()
@@ -129,7 +129,7 @@ class GuidedSelectionStateTest {
         state.search()
         yield()
         assertEquals(GuidedResult.Complete(listOf(card)), state.gemma)
-        assertEquals(GuidedResult.Loading, state.database)
+        assertEquals(GuidedResult.Loading(), state.database)
         databaseGate.complete(Unit)
         yield()
         assertTrue(logged)
@@ -158,5 +158,33 @@ class GuidedSelectionStateTest {
         yield()
         assertEquals(GuidedResult.Complete(listOf(newer)), state.gemma)
         assertEquals("Full-Bodied", state.submitted?.body)
+    }
+
+    @Test fun gemmaPublishesEachCompactCardWhileTheSearchIsStillRunning() = runBlocking {
+        val publishSecond = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val second = card.copy(name = "Second wine")
+        val state = GuidedSelectionState(
+            scope = this,
+            gemmaSearch = { _, onUpdate ->
+                onUpdate(listOf(card))
+                publishSecond.await()
+                onUpdate(listOf(card, second))
+                finish.await()
+                listOf(card, second)
+            },
+            databaseSearch = { GuidedResult.Complete(emptyList()) },
+        )
+        state.selection = criteria
+
+        state.search()
+        yield()
+        assertEquals(GuidedResult.Loading(listOf(card)), state.gemma)
+        publishSecond.complete(Unit)
+        yield()
+        assertEquals(GuidedResult.Loading(listOf(card, second)), state.gemma)
+        finish.complete(Unit)
+        yield()
+        assertEquals(GuidedResult.Complete(listOf(card, second)), state.gemma)
     }
 }

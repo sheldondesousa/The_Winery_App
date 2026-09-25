@@ -67,7 +67,7 @@ data class GuidedCriteria(
 
 sealed interface GuidedResult {
     data object Idle : GuidedResult
-    data object Loading : GuidedResult
+    data class Loading(val cards: List<WineSuggestion> = emptyList()) : GuidedResult
     data class Complete(val cards: List<WineSuggestion>, val usedProvinceFallback: Boolean = false) : GuidedResult
     data object Error : GuidedResult
 }
@@ -75,11 +75,24 @@ sealed interface GuidedResult {
 /** Kept above navigation so tab/profile changes do not restart requests or lose results. */
 class GuidedSelectionState(
     private val scope: CoroutineScope,
-    private val gemmaSearch: suspend (GuidedCriteria) -> List<WineSuggestion>,
+    private val gemmaSearch: suspend (GuidedCriteria, (List<WineSuggestion>) -> Unit) -> List<WineSuggestion>,
     private val databaseSearch: suspend (GuidedCriteria) -> GuidedResult.Complete,
     private val reportDatabaseError: (Exception) -> Unit = {},
     private val locations: Map<String, List<String>> = WineRegions.catalog,
 ) {
+    constructor(
+        scope: CoroutineScope,
+        gemmaSearch: suspend (GuidedCriteria) -> List<WineSuggestion>,
+        databaseSearch: suspend (GuidedCriteria) -> GuidedResult.Complete,
+        reportDatabaseError: (Exception) -> Unit = {},
+        locations: Map<String, List<String>> = WineRegions.catalog,
+    ) : this(
+        scope = scope,
+        gemmaSearch = { criteria, _ -> gemmaSearch(criteria) },
+        databaseSearch = databaseSearch,
+        reportDatabaseError = reportDatabaseError,
+        locations = locations,
+    )
     val countries: List<String> get() = locations.keys.sortedWith { a, b ->
         java.text.Collator.getInstance(java.util.Locale.ENGLISH).compare(a, b)
     }
@@ -101,7 +114,7 @@ class GuidedSelectionState(
     private var gemmaJob: Job? = null
     private var databaseJob: Job? = null
     val canSearch: Boolean get() = selection.valid &&
-        !(selection == submitted && (gemma == GuidedResult.Loading || database == GuidedResult.Loading))
+        !(selection == submitted && (gemma is GuidedResult.Loading || database is GuidedResult.Loading))
 
     fun search() {
         if (!canSearch) return
@@ -111,8 +124,8 @@ class GuidedSelectionState(
         databaseJob?.cancel()
         submitted = criteria
         showResults = true
-        gemma = GuidedResult.Loading
-        database = GuidedResult.Loading
+        gemma = GuidedResult.Loading()
+        database = GuidedResult.Loading()
         startGemma(criteria, request)
         databaseJob = scope.launch {
             val result = try {
@@ -135,14 +148,18 @@ class GuidedSelectionState(
     fun retryGemma() {
         val criteria = submitted ?: return
         if (gemma != GuidedResult.Error) return
-        gemma = GuidedResult.Loading
+        gemma = GuidedResult.Loading()
         startGemma(criteria, generation)
     }
 
     private fun startGemma(criteria: GuidedCriteria, request: Long) {
         gemmaJob = scope.launch {
             val result = try {
-                GuidedResult.Complete(gemmaSearch(criteria))
+                GuidedResult.Complete(
+                    gemmaSearch(criteria) { cards ->
+                        if (request == generation) gemma = GuidedResult.Loading(cards)
+                    },
+                )
             } catch (cancelled: CancellationException) {
                 if (request == generation) gemma = GuidedResult.Error
                 throw cancelled

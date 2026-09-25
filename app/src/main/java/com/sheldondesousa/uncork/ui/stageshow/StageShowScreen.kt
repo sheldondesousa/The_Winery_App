@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -173,13 +173,9 @@ fun StageShowRoute(
             fontWeight = FontWeight.Medium,
         )
         if (detailsLoading && !profile.winery.isResolvedValue()) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .padding(top = 12.dp)
-                    .requiredSize(16.dp)
-                    .semantics { contentDescription = "Loading WINERY" },
-                color = Wine,
-                strokeWidth = 1.5.dp,
+            PendingFieldLoader(
+                label = "WINERY",
+                modifier = Modifier.padding(top = 12.dp),
             )
         } else {
             Text(
@@ -425,13 +421,9 @@ private fun DetailCell(
             letterSpacing = 1.8.sp,
         )
         if (loading) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .padding(top = 10.dp)
-                    .requiredSize(16.dp)
-                    .semantics { contentDescription = "Loading $label" },
-                color = Wine,
-                strokeWidth = 1.5.dp,
+            PendingFieldLoader(
+                label = label,
+                modifier = Modifier.padding(top = 10.dp),
             )
         } else {
             Text(
@@ -444,6 +436,17 @@ private fun DetailCell(
             )
         }
     }
+}
+
+@Composable
+private fun PendingFieldLoader(label: String, modifier: Modifier = Modifier) {
+    CircularProgressIndicator(
+        modifier = modifier
+            .requiredSize(16.dp)
+            .semantics { contentDescription = "Loading $label" },
+        color = Hairline,
+        strokeWidth = 1.5.dp,
+    )
 }
 
 @Composable

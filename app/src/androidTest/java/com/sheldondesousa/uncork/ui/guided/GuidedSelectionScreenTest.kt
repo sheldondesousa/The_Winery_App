@@ -4,7 +4,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
+import kotlinx.coroutines.awaitCancellation
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -42,7 +44,9 @@ class GuidedSelectionScreenTest {
         compose.runOnIdle { assertEquals("", state.selection.province) }
         compose.onNodeWithText("Submit").assertIsEnabled().performClick()
         compose.onNodeWithText("Results").assertIsDisplayed()
-        compose.onAllNodesWithText("No matches for these selections.").assertCountEquals(2)
+        compose.onNodeWithText("Gemma").assertIsDisplayed()
+        compose.onNodeWithText("Kaggle db").assertIsDisplayed()
+        compose.onAllNodesWithText("No results found").assertCountEquals(2)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Submit").assertIsDisplayed()
         compose.runOnIdle { assertEquals("Italy", state.selection.country) }
@@ -61,5 +65,39 @@ class GuidedSelectionScreenTest {
         compose.onNodeWithTag("tannin-tile").performScrollTo().performClick()
         compose.onNodeWithText("Astringent").performClick()
         compose.runOnIdle { assertEquals(setOf("Astringent"), state.selection.tannin) }
+    }
+
+    @Test fun gemmaCardsAppearSequentiallyInTheSameSourceCardUsedByChat() {
+        lateinit var state: GuidedSelectionState
+        val card = WineSuggestion(
+            name = "Château Margaux",
+            country = "France",
+            province = "Bordeaux",
+            variety = "Cabernet Sauvignon",
+        )
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            state = remember {
+                GuidedSelectionState(
+                    scope = scope,
+                    gemmaSearch = { _, onUpdate ->
+                        onUpdate(listOf(card))
+                        awaitCancellation()
+                    },
+                    databaseSearch = { GuidedResult.Complete(emptyList()) },
+                )
+            }
+            UncorkTheme { GuidedSelectionScreen(state, {}, {}, {}) }
+        }
+
+        compose.runOnIdle {
+            state.selection = GuidedCriteria(wineType = "Red")
+            state.search()
+        }
+        compose.onNodeWithText("Gemma").assertIsDisplayed()
+        compose.onNodeWithText("Château Margaux").assertIsDisplayed()
+        compose.onNodeWithText("Preparing wine 2…").assertIsDisplayed()
+        compose.onNodeWithText("Preparing wine 3…").assertIsDisplayed()
+        compose.onNodeWithText("Kaggle db").assertIsDisplayed()
     }
 }
