@@ -214,7 +214,10 @@ class KaggleConversationResponder(
         val progress = SourceProgress(onUpdate)
 
         progress.startLoading(WineSuggestionSource.GEMMA, WineSuggestionSource.KAGGLE)
-        val (gemmaSuggestions, kaggleOptions) = coroutineScope {
+        val gemmaSuggestions = coroutineScope {
+            // Gemma's card synthesis runs concurrently with Kaggle, same as before — but only
+            // Kaggle (then the cache) is awaited before moving on. Gemma often takes far longer
+            // than either local lookup, and Kaggle/cache results shouldn't sit inert behind it.
             val gemmaDeferred = async {
                 val cardsResponse = try {
                     synthesizer.synthesizeCards(preferences) {}
@@ -231,34 +234,43 @@ class KaggleConversationResponder(
                 progress.resolve(WineSuggestionSource.GEMMA, suggestions)
                 suggestions
             }
-            val kaggleDeferred = async {
-                val reviews = DebugLatencyLog.timed("[Kotlin] Kaggle DB query (recorded preferences)") {
-                    runCatchingSource { findKaggleReviewsByCriteria(criteria) }
-                }
-                val options = reviews
-                    .distinctBy { it.id }
-                    .map { review -> review.toSuggestion(basis) }
-                    .filter { it.hasRequiredCardFields() }
-                    .filterNot { it.cardKey() in shownCardKeys }
-                    .distinctBy { it.cardKey() }
-                    .take(MAX_FALLBACK_OPTIONS)
-                progress.resolve(WineSuggestionSource.KAGGLE, options)
-                options
-            }
-            gemmaDeferred.await() to kaggleDeferred.await()
-        }
-        logFlow(
-            "From recorded preferences: Gemma cards=${gemmaSuggestions.size}, " +
-                "Kaggle reviews=${kaggleOptions.size}",
-        )
 
-        // Kaggle is complete — query the cache next, same as it always has.
-        progress.startLoading(WineSuggestionSource.CACHE)
-        val cachedOptions = DebugLatencyLog.timed("[Kotlin] local cache lookup (recorded preferences)") {
-            runCatchingSource { findCachedOptionsByCriteria(criteria) }
+            val reviews = DebugLatencyLog.timed("[Kotlin] Kaggle DB query (recorded preferences)") {
+                runCatchingSource { findKaggleReviewsByCriteria(criteria) }
+            }
+            val kaggleOptions = reviews
+                .distinctBy { it.id }
+                .map { review -> review.toSuggestion(basis) }
+                .filter { it.hasRequiredCardFields() }
+                .filterNot { it.cardKey() in shownCardKeys }
+                .distinctBy { it.cardKey() }
+                .take(MAX_FALLBACK_OPTIONS)
+            progress.resolve(WineSuggestionSource.KAGGLE, kaggleOptions)
+            logFlow("From recorded preferences: Kaggle reviews=${kaggleOptions.size}")
+
+            // Kaggle is complete — query the cache next, same as it always has, without waiting
+            // on Gemma.
+            progress.startLoading(WineSuggestionSource.CACHE)
+            val cachedOptions = DebugLatencyLog.timed("[Kotlin] local cache lookup (recorded preferences)") {
+                runCatchingSource { findCachedOptionsByCriteria(criteria) }
+            }
+            logFlow("Cache options from recorded preferences=${cachedOptions.size}")
+            progress.resolve(WineSuggestionSource.CACHE, cachedOptions)
+
+            // Kaggle and cache are both settled and their cards are on screen (filled or empty)
+            // — offer the web-search follow-up now rather than waiting on Gemma, which can still
+            // be mid-inference.
+            onUpdate(
+                ConversationStreamUpdate(
+                    text = "",
+                    sourceResults = progress.resultsWithLoading,
+                    followUpText = WEB_SEARCH_QUESTION,
+                ),
+            )
+
+            gemmaDeferred.await()
         }
-        logFlow("Cache options from recorded preferences=${cachedOptions.size}")
-        progress.resolve(WineSuggestionSource.CACHE, cachedOptions)
+        logFlow("From recorded preferences: Gemma cards=${gemmaSuggestions.size}")
 
         return buildMultiSourceResponse(
             originalQuery = originalQuery,
@@ -280,6 +292,13 @@ class KaggleConversationResponder(
         private var loading = listOf<WineSuggestionSource>()
 
         val results: List<SourceResult> get() = resolved.toList()
+
+        // Unlike [results] (resolved sources only — right for the terminal message, built once
+        // everything has settled), this also includes any source still in flight as a LOADING
+        // entry — needed for a manual mid-turn publish that fires before every source is done,
+        // so a still-loading card (e.g. Gemma) isn't dropped from the list it publishes.
+        val resultsWithLoading: List<SourceResult>
+            get() = resolved + loading.map { SourceResult(it, SourceQueryStatus.LOADING) }
 
         suspend fun startLoading(vararg sources: WineSuggestionSource) {
             lock.withLock { loading = loading + sources }
@@ -326,14 +345,14 @@ class KaggleConversationResponder(
         }
         shownCardKeys += contextualResults.flatMap { it.suggestions }.map { it.cardKey() }
 
-        val text = when (firstHit?.source) {
-            null -> "I’m sorry, but I couldn’t find a relevant wine for that request."
-            WineSuggestionSource.KAGGLE -> kaggleResultText(firstHit.suggestions, criteria)
-            WineSuggestionSource.CACHE -> "I found ${
-                if (firstHit.suggestions.size == 1) "an option" else "some options"
-            } saved from an earlier web search."
-            WineSuggestionSource.WEB_SEARCH -> "I searched online and found these options for you."
-            WineSuggestionSource.GEMMA -> "I found these options for you."
+        // No blanket top-of-bubble text (e.g. the old "I searched my database and found these
+        // matches from other wine enthusiasts.") — each search type now carries its own tag and
+        // text on its own card, so a duplicate summary line above them is redundant. The one
+        // exception is a true across-the-board miss, where there are no cards at all to say so.
+        val text = if (firstHit == null) {
+            "I’m sorry, but I couldn’t find a relevant wine for that request."
+        } else {
+            ""
         }
         val winningOptions = contextualResults.firstOrNull { it.suggestions.isNotEmpty() }?.suggestions.orEmpty()
 
@@ -419,7 +438,7 @@ class KaggleConversationResponder(
             }
             val webDeferred = async {
                 DebugLatencyLog.timed("[Kotlin] web search (+Gemma synthesis)") {
-                    findWebOptions(originalQuery, gemmaSuggestions, selectionCriteria)
+                    findWebOptions(originalQuery, gemmaSuggestions, selectionCriteria) ?: emptyList()
                 }
             }
             cachedDeferred.await() to webDeferred.await()
@@ -453,18 +472,44 @@ class KaggleConversationResponder(
     private suspend fun searchWeb(
         originalQuery: String,
         gemmaSuggestions: List<WineSuggestion>,
-        returnFailure: Boolean = true,
         criteria: WineSelectionCriteria = WineSelectionCriteria(),
     ): ChatMessage {
         val webOptions = findWebOptions(originalQuery, gemmaSuggestions, criteria)
-        if (webOptions.isNotEmpty()) {
-            return successfulOptions(
-                text = "I searched online and found these options for you.",
-                options = webOptions,
-                originalQuery = originalQuery,
+        if (webOptions == null) {
+            // The search itself failed (network error, or the attempt was interrupted, e.g. the
+            // user switched away mid-request) — was previously indistinguishable from "ran and
+            // found nothing", so it fell through however the caller happened to handle a missing
+            // result, which could surface as the generic mode-choice apology on the next turn.
+            // Keep the same pending web-search offer alive so "try again" (or "yes") resumes it.
+            pendingNextSource = PendingNextSource(originalQuery, gemmaSuggestions, NextSource.WEB, criteria)
+            return assistantMessage("", historyRequest = originalQuery).copy(
+                sourceResults = listOf(
+                    SourceResult(WineSuggestionSource.WEB_SEARCH, SourceQueryStatus.FAILED, emptyList()),
+                ),
             )
         }
-        return if (returnFailure) noResultsMessage(originalQuery) else assistantMessage("", historyRequest = originalQuery)
+        if (webOptions.isNotEmpty()) {
+            val contextualOptions = webOptions.map { option ->
+                option.copy(requestContext = option.requestContext ?: originalQuery)
+            }
+            shownCardKeys += contextualOptions.map { it.cardKey() }
+            return assistantMessage(
+                text = "",
+                options = contextualOptions,
+                historyRequest = originalQuery,
+            ).copy(
+                sourceResults = listOf(
+                    SourceResult(WineSuggestionSource.WEB_SEARCH, SourceQueryStatus.COMPLETE, contextualOptions),
+                ),
+            )
+        }
+        // The empty-state card itself says "No results found" — no need for returnFailure's old
+        // top-of-bubble apology text to repeat that.
+        return assistantMessage("", historyRequest = originalQuery).copy(
+            sourceResults = listOf(
+                SourceResult(WineSuggestionSource.WEB_SEARCH, SourceQueryStatus.COMPLETE, emptyList()),
+            ),
+        )
     }
 
     /**
@@ -476,12 +521,18 @@ class KaggleConversationResponder(
      * acidity Kotlin already knows from Q1-Q3 — not just "are these fields non-'Unknown'") and is
      * confirmed to not already be covered by the Kaggle DB for that country/province/variety.
      */
+    /**
+     * `null` means the search itself failed (e.g. no network) — distinct from a `List` that came
+     * back empty because the search genuinely ran and found nothing. [searchWeb] needs that
+     * distinction to show "couldn't complete" with a retry rather than a plain "no results"; the
+     * older [findKaggleThenWeb] race path doesn't care and folds a failure back to an empty list.
+     */
     private suspend fun findWebOptions(
         originalQuery: String,
         gemmaSuggestions: List<WineSuggestion>,
         criteria: WineSelectionCriteria = WineSelectionCriteria(),
-    ): List<WineSuggestion> {
-        val webOptions = runCatchingSource {
+    ): List<WineSuggestion>? {
+        val webOptions = try {
             webSearch.search(
                 WineWebSearchRequest(
                     originalQuery = originalQuery,
@@ -496,6 +547,10 @@ class KaggleConversationResponder(
             }.filter { it.hasRequiredCardFields() }
                 .filterNot { it.cardKey() in shownCardKeys }
                 .distinctBy { it.cardKey() }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            return null
         }
         if (webOptions.isNotEmpty()) {
             webOptions.firstOrNull { option ->
@@ -927,12 +982,13 @@ class KaggleConversationResponder(
 
         val EMPTY_PROFILE = WineSuggestion(name = "Unknown", province = "Unknown")
         val AFFIRMATIVE_REPLIES = setOf(
-            "yes", "yep", "yup", "yeah", "sure", "okay", "ok", "absolutely", "certainly",
-            "definitely", "of course", "go ahead", "sounds good", "why not", "please", "please do",
-            "do it", "show me", "i would", "i d like that", "id like that", "i would love to",
+            "yes", "y", "yep", "yup", "yeah", "ya", "go", "sure", "okay", "ok", "absolutely",
+            "certainly", "definitely", "of course", "go ahead", "sounds good", "why not",
+            "please", "please do", "do it", "show me", "i would", "i d like that", "id like that",
+            "i would love to", "try again", "retry",
         )
         val NEGATIVE_REPLIES = setOf(
-            "no", "nope", "nah", "no thanks", "no thank you", "not now", "not really",
+            "no", "n", "na", "nope", "nah", "no thanks", "no thank you", "not now", "not really",
             "absolutely not", "definitely not", "i m good", "im good",
         )
         val MORE_REQUEST_PHRASES = setOf("more", "more options", "other options", "different options")

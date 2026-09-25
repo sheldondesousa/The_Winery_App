@@ -59,6 +59,7 @@ private val NO_PREFERENCE_PHRASES = listOf(
     "no preference", "no preferences", "not sure", "dont know", "do not know",
     "skip", "any", "anything", "whatever", "surprise me", "doesnt matter",
     "does not matter", "no idea", "not fussed", "not picky", "idk",
+    "none", "nothing",
 )
 
 internal fun isNoPreference(reply: String): Boolean {
@@ -131,15 +132,46 @@ internal fun matchWineType(reply: String): String? {
     return matches.singleOrNull()
 }
 
+/** Whether the given Q1-Q3 step already has a recorded answer (matched or explicitly declined). */
+internal fun WinePreferences.isStepResolved(step: FindWineStep): Boolean = when (step) {
+    FindWineStep.Type -> type != WinePreferences.UNKNOWN
+    FindWineStep.Country -> country != WinePreferences.UNKNOWN
+    FindWineStep.Taste -> body != WinePreferences.UNKNOWN || tannin != WinePreferences.UNKNOWN ||
+        acidity != WinePreferences.UNKNOWN || sweetness != WinePreferences.UNKNOWN
+}
+
+/** First step in Type -> Country -> Taste order not yet resolved, or null once all three are. */
+internal fun nextUnresolvedStep(preferences: WinePreferences): FindWineStep? =
+    FindWineStep.entries.firstOrNull { !preferences.isStepResolved(it) }
+
 internal data class LocationMatch(val country: String, val province: String)
 
-private val COUNTRY_ALIASES = linkedMapOf(
+// A demonym/adjective alias for every country in WineRegions.catalog, not just the dozen that
+// happened to come up during testing — "Chinese Red" should resolve China exactly as reliably
+// as "French Red" resolves France, since both rely on the same matchLocation path. Also covers
+// short acronyms ("aus", "ind") where they're not ambiguous with common English words — "us" is
+// deliberately left out since it collides with the pronoun (e.g. "suggest one for us"), while
+// "usa"/"america"/"american" already resolve United States unambiguously. Internal (not private)
+// so a test can assert every catalog country has at least one alias.
+internal val COUNTRY_ALIASES = linkedMapOf(
     "french" to "France", "italian" to "Italy", "spanish" to "Spain",
     "portuguese" to "Portugal", "argentine" to "Argentina", "argentinian" to "Argentina",
-    "chilean" to "Chile", "australian" to "Australia", "usa" to "United States",
-    "america" to "United States", "american" to "United States",
+    "chilean" to "Chile", "australian" to "Australia", "aus" to "Australia",
+    "usa" to "United States", "america" to "United States", "american" to "United States",
     "german" to "Germany", "austrian" to "Austria", "greek" to "Greece",
     "kiwi" to "New Zealand",
+    "armenian" to "Armenia", "azerbaijani" to "Azerbaijan", "belgian" to "Belgium",
+    "brazilian" to "Brazil", "bulgarian" to "Bulgaria", "canadian" to "Canada",
+    "chinese" to "China", "croatian" to "Croatia", "cypriot" to "Cyprus",
+    "estonian" to "Estonia", "georgian" to "Georgia", "hungarian" to "Hungary",
+    "indian" to "India", "ind" to "India", "indonesian" to "Indonesia", "israeli" to "Israel",
+    "latvian" to "Latvia", "lithuanian" to "Lithuania", "mexican" to "Mexico",
+    "norwegian" to "Norway", "peruvian" to "Peru", "romanian" to "Romania",
+    "serbian" to "Serbia", "slovak" to "Slovakia", "slovakian" to "Slovakia",
+    "south african" to "South Africa", "swedish" to "Sweden", "swiss" to "Switzerland",
+    "turkish" to "Turkey", "ukrainian" to "Ukraine",
+    "british" to "United Kingdom", "english" to "United Kingdom", "uk" to "United Kingdom",
+    "uruguayan" to "Uruguay", "venezuelan" to "Venezuela",
 )
 
 internal fun matchLocation(reply: String): LocationMatch? {

@@ -1,9 +1,16 @@
 package com.sheldondesousa.uncork.ui.conversation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -60,6 +68,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.theme.Hairline
@@ -97,6 +106,7 @@ class ConversationSessionState {
     var streamingText by mutableStateOf("")
     var streamingSuggestions by mutableStateOf(emptyList<WineSuggestion>())
     var streamingSourceResults by mutableStateOf(emptyList<SourceResult>())
+    var streamingFollowUpText by mutableStateOf<String?>(null)
 }
 
 @Composable
@@ -127,6 +137,7 @@ fun ConversationRoute(
         state.streamingText = ""
         state.streamingSuggestions = emptyList()
         state.streamingSourceResults = emptyList()
+        state.streamingFollowUpText = null
 
         scope.launch {
             runCatching {
@@ -134,12 +145,16 @@ fun ConversationRoute(
                     state.streamingText = update.text
                     state.streamingSuggestions = update.suggestions
                     state.streamingSourceResults = update.sourceResults
+                    // Once set (Kaggle/cache have settled), a later update with no follow-up
+                    // text of its own — e.g. Gemma resolving — must not clear it back out.
+                    state.streamingFollowUpText = update.followUpText ?: state.streamingFollowUpText
                 }
             }
                 .onSuccess { response ->
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
                     state.streamingSourceResults = emptyList()
+                    state.streamingFollowUpText = null
                     val timeToFirstWordMs = if (BuildConfig.DEBUG) {
                         DebugLatencyLog.drain()
                             .firstOrNull { (label, _) -> label.endsWith("time to first word") }
@@ -166,6 +181,7 @@ fun ConversationRoute(
                     state.streamingText = ""
                     state.streamingSuggestions = emptyList()
                     state.streamingSourceResults = emptyList()
+                    state.streamingFollowUpText = null
                     state.errorMessage =
                         "I couldn’t finish that suggestion. Check your connection and try again."
                 }
@@ -187,6 +203,7 @@ fun ConversationRoute(
         streamingText = state.streamingText,
         streamingSuggestions = state.streamingSuggestions,
         streamingSourceResults = state.streamingSourceResults,
+        streamingFollowUpText = state.streamingFollowUpText,
         onDraftChange = { state.draft = it },
         onSend = ::submit,
         onQuickReplySelected = ::send,
@@ -205,6 +222,7 @@ private fun ConversationScreen(
     streamingText: String,
     streamingSuggestions: List<WineSuggestion>,
     streamingSourceResults: List<SourceResult>,
+    streamingFollowUpText: String?,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onQuickReplySelected: (String) -> Unit,
@@ -216,11 +234,12 @@ private fun ConversationScreen(
     BackHandler(onBack = onBack)
     val hasStreamingContent = streamingText.isNotBlank() ||
         streamingSuggestions.isNotEmpty() ||
-        streamingSourceResults.isNotEmpty()
+        streamingSourceResults.isNotEmpty() ||
+        !streamingFollowUpText.isNullOrBlank()
 
     LaunchedEffect(
         messages.size, isReplying, errorMessage, streamingText,
-        streamingSuggestions.size, streamingSourceResults,
+        streamingSuggestions.size, streamingSourceResults, streamingFollowUpText,
     ) {
         val extraRows = (if (hasStreamingContent) 1 else 0) +
             (if (isReplying) 1 else 0) +
@@ -280,8 +299,27 @@ private fun ConversationScreen(
                                     suggestions = streamingSuggestions,
                                     sourceResults = streamingSourceResults,
                                 ),
-                                onSuggestionClick = {},
+                                // Kaggle/cache cards can be on screen well before Gemma (or the
+                                // whole turn) finishes — they must be clickable as soon as
+                                // they're shown, not only once streaming ends.
+                                onSuggestionClick = onSuggestionClick,
                             )
+                        }
+                        // Always its own bubble, never folded into the cards' bubble above —
+                        // matches how it renders once the turn actually finishes (a separate
+                        // follow-up message), instead of briefly appearing inside the response
+                        // bubble's own background while cards are still streaming in.
+                        if (!streamingFollowUpText.isNullOrBlank()) {
+                            item(key = "streaming-follow-up") {
+                                MessageBubble(
+                                    message = ChatMessage(
+                                        id = Long.MIN_VALUE + 1,
+                                        author = MessageAuthor.Assistant,
+                                        text = streamingFollowUpText,
+                                    ),
+                                    onSuggestionClick = {},
+                                )
+                            }
                         }
                     }
                     if (isReplying && !hasStreamingContent) {
@@ -353,14 +391,20 @@ private fun MessageBubble(
                         .padding(start = 18.dp, top = 4.dp, bottom = 4.dp)
                         .clip(RoundedCornerShape(11.dp))
                         .background(Color.Black.copy(alpha = 0.05f))
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 16.dp),
                 ) {
-                    Text(
-                        text = parseBoldMarkdown(message.text),
-                        color = AiResponseInk,
-                        fontSize = 16.sp,
-                        lineHeight = 28.sp,
-                    )
+                    // A search-type response has no top-of-bubble text (each master card below
+                    // carries its own) — skip the Text entirely rather than reserving a full
+                    // empty line's height for it, which was the source of the large gap above
+                    // the first card.
+                    if (message.text.isNotBlank()) {
+                        Text(
+                            text = parseBoldMarkdown(message.text),
+                            color = AiResponseInk,
+                            fontSize = 16.sp,
+                            lineHeight = 28.sp,
+                        )
+                    }
                     message.debugLatencyMs?.let { timeToFirstWordMs ->
                         Text(
                             text = "⏱ time to first word: %.1fs".format(timeToFirstWordMs / 1000f),
@@ -381,44 +425,47 @@ private fun MessageBubble(
                             }
                         }
                     }
+                    // Only add a gap above the first card when something actually precedes it —
+                    // when the bubble has no top text (the normal case for a search response),
+                    // the bubble's own 16dp top padding is already the gap; stacking another 16dp
+                    // spacer on top of that was the large empty space above the first card.
+                    val hasLeadingContent = message.text.isNotBlank() ||
+                        (message.quickReplies.isNotEmpty() && quickRepliesEnabled)
                     if (message.sourceResults.isNotEmpty()) {
-                        // One section per source, in the order each actually resolved — a
-                        // section still in flight shows a loader, and one that resolved with
-                        // nothing says so, rather than silently vanishing.
-                        Spacer(Modifier.height(16.dp))
+                        // One master card per search type, in the order each actually resolved —
+                        // a card still in flight shows a loader, and one that resolved with
+                        // nothing says so, rather than the search silently vanishing.
+                        if (hasLeadingContent) Spacer(Modifier.height(16.dp))
                         message.sourceResults.forEachIndexed { groupIndex, sourceResult ->
-                            if (groupIndex > 0) Spacer(Modifier.height(16.dp))
-                            SourceResultSection(
+                            if (groupIndex > 0) SearchTypeDivider()
+                            SourceResultCard(
                                 sourceResult = sourceResult,
                                 onSuggestionClick = onSuggestionClick,
+                                onRetry = if (quickRepliesEnabled) {
+                                    { onQuickReplySelected("Try Again") }
+                                } else {
+                                    null
+                                },
                             )
                         }
                     } else {
                         val suggestions = message.wineSuggestions
                         if (suggestions.isNotEmpty()) {
-                            Spacer(Modifier.height(16.dp))
-                            // One tag per source group, its cards falling below it — a card's
-                            // individual pill was replaced by a single response-level tag, since
-                            // every card in a given response already comes from the same source.
+                            if (hasLeadingContent) Spacer(Modifier.height(16.dp))
+                            // One card per source group — a card's individual pill was replaced
+                            // by a single response-level card, since every card in a given
+                            // response already comes from the same source.
                             val sourceGroups = suggestions.groupBy { it.source }
                             sourceGroups.entries.forEachIndexed { groupIndex, (source, groupSuggestions) ->
-                                if (groupIndex > 0) Spacer(Modifier.height(16.dp))
-                                SourceLabel(source)
-                                Spacer(Modifier.height(8.dp))
-                                groupSuggestions.forEachIndexed { index, suggestion ->
-                                    if (index > 0) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(1.dp)
-                                                .background(Hairline),
-                                        )
-                                    }
-                                    SuggestionLink(
-                                        suggestion = suggestion,
-                                        onClick = { onSuggestionClick(suggestion) },
-                                    )
-                                }
+                                if (groupIndex > 0) SearchTypeDivider()
+                                SourceResultCard(
+                                    sourceResult = SourceResult(
+                                        source = source,
+                                        status = SourceQueryStatus.COMPLETE,
+                                        suggestions = groupSuggestions,
+                                    ),
+                                    onSuggestionClick = onSuggestionClick,
+                                )
                             }
                         }
                     }
@@ -489,9 +536,9 @@ private val LeftRuleShape = RoundedCornerShape(
 )
 
 @Composable
-private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit) {
+private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 8.dp),
@@ -545,81 +592,182 @@ private fun SuggestionLink(suggestion: WineSuggestion, onClick: () -> Unit) {
     }
 }
 
+/** A line separator between two consecutive search-type blocks (Kaggle, Cache, Gemma, …). */
+@Composable
+private fun SearchTypeDivider() {
+    Spacer(Modifier.height(12.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(Hairline),
+    )
+    Spacer(Modifier.height(12.dp))
+}
+
 /**
- * One source's section: its tag, a loader while still in flight, "No results found" if it
- * resolved with nothing, or its cards. Mirrors Find's per-section Loading/Complete display,
- * adapted to Chat's single scrolling bubble instead of two fixed side-by-side sections.
+ * One search type's own result block: its label and status text sit outside any border — only
+ * the individual wine cards below them are containerized, each in its own bordered box, rather
+ * than one shared border wrapping the label, text, and every card together.
  */
 @Composable
-private fun SourceResultSection(
+private fun SourceResultCard(
     sourceResult: SourceResult,
     onSuggestionClick: (WineSuggestion) -> Unit,
+    onRetry: (() -> Unit)? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SourceLabel(sourceResult.source)
-        if (sourceResult.status == SourceQueryStatus.LOADING) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(12.dp),
-                color = InkMuted,
-                strokeWidth = 1.5.dp,
-            )
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-    when {
-        sourceResult.status == SourceQueryStatus.LOADING -> Text(
-            text = "Searching…",
-            color = InkMuted,
-            fontSize = 13.sp,
-            fontStyle = FontStyle.Italic,
-        )
-        sourceResult.suggestions.isEmpty() -> Text(
-            text = "No results found",
-            color = InkMuted,
-            fontSize = 13.sp,
-            fontStyle = FontStyle.Italic,
-        )
-        else -> sourceResult.suggestions.forEachIndexed { index, suggestion ->
-            if (index > 0) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(Hairline),
-                )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SourceLabel(sourceResult.source)
+            if (sourceResult.status == SourceQueryStatus.LOADING) {
+                // Gemma gets the same three-dots indicator Find's "AI Sommelier" section uses
+                // while its model call is in flight, instead of a generic spinner — the two
+                // on-device model lookups should read as the same kind of wait.
+                if (sourceResult.source == WineSuggestionSource.GEMMA) {
+                    ThreeDotsLoadingIndicator(dotSize = 6.dp, spacing = 4.dp)
+                } else {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        color = InkMuted,
+                        strokeWidth = 1.5.dp,
+                    )
+                }
             }
-            SuggestionLink(
-                suggestion = suggestion,
-                onClick = { onSuggestionClick(suggestion) },
+        }
+        Spacer(Modifier.height(8.dp))
+        when {
+            sourceResult.status == SourceQueryStatus.LOADING -> Text(
+                text = if (sourceResult.source == WineSuggestionSource.GEMMA) {
+                    "Gemma is looking up its knowledge base…"
+                } else {
+                    "Searching…"
+                },
+                color = InkMuted,
+                fontSize = 13.sp,
+                fontStyle = FontStyle.Italic,
             )
+            // A genuine failure (network error, or the request was interrupted, e.g. the user
+            // switched away mid-search) — distinct from a search that ran fine and found
+            // nothing. Offers a retry instead of quietly falling through to some other turn.
+            sourceResult.status == SourceQueryStatus.FAILED -> {
+                Text(
+                    text = "Web Search could not be completed",
+                    color = InkMuted,
+                    fontSize = 13.sp,
+                    fontStyle = FontStyle.Italic,
+                )
+                if (onRetry != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "Try Again",
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(1.dp, Wine.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .clickable(role = Role.Button, onClick = onRetry)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = Wine,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+            sourceResult.suggestions.isEmpty() -> Text(
+                text = "No results found",
+                color = InkMuted,
+                fontSize = 13.sp,
+                fontStyle = FontStyle.Italic,
+            )
+            else -> {
+                Text(
+                    text = "Here are a few options from ${sourceResult.source.introLabel()}",
+                    color = InkMuted,
+                    fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    sourceResult.suggestions.forEach { suggestion ->
+                        SuggestionCard(
+                            suggestion = suggestion,
+                            onClick = { onSuggestionClick(suggestion) },
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
+/** A single wine suggestion, containerized in its own bordered card. */
+@Composable
+private fun SuggestionCard(suggestion: WineSuggestion, onClick: () -> Unit) {
+    SuggestionLink(
+        suggestion = suggestion,
+        onClick = onClick,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, Hairline, RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 4.dp),
+    )
+}
+
 /**
- * A single tag above a group of cards, distinguishing which of Gemma / Kaggle / the local
- * cache / a live web search produced them — the same distinction Find surfaces via its
- * "AI Sommelier" vs "Database" sections, one tag per group rather than per card.
+ * A single label at the top of a search-type card, distinguishing Kaggle db / Cache db / Gemma /
+ * Web Search — the same distinction Find surfaces via its "AI Sommelier" vs "Database" sections.
+ * Plain text, no chip background, so it reads as a heading rather than a tappable pill.
  */
 @Composable
 private fun SourceLabel(source: WineSuggestionSource) {
     Text(
         text = source.label(),
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(Wine.copy(alpha = 0.10f))
-            .padding(horizontal = 9.dp, vertical = 4.dp),
         color = Wine,
-        fontSize = 10.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
     )
 }
 
 private fun WineSuggestionSource.label(): String = when (this) {
     WineSuggestionSource.GEMMA -> "Gemma"
-    WineSuggestionSource.KAGGLE -> "Kaggle"
-    WineSuggestionSource.CACHE -> "Cache"
-    WineSuggestionSource.WEB_SEARCH -> "Web"
+    WineSuggestionSource.KAGGLE -> "Kaggle db"
+    WineSuggestionSource.CACHE -> "Cache db"
+    WineSuggestionSource.WEB_SEARCH -> "Web Search"
+}
+
+// The fuller name used only in the "Here are a few options from …" body line — the header tag
+// itself stays short ("Gemma"), everything else uses the same name in both places.
+private fun WineSuggestionSource.introLabel(): String = when (this) {
+    WineSuggestionSource.GEMMA -> "Gemma Knowledge"
+    else -> label()
+}
+
+/** Three dots pulsing in sequence, matching Find's "AI Sommelier" loading indicator. */
+@Composable
+private fun ThreeDotsLoadingIndicator(
+    modifier: Modifier = Modifier,
+    dotColor: Color = Wine,
+    dotSize: Dp = 10.dp,
+    spacing: Dp = 6.dp,
+) {
+    val transition = rememberInfiniteTransition(label = "loading-dots")
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(spacing), verticalAlignment = Alignment.CenterVertically) {
+        repeat(3) { index ->
+            val scale by transition.animateFloat(
+                initialValue = 0.4f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 600, delayMillis = index * 150, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "dot-$index-scale",
+            )
+            Box(
+                Modifier
+                    .size(dotSize)
+                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .clip(CircleShape)
+                    .background(dotColor),
+            )
+        }
+    }
 }
 
 private fun String.isUsefulCardValue(): Boolean =

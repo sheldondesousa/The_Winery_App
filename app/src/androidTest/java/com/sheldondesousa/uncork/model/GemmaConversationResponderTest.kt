@@ -1,6 +1,9 @@
 package com.sheldondesousa.uncork.model
 
+import androidx.test.core.app.ApplicationProvider
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
+import java.io.File
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -225,7 +228,10 @@ class GemmaConversationResponderTest {
         assertEquals("Piedmont", suggestion?.province)
         assertEquals("Braised beef", suggestion?.suggestedPairing)
         assertEquals(WineSuggestionSource.GEMMA, suggestion?.source)
-        assertEquals(199, suggestion?.summary?.length)
+        // 220 = 200 chars + a 10% buffer, since a model asked for "under 200 characters" often
+        // overruns slightly — truncating harder than that buffer just cuts a word off for no
+        // reason.
+        assertEquals(220, suggestion?.summary?.length)
         assertEquals("Unknown", suggestion?.reviewSummary)
         assertEquals("Unknown", suggestion?.webSummary)
         assertNull(suggestion?.rating)
@@ -367,5 +373,95 @@ class GemmaConversationResponderTest {
         assertEquals(true, requestsFindWineSwitch("let's find a wine for dinner"))
         assertEquals(false, requestsFindWineSwitch("what would you recommend with steak?"))
         assertEquals(false, requestsFindWineSwitch("any suggestions for a light lunch"))
+    }
+
+    /** None of these turns reach a digression or card-synthesis branch, so no real model file
+     * is ever needed — the deterministic Q1-Q3 flow never touches the engine. */
+    private fun newFindWineResponder(): GemmaConversationResponder =
+        GemmaConversationResponder(
+            ApplicationProvider.getApplicationContext(),
+            File("nonexistent-model-file"),
+        )
+
+    @Test
+    fun compoundReplyToQ1AlsoResolvesQ2AndSkipsStraightToQ3() = runBlocking {
+        val responder = newFindWineResponder()
+        responder.replyTo("find a wine")
+
+        val response = responder.replyTo("French Red")
+
+        assertEquals(ChatFlowText.Q3_TASTE, response.text)
+    }
+
+    @Test
+    fun fullyDetailedReplyToQ1FinalizesOnboardingImmediately() = runBlocking {
+        val responder = newFindWineResponder()
+        responder.replyTo("find a wine")
+
+        val response = responder.replyTo("full-bodied French red")
+
+        assertEquals(true, response.coverageComplete)
+        assertEquals("red", response.resolvedPreferences?.type)
+        assertEquals("France", response.resolvedPreferences?.country)
+        assertEquals("Full-Bodied", response.resolvedPreferences?.body)
+    }
+
+    @Test
+    fun typeOnlyReplyStillAsksQ2AsBefore() = runBlocking {
+        val responder = newFindWineResponder()
+        responder.replyTo("find a wine")
+
+        val response = responder.replyTo("red")
+
+        assertEquals(ChatFlowText.Q2_COUNTRY, response.text)
+    }
+
+    /** Regression: declining Q3 with "no preference"/"none"/"nothing"/"skip" left every taste
+     * field Unknown, so advanceFindWine (which walks preferences by field, not by turn) treated
+     * Taste as still-unresolved and re-asked the same question forever instead of finalizing. */
+    @Test
+    fun decliningQ3WithNoPreferenceFinalizesInsteadOfRepeatingTheQuestion() = runBlocking {
+        val responder = newFindWineResponder()
+        responder.replyTo("find a wine")
+        responder.replyTo("red")
+        responder.replyTo("France")
+
+        val response = responder.replyTo("no preference")
+
+        assertEquals(true, response.coverageComplete)
+        assertEquals("red", response.resolvedPreferences?.type)
+        assertEquals("France", response.resolvedPreferences?.country)
+    }
+
+    @Test
+    fun decliningQ3WithNoneNothingOrSkipAllFinalizeInsteadOfRepeating() = runBlocking {
+        for (decline in listOf("none", "nothing", "skip")) {
+            val responder = newFindWineResponder()
+            responder.replyTo("find a wine")
+            responder.replyTo("red")
+            responder.replyTo("France")
+
+            val response = responder.replyTo(decline)
+
+            assertEquals("decline phrase: $decline", true, response.coverageComplete)
+        }
+    }
+
+    /** Same bug also affected Q1/Q2: declining Type or Country never advanced past that step
+     * since the declined field stayed Unknown — indistinguishable from "not yet answered" by
+     * field value alone. */
+    @Test
+    fun decliningQ1AdvancesToQ2InsteadOfRepeatingItAndDecliningEverythingStillFinalizes() = runBlocking {
+        val responder = newFindWineResponder()
+        responder.replyTo("find a wine")
+
+        val afterQ1 = responder.replyTo("no preference")
+        assertEquals(ChatFlowText.Q2_COUNTRY, afterQ1.text)
+
+        val afterQ2 = responder.replyTo("no preference")
+        assertEquals(ChatFlowText.Q3_TASTE, afterQ2.text)
+
+        val afterQ3 = responder.replyTo("no preference")
+        assertEquals(true, afterQ3.coverageComplete)
     }
 }

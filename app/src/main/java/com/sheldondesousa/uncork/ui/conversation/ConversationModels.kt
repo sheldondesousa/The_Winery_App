@@ -15,7 +15,7 @@ enum class WineSuggestionSource {
     WEB_SEARCH,
 }
 
-enum class SourceQueryStatus { LOADING, COMPLETE }
+enum class SourceQueryStatus { LOADING, COMPLETE, FAILED }
 
 /**
  * One source's outcome for the current turn — cards if it found any, an empty list if it ran
@@ -89,6 +89,9 @@ data class ConversationStreamUpdate(
     val text: String,
     val suggestions: List<WineSuggestion> = emptyList(),
     val sourceResults: List<SourceResult> = emptyList(),
+    // Set once Kaggle/cache have settled, to surface the web-search follow-up question mid-turn
+    // instead of waiting for Gemma (which can still be mid-inference) before the turn completes.
+    val followUpText: String? = null,
 )
 
 fun interface ConversationResponder {

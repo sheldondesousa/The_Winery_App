@@ -130,10 +130,19 @@ fun StageShowRoute(
     }
 
     LaunchedEffect(wine) {
-        val loaded = runCatching { loadProfile(wine.toWineSuggestion()) }
-            .getOrDefault(wine.toWineSuggestion())
-        displayedWine = wine.copy(ai = loaded.toStageWine().ai)
-        loadingProfile = false
+        // Chat's own Gemma response already asks for (and usually gets) a summary on every
+        // card it returns — if it's already here, the full profile reload this triggers is a
+        // second ~10-30s on-device inference call purely to re-fetch something Chat already
+        // had, and "Loading details…" sits on screen the whole time for no reason. Only run it
+        // when the summary actually still needs filling in.
+        if (wine.ai.summary.isResolvedValue()) {
+            loadingProfile = false
+        } else {
+            val loaded = runCatching { loadProfile(wine.toWineSuggestion()) }
+                .getOrDefault(wine.toWineSuggestion())
+            displayedWine = wine.copy(ai = loaded.toStageWine().ai)
+            loadingProfile = false
+        }
     }
 
     Column(
