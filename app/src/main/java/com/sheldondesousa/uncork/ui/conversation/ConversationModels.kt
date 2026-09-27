@@ -42,8 +42,8 @@ data class ChatMessage(
     val coverageComplete: Boolean = false,
     val discardedStageOneCards: Int = 0,
     val quickReplies: List<String> = emptyList(),
-    // Time from request start to the first streamed word, debug builds only. Never set from
-    // model output, not persisted, not shown to real users.
+    // Debug latency: user Send to first Gemma text chunk for conversation replies;
+    // model request to first output for other flows. Never set from model output.
     val debugLatencyMs: Long? = null,
     // Set only when a deterministic Q1-Q3 chat turn just finalized the user's preferences,
     // before Gemma's card-synthesis call has run. Lets a wrapping responder start a Kaggle
@@ -92,6 +92,8 @@ data class ConversationStreamUpdate(
     // Set once Kaggle/cache have settled, to surface the web-search follow-up question mid-turn
     // instead of waiting for Gemma (which can still be mid-inference) before the turn completes.
     val followUpText: String? = null,
+    // True only for actual streamed conversational Gemma output, never canned replies/cards.
+    val isGemmaConversationOutput: Boolean = false,
 )
 
 fun interface ConversationResponder {

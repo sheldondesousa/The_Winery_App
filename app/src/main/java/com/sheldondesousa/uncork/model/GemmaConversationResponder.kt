@@ -125,7 +125,7 @@ class GemmaConversationResponder(
                         append(content.text)
                         if (toString() != lastText) {
                             lastText = toString()
-                            onUpdate(ConversationStreamUpdate(text = lastText))
+                            onUpdate(ConversationStreamUpdate(text = lastText, isGemmaConversationOutput = true))
                         }
                     }
                 }
