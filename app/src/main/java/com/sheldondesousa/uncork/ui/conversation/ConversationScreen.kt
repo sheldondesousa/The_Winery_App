@@ -82,6 +82,10 @@ import com.sheldondesousa.uncork.ui.components.WineResultCard
 import com.sheldondesousa.uncork.model.ChatFlowText
 import com.sheldondesousa.uncork.model.DebugLatencyLog
 import com.sheldondesousa.uncork.BuildConfig
+import android.os.SystemClock
+import androidx.compose.ui.platform.LocalContext
+import com.sheldondesousa.uncork.model.GemmaTimingTrace
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private val AiResponseInk = Color(0xFF27201D)
@@ -123,10 +127,15 @@ fun ConversationRoute(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val filesDirectory = LocalContext.current.applicationContext.filesDir
 
     fun send(text: String) {
         val query = text.trim()
         if (query.isEmpty() || state.isReplying) return
+
+        val submittedAt = SystemClock.elapsedRealtime()
+        var conversationFirstTokenMs: Long? = null
+        val timing = if (BuildConfig.DEBUG) GemmaTimingTrace(filesDirectory) else null
 
         state.messages += ChatMessage(
             id = System.nanoTime(),
@@ -143,6 +152,15 @@ fun ConversationRoute(
         scope.launch {
             runCatching {
                 responder.replyToUpdates(query) { update ->
+                    if (timing != null && conversationFirstTokenMs == null &&
+                        update.isGemmaConversationOutput && update.text.isNotEmpty()
+                    ) {
+                        val elapsedMs = SystemClock.elapsedRealtime() - submittedAt
+                        conversationFirstTokenMs = elapsedMs
+                        timing.detail("operation", "chat_conversation")
+                        timing.duration("user_send_to_first_token", elapsedMs)
+                        scope.launch(Dispatchers.IO) { timing.save() }
+                    }
                     state.streamingText = update.text
                     state.streamingSuggestions = update.suggestions
                     state.streamingSourceResults = update.sourceResults
@@ -165,7 +183,7 @@ fun ConversationRoute(
                     }
                     state.messages += response.copy(
                         followUpText = null,
-                        debugLatencyMs = timeToFirstWordMs,
+                        debugLatencyMs = conversationFirstTokenMs ?: timeToFirstWordMs,
                     )
                     response.followUpText
                         ?.takeIf { it.isNotBlank() }

@@ -78,3 +78,19 @@ Read the saved records without changing app data:
 adb shell run-as com.sheldondesousa.uncork cat files/diagnostics/stage-show-timings.log
 adb shell run-as com.sheldondesousa.uncork cat files/diagnostics/stage-show-timings.previous.log
 ```
+
+## Conversation with Gemma in Chat
+
+Debug builds also save `operation=chat_conversation` records in `gemma-timings.log`.
+`user_send_to_first_token_ms` measures from accepting the user's Send action until
+the first nonempty Gemma conversation text chunk reaches Chat. This includes
+coroutine scheduling, queue waits, and model/conversation setup. The runtime exposes
+text chunks rather than individual tokens, so the first chunk is the first-token
+proxy; this does not measure screen rendering.
+
+One record is saved as soon as the first chunk arrives, even if generation later
+fails. Subsequent chunks and retries do not create duplicate first-token records
+for the same send. Canned replies, mode selection, and wine-card updates do not
+create conversation records. Requests with no output have no first-token record.
+The completed chat reply's debug timing uses this same duration. Release builds
+do not collect or save this metric, and no conversation text is logged.
