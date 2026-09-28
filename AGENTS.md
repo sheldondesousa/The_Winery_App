@@ -1,3 +1,7 @@
+# Session startup
+
+- At the start of every session in this project, read `Coding Partner Persona/Coding Assistant Prompt.md` before beginning work and follow its communication rules throughout the session.
+
 # Device safety
 
 - Never run `connectedAndroidTest`, `connectedDebugAndroidTest`, `adb uninstall`, `adb shell pm clear`, or another command that can reinstall, uninstall, or clear this app on the user's physical device as part of testing.

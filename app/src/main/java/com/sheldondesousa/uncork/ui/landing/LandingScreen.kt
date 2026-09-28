@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sheldondesousa.uncork.BuildConfig
 import com.sheldondesousa.uncork.ui.conversation.AppTab
 import androidx.compose.material3.Text
 import com.sheldondesousa.uncork.ui.theme.Hairline
@@ -78,6 +79,7 @@ private val BottomNavReservedHeight = 72.dp
 fun LandingRoute(
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenEvalDebug: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -115,6 +117,17 @@ fun LandingRoute(
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+        if (BuildConfig.DEBUG && onOpenEvalDebug != null) {
+            Text(
+                text = "Debug: Gemma Eval Runner",
+                color = InkMuted,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .clickable(role = Role.Button, onClick = onOpenEvalDebug)
+                    .semantics { contentDescription = "Debug: Gemma Eval Runner" },
+            )
         }
         Spacer(Modifier.height(BottomNavReservedHeight))
     }

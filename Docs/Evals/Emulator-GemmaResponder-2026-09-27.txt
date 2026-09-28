@@ -1,0 +1,8 @@
+
+com.sheldondesousa.uncork.model.GemmaConversationResponderTest:.........................
+
+Time: 0.805
+
+OK (25 tests)
+
+

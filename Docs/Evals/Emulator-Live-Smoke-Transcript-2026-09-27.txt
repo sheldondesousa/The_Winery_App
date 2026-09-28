@@ -1,0 +1,5 @@
+Live model handover smoke test
+USER: find a wine
+ASSISTANT: What are you in the mood for: **red**, **rosé**, **white**, **sparkling**, **sweet**, or **fortified**?
+
+USER: Does tannin cause headaches?

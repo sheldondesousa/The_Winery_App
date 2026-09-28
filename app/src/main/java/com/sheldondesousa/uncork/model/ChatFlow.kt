@@ -32,6 +32,9 @@ internal object ChatFlowText {
             "##Acidity (sourness)##\n**Soft, Crisp, Tart**\n\n" +
             "##Sweetness (sugar)##\n**Bone-Dry, Off-Dry, Sweet**"
     const val CURIOUS_TRANSITION = "Happy to chat — what's on your mind about wine or pairings?"
+    const val FIND_WINE_HANDOVER_INTRO =
+        "Sure, Let's find you a wine. But first, I'm going to need some details to assist you better."
+    const val CONTINUE_CONVERSATION_LABEL = "Continue Conversation"
 
     fun questionFor(step: FindWineStep): String = when (step) {
         FindWineStep.Type -> Q1_TYPE
@@ -102,18 +105,31 @@ internal fun matchModeChoice(reply: String): ModeChoice? {
 
 // Deliberately narrower than FIND_WINE_KEYWORDS: mid-conversation, "recommend"/"suggest" alone
 // (e.g. "what would you recommend with steak?") should stay a normal chat answer, not yank the
-// user into the structured flow. Only an explicit ask to find/search for a wine switches modes.
+// user into the structured flow. Only an explicit ask to find/search/choose/pick/select a wine
+// (or see options) switches modes.
 private val FIND_WINE_SWITCH_PHRASES = listOf(
     "find a wine", "find me a wine", "find wine for me", "search for a wine",
     "help me find a wine", "let's find a wine", "lets find a wine",
     "start the wine finder", "switch to find a wine", "can we find a wine",
     "i want to find a wine", "id like to find a wine",
+    "help me find one", "find one for me", "find me one", "find one",
+    "choose a wine", "choose one for me", "help me choose a wine", "help me choose",
+    "pick a wine", "pick one for me", "help me pick a wine", "help me pick",
+    "select a wine", "select one for me", "help me select a wine", "help me select",
+    "show me some options", "show me some wine options", "show me options",
+    "show me wine options", "see some options", "see my options",
+    "recommend an actual bottle", "recommend a bottle", "recommend a wine for me",
+    "suggest an actual bottle", "suggest a bottle",
 )
 
 internal fun requestsFindWineSwitch(reply: String): Boolean {
     val normalized = reply.chatNormalized()
     return FIND_WINE_SWITCH_PHRASES.any(normalized::contains)
 }
+
+/** Matches the handover prompt's "Continue Conversation" quick reply, tapped or typed. */
+internal fun requestsContinueConversation(reply: String): Boolean =
+    reply.chatNormalized() == ChatFlowText.CONTINUE_CONVERSATION_LABEL.chatNormalized()
 
 private val TYPE_KEYWORDS: Map<String, List<String>> = linkedMapOf(
     "red" to listOf("red"),

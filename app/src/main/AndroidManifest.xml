@@ -18,5 +18,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Debug-only: lets GemmaEvalDebugScreen share its output file via the share sheet.
+             Exported=false and grants are per-file/per-request, so this adds no attack surface
+             in a release build even though the manifest entry itself ships. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.evalfileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/eval_file_paths" />
+        </provider>
     </application>
 </manifest>

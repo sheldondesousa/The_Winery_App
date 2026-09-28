@@ -106,7 +106,10 @@ class GemmaConversationResponder(
             findWineStep = FindWineStep.Type
             chatPreferences = WinePreferences()
             declinedSteps.clear()
-            return plainMessage("Sure — let's find you a wine.\n\n${ChatFlowText.questionFor(findWineStep)}")
+            return plainMessage(
+                "${ChatFlowText.FIND_WINE_HANDOVER_INTRO}\n\n${ChatFlowText.questionFor(findWineStep)}",
+                quickReplies = listOf(ChatFlowText.CONTINUE_CONVERSATION_LABEL),
+            )
         }
 
         suspend fun streamFrom(conversation: Conversation): String {
@@ -158,6 +161,13 @@ class GemmaConversationResponder(
     }
 
     private suspend fun handleFindWineTurn(query: String): ChatMessage {
+        if (requestsContinueConversation(query)) {
+            chatMode = ChatMode.Curious
+            findWineStep = FindWineStep.Type
+            chatPreferences = WinePreferences()
+            declinedSteps.clear()
+            return plainMessage(ChatFlowText.CURIOUS_TRANSITION)
+        }
         val noPreference = isNoPreference(query)
         return when (findWineStep) {
             FindWineStep.Type -> {
@@ -530,10 +540,11 @@ class GemmaConversationResponder(
         )
     }
 
-    private fun plainMessage(text: String): ChatMessage = ChatMessage(
+    private fun plainMessage(text: String, quickReplies: List<String> = emptyList()): ChatMessage = ChatMessage(
         id = System.nanoTime(),
         author = MessageAuthor.Assistant,
         text = text,
+        quickReplies = quickReplies,
     )
 
     suspend fun enrichWineDetails(card: WineSuggestion): WineSuggestion = withContext(Dispatchers.Default) {
@@ -761,6 +772,22 @@ class GemmaConversationResponder(
         curiousConversation = null
         engine?.close()
         engine = null
+        usedConversationOpeners.clear()
+        chatMode = ChatMode.Undecided
+        findWineStep = FindWineStep.Type
+        chatPreferences = WinePreferences()
+        declinedSteps.clear()
+    }
+
+    /**
+     * Same as [close] but keeps the (expensive-to-cold-start) [engine] alive — only the
+     * per-conversation state resets. Lets a caller run many independent conversations back to
+     * back (e.g. an eval harness) through the exact same inference path and config a fresh
+     * [GemmaConversationResponder] would use, without repaying engine initialization each time.
+     */
+    internal suspend fun resetConversationState() = requestMutex.withLock {
+        curiousConversation?.close()
+        curiousConversation = null
         usedConversationOpeners.clear()
         chatMode = ChatMode.Undecided
         findWineStep = FindWineStep.Type

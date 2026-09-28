@@ -20,6 +20,7 @@ import com.sheldondesousa.uncork.data.profile.VarietyRegionDatabase
 import com.sheldondesousa.uncork.data.profile.VarietyRegionProfileRepository
 import com.sheldondesousa.uncork.data.profile.seedFromAssetsIfEmpty
 import com.sheldondesousa.uncork.data.reviews.WineReviewRepository
+import com.sheldondesousa.uncork.eval.GemmaEvalDebugScreen
 import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.BraveSearchHttpClient
 import com.sheldondesousa.uncork.model.BraveWineWebSearchDataSource
@@ -87,6 +88,7 @@ class MainActivity : ComponentActivity() {
                 var modelReady by remember { mutableStateOf(false) }
                 var stageWine by remember { mutableStateOf<StageWine?>(null) }
                 var selectedTab by remember { mutableStateOf<AppTab?>(null) }
+                var showEvalDebug by remember { mutableStateOf(false) }
                 var favorites by remember { mutableStateOf(favoritesRepository.load()) }
                 val conversationState = rememberConversationSessionState()
                 val guidedScope = rememberCoroutineScope()
@@ -127,9 +129,14 @@ class MainActivity : ComponentActivity() {
                     selectedTab = null
                 }
 
-                if (modelReady) {
+                if (modelReady && showEvalDebug) {
+                    GemmaEvalDebugScreen(onBack = { showEvalDebug = false })
+                } else if (modelReady) {
                     when (selectedTab) {
-                        null -> LandingRoute(onTabSelected = onTabSelected)
+                        null -> LandingRoute(
+                            onTabSelected = onTabSelected,
+                            onOpenEvalDebug = { showEvalDebug = true },
+                        )
                         AppTab.Find -> GuidedSelectionScreen(
                             state = guidedState,
                             onSuggestionClick = { stageWine = it.toStageWine() },

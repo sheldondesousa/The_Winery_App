@@ -1,0 +1,199 @@
+--------- beginning of main
+09-27 19:27:41.298  5639  5639 I Zygote  : Process 5639 created for com.sheldondesousa.uncork
+09-27 19:27:41.298  5639  5639 I ndesousa.uncork: Late-enabling -Xcheck:jni
+09-27 19:27:41.317  5639  5639 I ndesousa.uncork: Using CollectorTypeCMC GC.
+09-27 19:27:41.326  5639  5639 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+--------- beginning of system
+09-27 19:27:41.344  5639  5639 W ActivityThread: Package uses different ABI(s) than its instrumentation: package[com.sheldondesousa.uncork]: arm64-v8a, null instrumentation[com.sheldondesousa.uncork.test]: null, null
+09-27 19:27:41.346  5639  5639 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+09-27 19:27:41.347  5639  5639 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+09-27 19:27:41.630  5639  5639 D nativeloader: Configuring clns-9 for other apk /data/app/~~_D0X0IK64GKSC1VmCEDMMQ==/com.sheldondesousa.uncork.test-Hcet-Tl72IE5x1Fn-S0ohA==/base.apk:/data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/base.apk. target_sdk_version=37, uses_libraries=, library_path=/data/app/~~_D0X0IK64GKSC1VmCEDMMQ==/com.sheldondesousa.uncork.test-Hcet-Tl72IE5x1Fn-S0ohA==/lib/arm64:/data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/lib/arm64:/data/app/~~_D0X0IK64GKSC1VmCEDMMQ==/com.sheldondesousa.uncork.test-Hcet-Tl72IE5x1Fn-S0ohA==/base.apk!/lib/arm64-v8a:/data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.sheldondesousa.uncork
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment: Currently set values for:
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment: com.sheldondesousa.uncork is not listed in per-application setting
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment: ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+09-27 19:27:41.634  5639  5639 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+09-27 19:27:41.874  5639  5639 I AndroidJUnitRunner: newApplication android.app.Application
+09-27 19:27:41.884  5639  5639 I AndroidJUnitRunner: onCreate Bundle[mParcelledData.dataSize=148]
+09-27 19:27:41.884  5639  5639 D AndroidJUnitRunner: Use the raw file system for managing file I/O.
+09-27 19:27:41.892  5639  5639 V TestEventClient: No service name argument was given (testDiscoveryService, testRunEventService or orchestratorService)
+09-27 19:27:41.892  5639  5683 D AndroidJUnitRunner: onStart is called.
+09-27 19:27:41.895  5639  5683 I InstrConnection: Could not send broadcast or register receiver (isolatedProcess?)
+09-27 19:27:41.900  5639  5683 I TestRunner: run started: 1 tests
+09-27 19:27:41.901  5639  5683 I TestRunner: started: liveQuestionThenCanonicalHandback(com.sheldondesousa.uncork.model.GemmaLiveHandoverSmokeTest)
+09-27 19:27:41.930  5639  5685 E ndesousa.uncork: No implementation found for void com.google.ai.edge.litertlm.NativeLibraryLoader.nativeCheckLoaded() (tried Java_com_google_ai_edge_litertlm_NativeLibraryLoader_nativeCheckLoaded and Java_com_google_ai_edge_litertlm_NativeLibraryLoader_nativeCheckLoaded__) - is the library loaded, e.g. System.loadLibrary?
+09-27 19:27:41.934  5639  5685 D nativeloader: Load /data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/base.apk!/lib/arm64-v8a/liblitertlm_jni.so using class loader ns clns-9 (caller=/data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/base.apk!classes14.dex): ok
+09-27 19:27:41.935  5639  5685 I litert  : [environment.cc:36] Creating LiteRT environment with options
+09-27 19:27:41.935  5639  5685 W litert  : [npu_registry.cc:34] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+09-27 19:27:41.935  5639  5685 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfde16120, name=LiteRT GPU
+09-27 19:27:41.936  5639  5685 I litert  : [gpu_registry.cc:109] Statically linked GPU accelerator registered.
+09-27 19:27:41.936  5639  5685 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfde167b0, name=CpuAccelerator
+09-27 19:27:41.936  5639  5685 I litert  : [cpu_registry.cc:75] XNNPACK CPU accelerator registered.
+09-27 19:27:41.996  5639  5685 I litert  : [environment.cc:36] Creating LiteRT environment with options
+09-27 19:27:41.996  5639  5685 W litert  : [npu_registry.cc:34] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+09-27 19:27:41.996  5639  5685 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfde15710, name=LiteRT GPU
+09-27 19:27:41.996  5639  5685 I litert  : [gpu_registry.cc:109] Statically linked GPU accelerator registered.
+09-27 19:27:41.996  5639  5685 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfde138e0, name=CpuAccelerator
+09-27 19:27:41.996  5639  5685 I litert  : [cpu_registry.cc:75] XNNPACK CPU accelerator registered.
+09-27 19:27:41.996  5639  5685 W native  : W0000 00:00:1790533661.996497    5685 litert_lm_loader.cc:291] Section not found: 	
+09-27 19:27:41.996  5639  5685 W native  : W0000 00:00:1790533661.996537    5685 litert_lm_loader.cc:291] Section not found: 	
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:101] Loaded: num_subgraphs=976, num_signatures=4
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=decode, subgraph_index=0, num_tensors=2703, num_inputs=35, num_outputs=32, num_ops=2068
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=prefill_1024, subgraph_index=1, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=prefill_128, subgraph_index=2, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=verify, subgraph_index=3, num_tensors=2887, num_inputs=35, num_outputs=32, num_ops=2243
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:113] Magic number configs: num_configs=1
+09-27 19:27:41.996  5639  5685 I litert  : [magic_number_utils.cc:120]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+09-27 19:27:41.997  5639  5685 I litert  : [magic_number_utils.cc:536] 439 tensors of signature decode have been updated for magic number  32003 to target number 4096
+09-27 19:27:41.997  5639  5685 I litert  : [magic_number_utils.cc:536] 271 tensors of signature prefill_1024 have been updated for magic number  32003 to target number 4096
+09-27 19:27:41.997  5639  5685 I litert  : [magic_number_utils.cc:536] 270 tensors of signature prefill_128 have been updated for magic number  32003 to target number 4096
+09-27 19:27:41.997  5639  5685 I litert  : [magic_number_utils.cc:536] 444 tensors of signature verify have been updated for magic number  32003 to target number 4096
+09-27 19:27:41.997  5639  5685 I litert  : [compiled_model.cc:835] Flatbuffer model initialized directly from incoming litert model.
+09-27 19:27:41.998  5639  5685 I tflite  : Initialized TensorFlow Lite runtime.
+09-27 19:27:42.003  5639  5685 W libc    : Access denied finding property "ro.hardware.chipname"
+09-27 19:27:42.017  5639  5685 I litert  : [ml_drift_gpu_accelerator.cc:184] OpenCL not supported on this platform. Using WebGPU instead.
+09-27 19:27:42.017  5639  5685 I litert  : [delegate_webgpu.cc:322] Create WebGPU environment (use_low_power=0, enable_host_mapped_pointer=1)
+09-27 19:27:42.018  5639  5685 W libc    : Access denied finding property "vendor.mesa.log"
+09-27 19:27:42.018  5639  5685 W libc    : Access denied finding property "vendor.mesa.log.file"
+09-27 19:27:42.018  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.018  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.020  5639  5685 D vulkan  : searching for layers in '/data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/lib/arm64'
+09-27 19:27:42.020  5639  5685 D vulkan  : searching for layers in '/data/app/~~_D0X0IK64GKSC1VmCEDMMQ==/com.sheldondesousa.uncork.test-Hcet-Tl72IE5x1Fn-S0ohA==/base.apk!/lib/arm64-v8a'
+09-27 19:27:42.020  5639  5685 D vulkan  : searching for layers in '/data/app/~~6c3VewOo6FrDnigbZRR_jg==/com.sheldondesousa.uncork-tM6HeuOaHaY9wrBMy1k01w==/base.apk!/lib/arm64-v8a'
+09-27 19:27:42.020  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.020  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.020  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.020  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.021  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.021  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.021  5639  5685 W libc    : Access denied finding property "vendor.mesa.vk.trace.per.submit"
+09-27 19:27:42.021  5639  5685 W libc    : Access denied finding property "vendor.mesa.gallium.print.optio"
+09-27 19:27:42.021  5639  5685 W libc    : Access denied finding property "vendor.mesa.vk.trace.frame"
+09-27 19:27:42.022  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.023  5639  5685 W libc    : Access denied finding property "vendor.mesa.vk.wsi.headless.swa"
+09-27 19:27:42.023  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.023  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.023  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.023  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.023  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.023  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.024  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.024  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.024  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.025  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.026  5639  5685 W Dawn    : Warning: maxDynamicUniformBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+09-27 19:27:42.026  5639  5685 W Dawn    : Warning: maxDynamicStorageBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+09-27 19:27:42.026  5639  5685 I native  : I0000 00:00:1790533662.026546    5685 environment.cc:526] Selected adapter: Goldfish GFXStream (llvmpipe (LLVM 21.1.4, 128 bits)), arch=software, vendor=mesa, backend=Vulkan, adapterType=CPU / Software
+09-27 19:27:42.026  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.026  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.026  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.026  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.027  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.027  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.027  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.027  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.027  5639  5685 E MESA    : Failed to open rendernode: No such file or directory
+09-27 19:27:42.033  5639  5685 I litert  : [delegate_webgpu.cc:343] Created a WebGPU environment.
+09-27 19:27:42.033  5639  5685 I litert  : [environment.cc:47] Adding options to the existing LiteRT environment
+09-27 19:27:42.034  5639  5685 I tflite  : Failed to load OpenCL library with dlopen: dlopen failed: library "libvndksupport.so" not found. Trying ICD loader.
+09-27 19:27:42.035  5639  5685 I litert  : [gpu_environment.h:155] Created LiteRT GpuEnvironment.
+09-27 19:27:42.035  5639  5685 I litert  : [environment.cc:47] Adding options to the existing LiteRT environment
+09-27 19:27:42.035  5639  5685 I native  : I0000 00:00:1790533662.035052    5685 delegate_webgpu.cc:731] # of threads to upload weights = 2
+09-27 19:27:42.035  5639  5685 I native  : I0000 00:00:1790533662.035130    5685 delegate_webgpu.cc:739] # of threads to compile kernels = 1
+09-27 19:27:42.036  5639  5685 I tflite  : Replacing 2068 out of 2068 node(s) with delegate (LITERT_WEBGPU) node, yielding 1 partitions for subgraph 0 (decode).
+09-27 19:27:42.863  5639  5685 I native  : I0000 00:00:1790533662.863908    5685 delegate_kernel.cc:331] Total 32 external tensors are used for delegate inputs and outputs
+09-27 19:27:42.863  5639  5685 I native  : I0000 00:00:1790533662.863950    5685 delegate_kernel.cc:907] Initializing WebGPU-based API from serialized data.
+09-27 19:27:43.045  5639  5685 I tflite  : Replacing 1107 out of 1107 node(s) with delegate (LITERT_WEBGPU) node, yielding 1 partitions for subgraph 1 (prefill_1024).
+09-27 19:27:43.050  5639  5685 I native  : I0000 00:00:1790533663.050798    5685 delegate_kernel.cc:331] Total 31 external tensors are used for delegate inputs and outputs
+09-27 19:27:43.050  5639  5685 I native  : I0000 00:00:1790533663.050847    5685 delegate_kernel.cc:907] Initializing WebGPU-based API from serialized data.
+09-27 19:27:43.226  5639  5685 I tflite  : Replacing 1107 out of 1107 node(s) with delegate (LITERT_WEBGPU) node, yielding 1 partitions for subgraph 2 (prefill_128).
+09-27 19:27:43.231  5639  5685 I native  : I0000 00:00:1790533663.231922    5685 delegate_kernel.cc:331] Total 31 external tensors are used for delegate inputs and outputs
+09-27 19:27:43.231  5639  5685 I native  : I0000 00:00:1790533663.231953    5685 delegate_kernel.cc:907] Initializing WebGPU-based API from serialized data.
+09-27 19:27:43.376  5639  5685 I tflite  : Replacing 2243 out of 2243 node(s) with delegate (LITERT_WEBGPU) node, yielding 1 partitions for subgraph 3 (verify).
+09-27 19:27:43.388  5639  5685 I native  : I0000 00:00:1790533663.388377    5685 delegate_kernel.cc:331] Total 32 external tensors are used for delegate inputs and outputs
+09-27 19:27:43.388  5639  5685 I native  : I0000 00:00:1790533663.388410    5685 delegate_kernel.cc:907] Initializing WebGPU-based API from serialized data.
+09-27 19:27:43.610  5639  5685 I litert  : [environment.cc:36] Creating LiteRT environment with options
+09-27 19:27:43.610  5639  5685 W litert  : [npu_registry.cc:34] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+09-27 19:27:43.610  5639  5685 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfdededb0, name=LiteRT GPU
+09-27 19:27:43.610  5639  5685 I litert  : [gpu_registry.cc:109] Statically linked GPU accelerator registered.
+09-27 19:27:43.610  5639  5685 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfde64620, name=CpuAccelerator
+09-27 19:27:43.610  5639  5685 I litert  : [cpu_registry.cc:75] XNNPACK CPU accelerator registered.
+09-27 19:27:43.620  5639  5685 I litert  : [magic_number_utils.cc:101] Loaded: num_subgraphs=1, num_signatures=1
+09-27 19:27:43.620  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=embedder, subgraph_index=0, num_tensors=16, num_inputs=1, num_outputs=1, num_ops=8
+09-27 19:27:43.620  5639  5685 I litert  : [magic_number_utils.cc:113] Magic number configs: num_configs=1
+09-27 19:27:43.620  5639  5685 I litert  : [magic_number_utils.cc:120]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+09-27 19:27:43.620  5639  5685 I litert  : [compiled_model.cc:835] Flatbuffer model initialized directly from incoming litert model.
+09-27 19:27:43.621  5639  5685 W litert  : [compiled_model.cc:967] You should provide the `DispatchLibraryDir` option to use NPU.
+09-27 19:27:43.621  5639  5685 I tflite  : Created TensorFlow Lite XNNPACK delegate for CPU.
+09-27 19:27:43.621  5639  5685 I tflite  : Replacing 2 out of 8 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0 (main).
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:101] Loaded: num_subgraphs=1, num_signatures=1
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=eoa, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:113] Magic number configs: num_configs=1
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:120]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+09-27 19:27:43.621  5639  5685 I litert  : [compiled_model.cc:835] Flatbuffer model initialized directly from incoming litert model.
+09-27 19:27:43.621  5639  5685 W litert  : [compiled_model.cc:967] You should provide the `DispatchLibraryDir` option to use NPU.
+09-27 19:27:43.621  5639  5685 I litert  : [compiled_model.cc:1775] Tracked constant output tensor eoa_embedding with locked address
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:101] Loaded: num_subgraphs=1, num_signatures=1
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=eoi, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:113] Magic number configs: num_configs=1
+09-27 19:27:43.621  5639  5685 I litert  : [magic_number_utils.cc:120]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+09-27 19:27:43.621  5639  5685 I litert  : [compiled_model.cc:835] Flatbuffer model initialized directly from incoming litert model.
+09-27 19:27:43.621  5639  5685 W litert  : [compiled_model.cc:967] You should provide the `DispatchLibraryDir` option to use NPU.
+09-27 19:27:43.621  5639  5685 I litert  : [compiled_model.cc:1775] Tracked constant output tensor eoi_embedding with locked address
+09-27 19:27:43.622  5639  5685 I litert  : [magic_number_utils.cc:101] Loaded: num_subgraphs=1, num_signatures=1
+09-27 19:27:43.622  5639  5685 I litert  : [magic_number_utils.cc:109]   signature=per_layer_embedder, subgraph_index=0, num_tensors=83, num_inputs=1, num_outputs=1, num_ops=42
+09-27 19:27:43.622  5639  5685 I litert  : [magic_number_utils.cc:113] Magic number configs: num_configs=1
+09-27 19:27:43.622  5639  5685 I litert  : [magic_number_utils.cc:120]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+09-27 19:27:43.622  5639  5685 I litert  : [compiled_model.cc:835] Flatbuffer model initialized directly from incoming litert model.
+09-27 19:27:43.646  5639  5685 W litert  : [compiled_model.cc:967] You should provide the `DispatchLibraryDir` option to use NPU.
+09-27 19:27:43.646  5639  5685 I tflite  : Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0 (main).
+09-27 19:27:43.657  5639  5683 W native  : W0000 00:00:1790533663.657958    5683 mel_filterbank.cc:137] Missing 10 bands  starting at 0 in mel-frequency design. Perhaps too many channels or not enough frequency resolution in spectrum. (fft_length: 257 sample_rate: 16000 mel_channel_count: 128 lower_frequency_limit: 0 upper_frequency_limit: 8000
+09-27 19:27:47.631  5639  5699 D ProfileInstaller: Installing profile for com.sheldondesousa.uncork
+09-27 19:28:03.176  5639  5645 W ndesousa.uncork: userfaultfd: MOVE ioctl seems unsupported: Connection timed out
+09-27 19:30:51.613  5639  5782 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+09-27 19:30:51.634  5639  5639 D DesktopExperienceFlags: Toggle override initialized to: false
+09-27 19:30:51.638  5639  5782 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv1_CM_emulation.so
+09-27 19:30:51.638  5639  5782 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv2_emulation.so
+09-27 19:30:51.638  5639  5639 E ashmem  : Pinning is deprecated since Android Q. Please use trim or other methods.
+09-27 19:30:51.641  5639  5639 D LifecycleMonitor: Lifecycle status change: com.sheldondesousa.uncork.MainActivity@a44538a in: PRE_ON_CREATE
+09-27 19:30:51.643  5639  5782 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+09-27 19:30:51.644  5639  5782 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+09-27 19:30:51.648  5639  5639 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+09-27 19:30:51.696  5639  5639 D LifecycleMonitor: Lifecycle status change: com.sheldondesousa.uncork.MainActivity@a44538a in: CREATED
+09-27 19:30:51.697  5639  5639 D LifecycleMonitor: Lifecycle status change: com.sheldondesousa.uncork.MainActivity@a44538a in: STARTED
+09-27 19:30:51.700  5639  5639 D LifecycleMonitor: Lifecycle status change: com.sheldondesousa.uncork.MainActivity@a44538a in: RESUMED
+09-27 19:30:51.717  5639  5639 W HWUI    : Unknown dataspace 0
+09-27 19:30:51.751  5639  5639 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@849d933
+09-27 19:30:51.903  5639  5645 W ndesousa.uncork: Suspending all threads took: 12.576ms
+09-27 19:30:51.912  5639  5645 I ndesousa.uncork: Background young concurrent mark compact GC freed 1205KB AllocSpace bytes, 0(0B) LOS objects, 25% free, 3178KB/4240KB, paused 14.064ms,507us total 35.275ms
+09-27 19:30:52.093  5639  5639 D VRI[MainActivity]: WindowInsets changed: 1280x2856 statusBars:[0,156,0,0] navigationBars:[0,0,0,72] mandatorySystemGestures:[0,192,0,96] 
+09-27 19:30:52.130  5639  5639 I HWUI    : Using FreeType backend (prop=Auto)
+09-27 19:30:52.299  5639  5639 I ndesousa.uncork: hiddenapi: Accessing hidden method Landroid/os/SystemProperties;->addChangeCallback(Ljava/lang/Runnable;)V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/compose/ui/platform/AndroidComposeView$Companion; (domain=app, TargetSdkVersion=37) using reflection: allowed
+09-27 19:30:52.341  5639  5639 D InsetsController: hide(ime())
+09-27 19:30:52.342  5639  5639 I ImeTracker: com.sheldondesousa.uncork:a508cb96: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-27 19:30:52.705  5639  5686 I litert  : [environment.cc:36] Creating LiteRT environment with options
+09-27 19:30:52.705  5639  5686 W litert  : [npu_registry.cc:34] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+09-27 19:30:52.716  5639  5686 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfdf0a550, name=LiteRT GPU
+09-27 19:30:52.716  5639  5686 I litert  : [gpu_registry.cc:109] Statically linked GPU accelerator registered.
+09-27 19:30:52.716  5639  5686 I litert  : [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cfdf0c000, name=CpuAccelerator
+09-27 19:30:52.716  5639  5686 I litert  : [cpu_registry.cc:75] XNNPACK CPU accelerator registered.
+09-27 19:30:52.716  5639  5686 W native  : W0000 00:00:1790533852.716378    5686 litert_lm_loader.cc:291] Section not found: 	
+09-27 19:30:52.716  5639  5686 W native  : W0000 00:00:1790533852.716447    5686 litert_lm_loader.cc:291] Section not found: 	
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:101] Loaded: num_subgraphs=976, num_signatures=4
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:109]   signature=decode, subgraph_index=0, num_tensors=2703, num_inputs=35, num_outputs=32, num_ops=2068
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:109]   signature=prefill_1024, subgraph_index=1, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:109]   signature=prefill_128, subgraph_index=2, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:109]   signature=verify, subgraph_index=3, num_tensors=2887, num_inputs=35, num_outputs=32, num_ops=2243
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:113] Magic number configs: num_configs=1
+09-27 19:30:52.716  5639  5686 I litert  : [magic_number_utils.cc:120]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+09-27 19:30:52.717  5639  5686 I litert  : [magic_number_utils.cc:536] 439 tensors of signature decode have been updated for magic number  32003 to target number 4096
+09-27 19:30:52.723  5639  5686 I litert  : [magic_number_utils.cc:536] 271 tensors of signature prefill_1024 have been updated for magic number  32003 to target number 4096
+09-27 19:30:52.728  5639  5686 I litert  : [magic_number_utils.cc:536] 270 tensors of signature prefill_128 have been updated for magic number  32003 to target number 4096
+09-27 19:30:52.730  5639  5686 I litert  : [magic_number_utils.cc:536] 444 tensors of signature verify have been updated for magic number  32003 to target number 4096
+09-27 19:30:52.735  5639  5686 I litert  : [compiled_model.cc:835] Flatbuffer model initialized directly from incoming litert model.
+09-27 19:30:52.875  5639  5686 I litert  : [ml_drift_gpu_accelerator.cc:184] OpenCL not supported on this platform. Using WebGPU instead.
+09-27 19:30:52.875  5639  5686 I litert  : [delegate_webgpu.cc:322] Create WebGPU environment (use_low_power=0, enable_host_mapped_pointer=1)
+09-27 19:30:52.875  5639  5686 I native  : I0000 00:00:1790533852.875153    5686 environment.cc:526] Selected adapter: Goldfish GFXStream (llvmpipe (LLVM 21.1.4, 128 bits)), arch=software, vendor=mesa, backend=Vulkan, adapterType=CPU / Software
+09-27 19:30:54.658  5639  5644 I ndesousa.uncork: Compiler allocated 5145KB to compile void android.view.ViewRootImpl.performTraversals()
