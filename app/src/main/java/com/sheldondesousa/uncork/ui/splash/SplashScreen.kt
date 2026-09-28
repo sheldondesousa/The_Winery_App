@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.model.ModelDownloadEvent
 import com.sheldondesousa.uncork.model.ModelFileManager
 import com.sheldondesousa.uncork.ui.theme.Ink
-import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import kotlinx.coroutines.delay
@@ -208,7 +208,7 @@ private fun TokenEntryState(
     ) {
         Text(
             text = "Download the on-device model once, then use Uncork fully offline.",
-            color = InkMuted,
+            color = InkSubtle,
             fontSize = 16.sp,
             lineHeight = 23.sp,
             textAlign = TextAlign.Center,
@@ -226,7 +226,7 @@ private fun TokenEntryState(
         Spacer(Modifier.height(10.dp))
         Text(
             text = "The token is used only for this download and is not saved.",
-            color = InkMuted,
+            color = InkSubtle,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
         )
@@ -249,7 +249,7 @@ private fun LoadingState(progress: Float?, label: String) {
     ) {
         Text(
             text = label,
-            color = InkMuted,
+            color = InkSubtle,
             fontSize = 13.sp,
             letterSpacing = 0.4.sp,
             textAlign = TextAlign.Center,
@@ -296,7 +296,7 @@ private fun ErrorState(
     ) {
         Text(
             text = "Model failed to download three times. $message",
-            color = InkMuted,
+            color = InkSubtle,
             fontSize = 16.sp,
             lineHeight = 23.sp,
             textAlign = TextAlign.Center,
@@ -310,7 +310,7 @@ private fun ErrorState(
         }
         TextButton(
             onClick = onChangeToken,
-            colors = ButtonDefaults.textButtonColors(contentColor = InkMuted),
+            colors = ButtonDefaults.textButtonColors(contentColor = InkSubtle),
         ) {
             Text("Use a different token")
         }

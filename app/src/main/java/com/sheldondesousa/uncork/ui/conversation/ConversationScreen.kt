@@ -73,7 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
-import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 import com.sheldondesousa.uncork.ui.components.AppHeader
@@ -427,7 +427,7 @@ private fun MessageBubble(
                     message.debugLatencyMs?.let { timeToFirstWordMs ->
                         Text(
                             text = "⏱ time to first word: %.1fs".format(timeToFirstWordMs / 1000f),
-                            color = InkMuted,
+                            color = InkSubtle,
                             fontSize = 11.sp,
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier.padding(top = 4.dp),
@@ -610,14 +610,14 @@ internal fun SourceResultCard(
                                 )
                                 Text(
                                     text = "Preparing wine ${displayedSuggestions.size + index + 1}…",
-                                    color = InkMuted,
+                                    color = InkSubtle,
                                     fontSize = 13.sp,
                                 )
                             }
                         }
                     }
                 } else {
-                    Text("Searching…", color = InkMuted, fontSize = 13.sp, fontStyle = FontStyle.Italic)
+                    Text("Searching…", color = InkSubtle, fontSize = 13.sp, fontStyle = FontStyle.Italic)
                 }
             }
             // A genuine failure (network error, or the request was interrupted, e.g. the user
@@ -626,7 +626,7 @@ internal fun SourceResultCard(
             sourceResult.status == SourceQueryStatus.FAILED -> {
                 Text(
                     text = "${sourceResult.source.label()} could not be completed",
-                    color = InkMuted,
+                    color = InkSubtle,
                     fontSize = 13.sp,
                     fontStyle = FontStyle.Italic,
                 )
@@ -647,14 +647,14 @@ internal fun SourceResultCard(
             }
             displayedSuggestions.isEmpty() -> Text(
                 text = "No results found",
-                color = InkMuted,
+                color = InkSubtle,
                 fontSize = 13.sp,
                 fontStyle = FontStyle.Italic,
             )
             else -> {
                 Text(
                     text = "Here are a few options from ${sourceResult.source.introLabel()}",
-                    color = InkMuted,
+                    color = InkSubtle,
                     fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(10.dp))
@@ -753,13 +753,13 @@ private fun ReplyingIndicator() {
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(14.dp),
-            color = InkMuted,
+            color = InkSubtle,
             strokeWidth = 1.dp,
         )
         Spacer(Modifier.width(10.dp))
         Text(
             text = "Thinking…",
-            color = InkMuted,
+            color = InkSubtle,
             fontSize = 14.sp,
             fontStyle = FontStyle.Italic,
         )
@@ -838,7 +838,7 @@ private fun MessageComposer(
                     if (value.isEmpty()) {
                         Text(
                             text = "Ask me about wine",
-                            color = InkMuted,
+                            color = InkSubtle,
                             fontSize = 17.sp,
                             fontStyle = FontStyle.Italic,
                         )
@@ -866,7 +866,7 @@ private fun MessageComposer(
                 imageVector = Icons.Filled.ArrowUpward,
                 contentDescription = null,
                 modifier = Modifier.size(21.dp),
-                tint = if (canSend) Parchment else InkMuted,
+                tint = if (canSend) Parchment else InkSubtle,
             )
         }
     }

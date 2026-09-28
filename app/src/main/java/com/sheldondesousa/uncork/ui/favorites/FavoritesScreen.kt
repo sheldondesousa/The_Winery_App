@@ -23,7 +23,7 @@ import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.theme.Ink
-import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 
 @Composable
@@ -66,7 +66,7 @@ fun FavoritesRoute(
                         Text(
                             text = wine.province,
                             modifier = Modifier.padding(top = 3.dp),
-                            color = InkMuted,
+                            color = InkSubtle,
                             fontSize = 12.sp,
                         )
                     }

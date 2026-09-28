@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.cardValueOrUnknown
-import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Wine
 
 /** The shared result-card layout used by both Find and Chat. */
@@ -47,7 +47,7 @@ fun WineResultCard(
             }
             Text(
                 text = "›",
-                color = InkMuted,
+                color = InkSubtle,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Light,
             )

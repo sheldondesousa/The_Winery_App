@@ -47,7 +47,7 @@ import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
-import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 
@@ -181,7 +181,7 @@ fun StageShowRoute(
             Text(
                 text = profile.winery,
                 modifier = Modifier.padding(top = 8.dp),
-                color = InkMuted,
+                color = InkSubtle,
                 fontSize = 17.sp,
                 lineHeight = 23.sp,
             )
@@ -250,7 +250,7 @@ fun StageShowRoute(
         Spacer(Modifier.height(28.dp))
         Text(
             text = wine.userRating?.let { "YOUR RATING · $it / 10" } ?: "YOU HAVE NOT TRIED THIS WINE",
-            color = if (wine.userRating == null) InkMuted else Ink,
+            color = if (wine.userRating == null) InkSubtle else Ink,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 1.4.sp,
@@ -357,7 +357,7 @@ private fun SourceSelector(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         SourceOption("AI", selected == WineSource.AI) { onSelect(WineSource.AI) }
-        Text(" / ", color = InkMuted, fontSize = 13.sp)
+        Text(" / ", color = InkSubtle, fontSize = 13.sp)
         SourceOption("Kaggle", selected == WineSource.Kaggle) { onSelect(WineSource.Kaggle) }
         Text(
             text = if (sourcesAgree) "SIMILAR PICK" else "DIFFERENT TAKE",
@@ -375,7 +375,7 @@ private fun SourceOption(label: String, selected: Boolean, onClick: () -> Unit) 
     Text(
         text = label,
         modifier = Modifier.clickable(role = Role.Tab, onClick = onClick),
-        color = if (selected) Ink else InkMuted,
+        color = if (selected) Ink else InkSubtle,
         fontSize = 14.sp,
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         textDecoration = if (selected) TextDecoration.Underline else TextDecoration.None,
@@ -429,7 +429,7 @@ private fun DetailCell(
             Text(
                 text = value,
                 modifier = Modifier.padding(top = 7.dp),
-                color = if (unknown) InkMuted else Ink,
+                color = if (unknown) InkSubtle else Ink,
                 fontSize = 15.sp,
                 lineHeight = 28.sp,
                 fontStyle = if (unknown) FontStyle.Italic else FontStyle.Normal,

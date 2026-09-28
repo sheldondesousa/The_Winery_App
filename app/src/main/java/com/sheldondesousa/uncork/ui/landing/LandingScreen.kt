@@ -39,7 +39,7 @@ import com.sheldondesousa.uncork.ui.conversation.AppTab
 import androidx.compose.material3.Text
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
-import com.sheldondesousa.uncork.ui.theme.InkMuted
+import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
 
@@ -121,7 +121,7 @@ fun LandingRoute(
         if (BuildConfig.DEBUG && onOpenEvalDebug != null) {
             Text(
                 text = "Debug: Gemma Eval Runner",
-                color = InkMuted,
+                color = InkSubtle,
                 fontSize = 12.sp,
                 modifier = Modifier
                     .padding(bottom = 8.dp)
@@ -173,7 +173,7 @@ private fun LandingCard(
                 Text(
                     text = destination.description,
                     modifier = Modifier.padding(top = 4.dp),
-                    color = InkMuted,
+                    color = InkSubtle,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
                 )
@@ -182,7 +182,7 @@ private fun LandingCard(
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
-            tint = InkMuted,
+            tint = InkSubtle,
             modifier = Modifier.size(20.dp),
         )
     }

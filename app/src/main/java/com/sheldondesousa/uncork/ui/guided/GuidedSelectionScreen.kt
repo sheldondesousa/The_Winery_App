@@ -393,7 +393,7 @@ private fun FormTile(field: FormField, selection: GuidedCriteria, modifier: Modi
 @Composable
 private fun RadioDot(selected: Boolean) {
     Canvas(Modifier.size(20.dp)) {
-        val color = if (selected) Wine else InkMuted.copy(alpha = 0.45f)
+        val color = if (selected) Wine else InkSubtle
         drawCircle(color, style = Stroke(1.5.dp.toPx()))
         if (selected) {
             drawCircle(color, radius = size.minDimension / 2 * 0.5f)

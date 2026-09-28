@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Author:** Sheldon
-**Last updated:** 27 September 2026
+**Last updated:** 28 September 2026
 **Platform:** Android only, native (Kotlin) — matches your Pixel 10 Pro Fold
 **On-device model:** Gemma 4 E2B instruction-tuned LiteRT-LM bundle, downloaded from Hugging Face on first launch and stored in private app storage (not Gemini Nano/AICore)
 **User:** Personal use (single user); BYOK model if ever shared
@@ -508,6 +508,13 @@ Status checked against the working code on 27 September 2026, including the Chat
 - [x] On-device measurement of this rework showed the initial three-card search falling from a historical 48.13s average to 6.28s, with the on-demand detail fill for an opened card separately measured at 8.68s (`Docs/Gemma-Performance-Optimization-Summary-2026-09-25.md`) — a single-run, uncontrolled measurement, not a test-enforced threshold
 - [x] The curious-chat system instruction (`curious_chat_instruction.txt`) now tells Gemma that when the user signals intent to make a selection, it should say it needs a few details first and ask for confirmation before handing back to the Q1-Q3 flow; this is prompt-level guidance for Gemma's reply text only — the actual mode switch remains driven deterministically by `requestsFindWineSwitch` regardless of how Gemma's reply is worded (AC3d-curious)
 - [x] Conversation replies now record a debug-only `user_send_to_first_token` latency (user Send tap to the first streamed Gemma conversation-output chunk, tagged `operation=chat_conversation`) via the existing `GemmaTimingTrace` mechanism, distinct from the canned-reply/card timings it already tracked
+
+### Accessibility — 28 September 2026 (WCAG 2.0 AA text contrast pass)
+
+- [x] `InkMuted` (`0xFF9A8F82`), used for secondary/caption text and icon tints across Landing, Splash, Find, My List, the Profile Page, and Chat, measured 2.8:1 against the `Parchment` background — below the 4.5:1 WCAG 2.0 AA minimum for normal text and even the 3:1 minimum for large text/UI components. The existing `InkSubtle` (`0xFF6E645A`, 5.1:1 against `Parchment`) — already defined in `Color.kt` for this purpose but only applied on the Find screen — was extended to every remaining `InkMuted` text and icon usage across `LandingScreen.kt`, `SplashScreen.kt`, `WineResultCard.kt`, `FavoritesScreen.kt`, `StageShowScreen.kt`, and `ConversationScreen.kt`
+- [x] The Find screen's unselected radio-dot indicator (`GuidedSelectionScreen.kt`'s `RadioDot`) measured 1.5:1 at its previous `InkMuted.copy(alpha = 0.45f)` stroke color, failing the 3:1 non-text/UI-component contrast minimum; changed to solid `InkSubtle`
+- [x] `Wine` (8.8:1) and `Ink` (13.7:1) against `Parchment` were already compliant and unchanged. One purely decorative fill (the Find screen's filter-count pill background, `InkMuted.copy(alpha = 0.12f)`) was left as-is since it sits behind default dark text rather than being foreground content itself
+- [ ] No automated contrast-regression check exists yet; this was a manual pass. A lint rule or test that flags a new text/icon color below 4.5:1 against its background would prevent regression
 
 ### Partially complete
 
