@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.BuildConfig
 import com.sheldondesousa.uncork.ui.conversation.AppTab
+import com.sheldondesousa.uncork.ui.components.AppBottomBar
+import com.sheldondesousa.uncork.ui.components.ElevatedBottomAction
 import androidx.compose.material3.Text
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
@@ -71,10 +72,6 @@ private val LandingDestinations = listOf(
     ),
 )
 
-// Matches the height the removed bottom navigation bar used to occupy, so the last
-// card's base lines up with where its top edge would have been.
-private val BottomNavReservedHeight = 72.dp
-
 @Composable
 fun LandingRoute(
     onTabSelected: (AppTab) -> Unit,
@@ -85,51 +82,56 @@ fun LandingRoute(
         modifier = modifier
             .fillMaxSize()
             .background(Parchment)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .statusBarsPadding(),
     ) {
-        Spacer(Modifier.height(64.dp))
-        Text(
-            text = "Uncork",
-            color = Ink,
-            fontSize = 52.sp,
-            fontWeight = FontWeight.Medium,
-            lineHeight = 58.sp,
-        )
-        Text(
-            text = "AI SOMMELIER",
-            color = Wine,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 3.sp,
-        )
-        Spacer(Modifier.height(56.dp))
         Column(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LandingDestinations.forEach { destination ->
-                LandingCard(
-                    destination = destination,
-                    onClick = { onTabSelected(destination.tab) },
-                    modifier = Modifier.weight(1f),
+            Spacer(Modifier.height(64.dp))
+            Text(
+                text = "Uncork",
+                color = Ink,
+                fontSize = 52.sp,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 58.sp,
+            )
+            Text(
+                text = "AI SOMMELIER",
+                color = Wine,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 3.sp,
+            )
+            Spacer(Modifier.height(56.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                LandingDestinations.forEach { destination ->
+                    LandingCard(
+                        destination = destination,
+                        onClick = { onTabSelected(destination.tab) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            if (BuildConfig.DEBUG && onOpenEvalDebug != null) {
+                Text(
+                    text = "Debug: Gemma Eval Runner",
+                    color = InkSubtle,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .clickable(role = Role.Button, onClick = onOpenEvalDebug)
+                        .semantics { contentDescription = "Debug: Gemma Eval Runner" },
                 )
             }
+            Spacer(Modifier.height(32.dp))
         }
-        if (BuildConfig.DEBUG && onOpenEvalDebug != null) {
-            Text(
-                text = "Debug: Gemma Eval Runner",
-                color = InkSubtle,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .padding(bottom = 8.dp)
-                    .clickable(role = Role.Button, onClick = onOpenEvalDebug)
-                    .semantics { contentDescription = "Debug: Gemma Eval Runner" },
-            )
+        AppBottomBar {
+            ElevatedBottomAction(label = "Menu", onClick = {})
         }
-        Spacer(Modifier.height(BottomNavReservedHeight))
     }
 }
 

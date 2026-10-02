@@ -6,7 +6,6 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
-import kotlinx.coroutines.awaitCancellation
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -16,13 +15,17 @@ class GuidedSelectionScreenTest {
 
     @Test fun anySelectionEnablesSearchAndSheetsPopulateFields() {
         lateinit var state: GuidedSelectionState
+        var homeTapped = false
         compose.setContent {
             val scope = rememberCoroutineScope()
-            state = remember { GuidedSelectionState(scope, { emptyList() }, { GuidedResult.Complete(emptyList()) },
+            state = remember { GuidedSelectionState(scope, { GuidedResult.Complete(emptyList()) },
                 locations = mapOf("France" to listOf("Bordeaux", "Burgundy"),
                     "Italy" to listOf("Tuscany"))) }
-            UncorkTheme { GuidedSelectionScreen(state, {}, {}, {}) }
+            UncorkTheme { GuidedSelectionScreen(state, {}, {}, onHome = { homeTapped = true }) }
         }
+        compose.onNodeWithContentDescription("Find").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Home").assertDoesNotExist()
         compose.onNodeWithText("Submit").assertIsNotEnabled()
         // Every field is single-select: picking a value closes the sheet immediately, no Done button.
         compose.onNodeWithTag("type-tile").performScrollTo().performClick()
@@ -44,8 +47,12 @@ class GuidedSelectionScreenTest {
         compose.runOnIdle { assertEquals("", state.selection.province) }
         compose.onNodeWithText("Submit").assertIsEnabled().performClick()
         compose.onNodeWithText("Results").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Find").assertIsDisplayed()
+        compose.onNodeWithText("Back").assertIsDisplayed()
+        compose.onNodeWithText("Home").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(true, homeTapped) }
         compose.onNodeWithText("AI Sommelier").assertIsDisplayed()
-        compose.onNodeWithText("Reviews").assertIsDisplayed()
+        compose.onNodeWithText("Reviewed Wines").assertIsDisplayed()
         compose.onAllNodesWithText("No results found").assertCountEquals(2)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Submit").assertIsDisplayed()
@@ -56,8 +63,8 @@ class GuidedSelectionScreenTest {
         lateinit var state: GuidedSelectionState
         compose.setContent {
             val scope = rememberCoroutineScope()
-            state = remember { GuidedSelectionState(scope, { emptyList() }, { GuidedResult.Complete(emptyList()) }) }
-            UncorkTheme { GuidedSelectionScreen(state, {}, {}, {}) }
+            state = remember { GuidedSelectionState(scope, { GuidedResult.Complete(emptyList()) }) }
+            UncorkTheme { GuidedSelectionScreen(state, {}, {}) }
         }
         compose.onNodeWithTag("tannin-tile").performScrollTo().performClick()
         compose.onNodeWithText("Smooth").performClick()
@@ -67,10 +74,10 @@ class GuidedSelectionScreenTest {
         compose.runOnIdle { assertEquals(setOf("Astringent"), state.selection.tannin) }
     }
 
-    @Test fun gemmaCardsAppearSequentiallyInTheSameSourceCardUsedByChat() {
+    @Test fun reviewsAreFollowedByExtendedDbAndWebSearchOnlyAfterTheButtonIsTapped() {
         lateinit var state: GuidedSelectionState
-        val card = WineSuggestion(
-            name = "Château Margaux",
+        val saved = WineSuggestion(
+            name = "Saved Web Wine",
             country = "France",
             province = "Bordeaux",
             variety = "Cabernet Sauvignon",
@@ -80,24 +87,23 @@ class GuidedSelectionScreenTest {
             state = remember {
                 GuidedSelectionState(
                     scope = scope,
-                    gemmaSearch = { _, onUpdate ->
-                        onUpdate(listOf(card))
-                        awaitCancellation()
-                    },
                     databaseSearch = { GuidedResult.Complete(emptyList()) },
+                    extendedSearch = { GuidedResult.Complete(listOf(saved)) },
+                    webSearch = { emptyList() },
                 )
             }
-            UncorkTheme { GuidedSelectionScreen(state, {}, {}, {}) }
+            UncorkTheme { GuidedSelectionScreen(state, {}, {}) }
         }
 
         compose.runOnIdle {
             state.selection = GuidedCriteria(wineType = "Red")
             state.search()
         }
-        compose.onNodeWithText("AI Sommelier").assertIsDisplayed()
-        compose.onNodeWithText("Château Margaux").assertIsDisplayed()
-        compose.onNodeWithText("Preparing wine 2…").assertIsDisplayed()
-        compose.onNodeWithText("Preparing wine 3…").assertIsDisplayed()
         compose.onNodeWithText("Reviews").assertIsDisplayed()
+        compose.onNodeWithText("Extended db").assertIsDisplayed()
+        compose.onNodeWithText("Saved Web Wine").assertIsDisplayed()
+        compose.onAllNodesWithText("AI Sommelier").assertCountEquals(0)
+        compose.onNodeWithTag("web-search-button").performClick()
+        compose.onNodeWithText("Web Search", useUnmergedTree = true).assertExists()
     }
 }

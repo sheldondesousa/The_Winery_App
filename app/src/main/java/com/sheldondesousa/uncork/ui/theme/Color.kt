@@ -9,4 +9,5 @@ val InkMuted = Color(0xFF9A8F82)
 val InkSubtle = Color(0xFF6E645A)
 val Wine = Color(0xFF7A2331)
 val Hairline = Color(0x1A2B2320)
-
+val ResultCardBackground = Color.White
+val ChatResultCardBackground = Color.White

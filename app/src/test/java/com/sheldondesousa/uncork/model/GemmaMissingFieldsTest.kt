@@ -149,7 +149,6 @@ class GemmaMissingFieldsTest {
             **Where it's grown:** Marlborough in New Zealand is especially well known for it.
             **Production facts:** Cool conditions help preserve its fresh aromas.
             **Flavours:** Citrus, gooseberry, passion fruit, and herbs.
-            **Best pairings:** Goat cheese, shellfish, salads, and grilled vegetables.
             """.trimIndent(),
         )
 
@@ -157,7 +156,7 @@ class GemmaMissingFieldsTest {
         assertEquals("Unknown", enriched.body)
         assertEquals("Unknown", enriched.acidity)
         assertEquals(true, enriched.summary.startsWith("**Overview:**"))
-        assertEquals(true, enriched.summary.contains("**Best pairings:**"))
+        assertEquals(false, enriched.summary.contains("**Best pairings:**"))
         assertEquals(true, enriched.profileComplete)
     }
 

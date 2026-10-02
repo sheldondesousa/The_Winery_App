@@ -33,7 +33,7 @@ class RequestedPreferenceKeysTest {
         """.trimIndent()
 
         assertEquals(
-            listOf("Overview", "Taste", "Where it's grown", "Production facts", "Flavours", "Best pairings"),
+            listOf("Overview", "Taste", "Where it's grown", "Production facts", "Flavours"),
             wineEducationSections(answer).map { it.first },
         )
     }

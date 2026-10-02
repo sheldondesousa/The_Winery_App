@@ -14,6 +14,8 @@ import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import kotlinx.coroutines.awaitCancellation
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -49,7 +51,9 @@ class StageShowScreenTest {
     }
 
     @Test
-    fun showsWineDetailsWithoutPersistentNavigation() {
+    fun showsWineDetailsWithBackAndHomeNavigation() {
+        var wentBack = false
+        var wentHome = false
         composeRule.setContent {
             UncorkTheme {
                 StageShowRoute(
@@ -60,7 +64,8 @@ class StageShowScreenTest {
                             province = "Willamette Valley, Oregon",
                         ),
                     ),
-                    onBack = {},
+                    onBack = { wentBack = true },
+                    onHome = { wentHome = true },
                 )
             }
         }
@@ -71,8 +76,14 @@ class StageShowScreenTest {
         composeRule.onNodeWithText("RATING").assertDoesNotExist()
         composeRule.onNodeWithText("AI CONFIDENCE · UNKNOWN").assertDoesNotExist()
         composeRule.onNodeWithText("Model estimate, not verified accuracy").assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("Back to chat").assertIsDisplayed()
-        composeRule.onNodeWithText("Chat").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Summary").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").assertIsDisplayed().performClick()
+        composeRule.runOnIdle {
+            assertTrue(wentBack)
+            assertFalse(wentHome)
+        }
+        composeRule.onNodeWithContentDescription("Home").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { assertTrue(wentHome) }
     }
 
     @Test
@@ -150,7 +161,8 @@ class StageShowScreenTest {
     }
 
     @Test
-    fun favoriteTagTogglesAndRatingIsReadOnly() {
+    fun askButtonOpensTheSommelier() {
+        var asked = false
         composeRule.setContent {
             UncorkTheme {
                 StageShowRoute(
@@ -162,19 +174,17 @@ class StageShowScreenTest {
                         ),
                     ),
                     onBack = {},
+                    onAsk = { asked = true },
                 )
             }
         }
 
-        composeRule.onNodeWithContentDescription("Save favorite, off")
+        composeRule.onNodeWithContentDescription("Ask AI Sommelier")
             .assertWidthIsEqualTo(88.dp)
             .assertHeightIsEqualTo(88.dp)
             .performClick()
-        composeRule.onNodeWithContentDescription("Save favorite, on").assertExists()
-        composeRule.onNodeWithText("Saved").assertIsDisplayed()
-        composeRule.onNodeWithText("YOU HAVE NOT TRIED THIS WINE").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Save favorite, on").performClick()
-        composeRule.onNodeWithContentDescription("Save favorite, off").assertExists()
-        composeRule.onNodeWithText("Save").assertIsDisplayed()
+        composeRule.onNodeWithText("Ask").assertIsDisplayed()
+        composeRule.onNodeWithText("YOU HAVE NOT TRIED THIS WINE").assertDoesNotExist()
+        composeRule.runOnIdle { assertTrue(asked) }
     }
 }

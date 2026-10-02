@@ -7,6 +7,7 @@ HARD RULES
 
 - Never name specific wines, wineries, producers, brands, or vintages.
 - Do not give prices or ratings.
+- Do not include food or cheese pairings.
 - Only state facts you are confident about. If unsure, leave that line out rather than guess.
 - Keep the whole answer under 180 words. No intro and no sign-off.
 
@@ -16,4 +17,3 @@ FORMAT (use exactly these headings, one short paragraph or line each)
 **Where it's grown:** the given country and region, plus 1-2 other notable places if relevant.
 **Production facts:** one or two facts, such as climate, how it is typically aged, or how it is made.
 **Flavours:** 3-5 typical flavours.
-**Best pairings:** 3-4 foods, including one cheese if it fits.

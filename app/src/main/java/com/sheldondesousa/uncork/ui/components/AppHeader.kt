@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -107,6 +108,7 @@ fun AppHeader(
             Spacer(Modifier.width(if (onIconClick == null) 9.dp else 3.dp))
             Text(
                 text = title,
+                modifier = Modifier.semantics { heading() },
                 color = Ink,
                 fontSize = 24.sp,
                 fontFamily = FontFamily.Serif,

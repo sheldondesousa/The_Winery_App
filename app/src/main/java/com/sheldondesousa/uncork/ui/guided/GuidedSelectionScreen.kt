@@ -2,7 +2,6 @@ package com.sheldondesousa.uncork.ui.guided
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
@@ -13,28 +12,28 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.components.AppHeader
-import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.ui.components.AppBottomBar
+import com.sheldondesousa.uncork.ui.components.ElevatedBottomAction
 import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.SourceQueryStatus
 import com.sheldondesousa.uncork.ui.conversation.SourceResult
@@ -50,12 +49,13 @@ import com.sheldondesousa.uncork.ui.theme.Wine
 
 /** One tile per field on the Find form; tapping a tile opens its options in a bottom sheet. */
 private enum class FormField(val label: String) {
-    Type("Type"), Sweetness("Sweetness"), Tannin("Tannin"), Body("Body"), Acidity("Acidity"),
+    Type("Type"), Variety("Variety"), Sweetness("Sweetness"), Tannin("Tannin"), Body("Body"), Acidity("Acidity"),
     Country("Country"), Province("Province"),
 }
 
 private fun FormField.options(): List<String> = when (this) {
     FormField.Type -> GuidedOptions.types
+    FormField.Variety -> GuidedOptions.varieties
     FormField.Sweetness -> GuidedOptions.sweetness
     FormField.Tannin -> GuidedOptions.tannin
     FormField.Body -> GuidedOptions.body
@@ -66,6 +66,7 @@ private fun FormField.options(): List<String> = when (this) {
 /** Every field on this form is single-select: choosing a value (or "Any") replaces whatever was there before. */
 private fun FormField.selectedValue(selection: GuidedCriteria): String = when (this) {
     FormField.Type -> selection.wineType
+    FormField.Variety -> selection.variety
     FormField.Sweetness -> selection.sweetness
     FormField.Tannin -> selection.tannin
     FormField.Body -> selection.body
@@ -76,6 +77,7 @@ private fun FormField.selectedValue(selection: GuidedCriteria): String = when (t
 
 private fun FormField.select(selection: GuidedCriteria, value: String): GuidedCriteria = when (this) {
     FormField.Type -> selection.copy(wineType = value)
+    FormField.Variety -> selection.copy(variety = value)
     FormField.Sweetness -> selection.copy(sweetness = value)
     FormField.Tannin -> selection.copy(tannin = value)
     FormField.Body -> selection.copy(body = value)
@@ -95,15 +97,15 @@ fun GuidedSelectionScreen(
     state: GuidedSelectionState,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onTabSelected: (AppTab) -> Unit,
-    onModelSetup: () -> Unit,
     onBack: () -> Unit = {},
+    onHome: () -> Unit = onBack,
 ) {
     if (state.showResults) {
         GuidedResultsScreen(
             state = state,
             onSuggestionClick = onSuggestionClick,
-            onModelSetup = onModelSetup,
             onBack = state::backToForm,
+            onHome = onHome,
         )
     } else {
         GuidedSelectionFormScreen(
@@ -126,32 +128,37 @@ private fun GuidedSelectionFormScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     androidx.activity.compose.BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().background(Parchment).statusBarsPadding()) {
-        AppHeader(title = "Find", icon = BackArrowIcon, onIconClick = onBack, iconContentDescription = "Back")
+        AppHeader(title = "Find", icon = Icons.Outlined.Search, iconContentDescription = "Find")
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text("Choose any preferences to find a wine.", color = InkSubtle)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("${selection.filterCount} filters applied", fontWeight = FontWeight.Bold,
+                Text("${selection.filterCount} filters applied",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.background(InkMuted.copy(alpha = 0.12f), CircleShape)
                         .padding(horizontal = 16.dp, vertical = 8.dp))
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { state.selection = GuidedCriteria() }, enabled = selection.filterCount > 0) {
-                    Text("Clear all", color = Wine, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Clear all",
+                        color = Wine,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             }
+            CategoryTitle("Wine Style & Origin")
             FormTile(FormField.Type, selection, Modifier.fillMaxWidth()) { activeField = it }
+            FormTile(FormField.Variety, selection, Modifier.fillMaxWidth()) { activeField = it }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FormTile(FormField.Country, selection, Modifier.weight(1f)) { activeField = it }
                 FormTile(FormField.Province, selection, Modifier.weight(1f)) { activeField = it }
             }
             HorizontalDivider()
-            Column {
-                CategoryTitle("Taste profile")
-                Text("Optional — leave blank if you're not sure", color = InkSubtle,
-                    style = MaterialTheme.typography.bodySmall)
-            }
+            CategoryTitle("Taste Profile")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FormTile(FormField.Sweetness, selection, Modifier.weight(1f)) { activeField = it }
                 FormTile(FormField.Tannin, selection, Modifier.weight(1f)) { activeField = it }
@@ -172,22 +179,12 @@ private fun GuidedSelectionFormScreen(
             // Clears the Submit button, which floats above the bottom bar and would otherwise cover this text.
             Spacer(Modifier.height(48.dp))
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Hairline)
-                .navigationBarsPadding()
-                .height(72.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Spacer(
-                modifier = Modifier
-                    .requiredSize(104.dp)
-                    .offset(y = (-24).dp)
-                    .clip(CircleShape)
-                    .background(Parchment),
+        AppBottomBar(onBack = onBack) {
+            ElevatedBottomAction(
+                label = "Submit",
+                enabled = state.canSearch,
+                onClick = state::search,
             )
-            SubmitButton(enabled = state.canSearch, onClick = state::search)
         }
     }
     activeField?.let { field ->
@@ -221,8 +218,11 @@ private fun FieldBottomSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Parchment) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.5f)) {
             Text("Choose ${field.label.lowercase()}",
-                fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = Modifier
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .semantics { heading() })
             LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("${field.label.lowercase()}-options")) {
                 item {
                     SingleSelectRow(
@@ -264,15 +264,27 @@ private fun SingleSelectRow(label: String, selected: Boolean, onClick: () -> Uni
 private fun GuidedResultsScreen(
     state: GuidedSelectionState,
     onSuggestionClick: (WineSuggestion) -> Unit,
-    onModelSetup: () -> Unit,
     onBack: () -> Unit,
+    onHome: () -> Unit,
 ) {
     val submitted = state.submitted
     androidx.activity.compose.BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().background(Parchment).statusBarsPadding()) {
-        AppHeader(title = "Results", icon = BackArrowIcon, onIconClick = onBack, iconContentDescription = "Back")
+        AppHeader(
+            title = "Results",
+            icon = Icons.Outlined.Search,
+            iconContentDescription = "Find",
+        )
         Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = 20.dp,
+                    top = 20.dp,
+                    end = 20.dp,
+                    bottom = 20.dp,
+                ),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             submitted?.let { criteria ->
@@ -284,6 +296,7 @@ private fun GuidedResultsScreen(
                             append(tags.joinToString(" | "))
                         },
                         color = Ink,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f).padding(end = 12.dp),
                     )
                     OutlinedButton(
@@ -299,15 +312,13 @@ private fun GuidedResultsScreen(
                 Text("Selections changed. Go back and search again to update results.", color = Wine)
             }
             GuidedSourceSection(
-                source = WineSuggestionSource.GEMMA,
-                result = state.gemma,
-                onSuggestionClick = onSuggestionClick,
-                onRetry = state::retryGemma,
-                onModelSetup = onModelSetup,
-            )
-            GuidedSourceSection(
                 source = WineSuggestionSource.KAGGLE,
                 result = state.database,
+                onSuggestionClick = onSuggestionClick,
+            )
+            GuidedSourceSection(
+                source = WineSuggestionSource.CACHE,
+                result = state.extended,
                 onSuggestionClick = onSuggestionClick,
             )
             if (state.web != GuidedResult.Idle) {
@@ -319,11 +330,13 @@ private fun GuidedResultsScreen(
                 )
             }
         }
+        AppBottomBar(onBack = onBack, onHome = onHome)
     }
 }
 
 private fun GuidedCriteria.tags(): List<String> = buildList {
     if (wineType.isNotBlank()) add(wineType)
+    if (variety.isNotBlank()) add(variety)
     if (country.isNotBlank() || province.isNotBlank()) add(locationLabel)
     if (sweetness.isNotBlank()) add("Sweetness: $sweetness")
     if (tannin.isNotBlank()) add("Tannin: $tannin")
@@ -332,50 +345,15 @@ private fun GuidedCriteria.tags(): List<String> = buildList {
 }
 
 @Composable
-private fun SubmitButton(enabled: Boolean, onClick: () -> Unit) {
-    Box(contentAlignment = Alignment.Center) {
-        // A shadow-only layer, offset further up (negative Y) than the button itself, so the
-        // shadow reads as cast upward rather than Compose's default downward elevation shadow.
-        // Skipped when disabled: full-strength elevation shadow behind a translucent button looked
-        // like a dark halo.
-        if (enabled) {
-            Box(
-                Modifier
-                    .requiredSize(88.dp)
-                    .offset(y = ButtonOffsetY + ShadowOffsetY)
-                    .shadow(elevation = 6.dp, shape = CircleShape, clip = false),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .requiredSize(88.dp)
-                .offset(y = ButtonOffsetY)
-                .clip(CircleShape)
-                .background(if (enabled) Wine else Wine.copy(alpha = 0.4f))
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .semantics {
-                    role = Role.Button
-                    contentDescription = "Submit"
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Submit",
-                color = Parchment,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-private val ButtonOffsetY = (-24).dp
-private val ShadowOffsetY = (-6).dp
-
-@Composable
 private fun CategoryTitle(title: String) {
-    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-        color = Ink, modifier = Modifier.semantics { heading() })
+    Text(
+        text = title,
+        color = Wine,
+        fontSize = 20.sp,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.semantics { heading() },
+    )
 }
 
 /** A tile summarizing one field's current selection; tapping it opens that field's bottom sheet. */
@@ -388,11 +366,19 @@ private fun FormTile(field: FormField, selection: GuidedCriteria, modifier: Modi
         colors = CardDefaults.outlinedCardColors(containerColor = Parchment)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(field.label, fontWeight = FontWeight.Bold, color = Ink, modifier = Modifier.weight(1f))
+                Text(
+                    text = field.label,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Ink,
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { heading() },
+                )
                 Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
             }
             Text(value, color = if (value == "Any") InkSubtle else Wine, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -415,28 +401,29 @@ private fun GuidedSourceSection(
     result: GuidedResult,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onRetry: () -> Unit = {},
-    onModelSetup: () -> Unit = {},
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HorizontalDivider()
-        if (result is GuidedResult.Complete && result.usedProvinceFallback) {
-            Text("Some results do not have an exact match.", color = InkSubtle)
-        }
-        val sourceResult = when (result) {
-            GuidedResult.Idle -> null
-            is GuidedResult.Loading -> SourceResult(source, SourceQueryStatus.LOADING, result.cards)
-            GuidedResult.Error -> SourceResult(source, SourceQueryStatus.FAILED)
-            is GuidedResult.Complete -> SourceResult(source, SourceQueryStatus.COMPLETE, result.cards)
-        }
-        sourceResult?.let {
-            SourceResultCard(
-                sourceResult = it,
-                onSuggestionClick = onSuggestionClick,
-                onRetry = if (result == GuidedResult.Error) onRetry else null,
-            )
-        }
-        if (result == GuidedResult.Error && source == WineSuggestionSource.GEMMA) {
-            TextButton(onClick = onModelSetup) { Text("Model setup") }
+    Column {
+        HorizontalDivider(thickness = 1.5.dp)
+        Column(
+            modifier = Modifier.padding(top = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (result is GuidedResult.Complete && result.usedProvinceFallback) {
+                Text("Some results do not have an exact match.", color = InkSubtle)
+            }
+            val sourceResult = when (result) {
+                GuidedResult.Idle -> null
+                is GuidedResult.Loading -> SourceResult(source, SourceQueryStatus.LOADING, result.cards)
+                GuidedResult.Error -> SourceResult(source, SourceQueryStatus.FAILED)
+                is GuidedResult.Complete -> SourceResult(source, SourceQueryStatus.COMPLETE, result.cards)
+            }
+            sourceResult?.let {
+                SourceResultCard(
+                    sourceResult = it,
+                    onSuggestionClick = onSuggestionClick,
+                    onRetry = if (result == GuidedResult.Error) onRetry else null,
+                )
+            }
         }
     }
 }

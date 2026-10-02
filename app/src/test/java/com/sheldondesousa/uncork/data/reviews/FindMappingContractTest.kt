@@ -55,4 +55,31 @@ class FindMappingContractTest {
         assertFalse(query.sql.contains("description"))
         assertEquals(query.sql.count { it == '?' }, query.arguments.size)
     }
+
+    @Test fun reviewedWinesReturnUpToTenInPointsOrder() {
+        val query = GuidedReviewQuery.from(GuidedCriteria(country = "France"))
+
+        assertTrue(query.sql.contains("ORDER BY points IS NULL ASC, points DESC"))
+        assertTrue(query.sql.endsWith("LIMIT 10"))
+    }
+
+    @Test fun varietyListHasEveryGrapeOnceAndIsOrderedMostCommonFirst() {
+        val names = GuidedOptions.varieties
+        assertEquals(404, names.size)
+        assertEquals(names.distinct(), names)
+        assertEquals("Pinot Noir", names.first())
+        assertTrue(names.indexOf("Chardonnay") < names.indexOf("Nebbiolo"))
+        assertTrue(GrapeVarieties.all.all { it.databaseNames.isNotEmpty() })
+        assertEquals(listOf("Shiraz", "Syrah"), GrapeVarieties.all.first { it.name == "Syrah / Shiraz" }.databaseNames)
+    }
+
+    @Test fun selectedVarietyMatchesEveryMergedDatabaseNameAndCombinesWithOtherFields() {
+        val query = GuidedReviewQuery.from(GuidedCriteria(country = "France", variety = "Syrah / Shiraz"))
+        assertTrue(query.sql.contains("variety COLLATE NOCASE IN (?,?)"))
+        assertTrue(query.arguments.toList().containsAll(listOf("Shiraz", "Syrah", "France")))
+        assertEquals(query.sql.count { it == '?' }, query.arguments.size)
+        assertTrue(runCatching { GuidedReviewQuery.from(GuidedCriteria(variety = "Not a grape")) }.isFailure)
+        assertTrue(GuidedCriteria(variety = "Malbec").valid)
+        assertEquals(mapOf("variety" to "Malbec"), GuidedCriteria(variety = "Malbec").constraints())
+    }
 }

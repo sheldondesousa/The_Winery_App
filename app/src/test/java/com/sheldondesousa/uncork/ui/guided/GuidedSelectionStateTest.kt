@@ -47,8 +47,10 @@ class GuidedSelectionStateTest {
         assertTrue(GuidedCriteria().constraints().isEmpty())
     }
 
+    private val none: suspend (GuidedCriteria) -> GuidedResult.Complete = { GuidedResult.Complete(emptyList()) }
+
     @Test fun catalogProvidesAllCountriesAndAlphabeticalCascadingProvinces() = runBlocking {
-        val state = GuidedSelectionState(this, { emptyList() }, { GuidedResult.Complete(emptyList()) },
+        val state = GuidedSelectionState(this, none,
             locations = linkedMapOf("US" to listOf("Oregon", "California"),
                 "France" to listOf("Burgundy", "Bordeaux"), "Argentina" to listOf("Mendoza")))
         assertEquals(listOf("Argentina", "France", "US"), state.countries)
@@ -58,15 +60,15 @@ class GuidedSelectionStateTest {
     }
 
     @Test fun defaultCatalogIsTheCuratedWineRegionsList() = runBlocking {
-        val state = GuidedSelectionState(this, { emptyList() }, { GuidedResult.Complete(emptyList()) })
+        val state = GuidedSelectionState(this, none)
         assertEquals(WineRegions.catalog.keys.sorted(), state.countries.sorted())
         assertTrue(state.countries.isNotEmpty())
     }
 
-    @Test fun bothSourcesReceiveOnlyTheSameSelectedCriteria() = runBlocking {
+    @Test fun reviewsAndExtendedDbReceiveOnlyTheSameSelectedCriteria() = runBlocking {
         val received = mutableListOf<Map<String, String>>()
         val state = GuidedSelectionState(this,
-            { received += it.constraints(); emptyList() },
+            { received += it.constraints(); GuidedResult.Complete(emptyList()) },
             { received += it.constraints(); GuidedResult.Complete(emptyList()) })
         state.selection = GuidedCriteria(tannin = "Smooth")
         state.search()
@@ -75,60 +77,49 @@ class GuidedSelectionStateTest {
     }
 
     @Test fun searchShowsResultsAndBackToFormPreservesSelection() = runBlocking {
-        val state = GuidedSelectionState(this, { listOf(card) }, { GuidedResult.Complete(listOf(card)) })
+        val state = GuidedSelectionState(this, { GuidedResult.Complete(listOf(card)) })
         assertFalse(state.showResults)
         state.selection = criteria
         state.search()
         yield()
         assertTrue(state.showResults)
+        assertEquals(GuidedResult.Complete(listOf(card)), state.database)
         state.backToForm()
         assertFalse(state.showResults)
         assertEquals(criteria, state.selection)
         assertEquals(criteria, state.submitted)
     }
 
-    @Test fun databaseCompletesWhileGemmaIsPendingAndRetryOnlyCallsGemma() = runBlocking {
-        val releaseGemma = CompletableDeferred<Unit>()
-        var gemmaCalls = 0
+    @Test fun reviewsShowWhileExtendedDbIsStillLoadingAndASecondSearchWaits() = runBlocking {
+        val releaseExtended = CompletableDeferred<Unit>()
+        val saved = card.copy(name = "Saved web wine")
         var databaseCalls = 0
-        val state = GuidedSelectionState(this, {
-            gemmaCalls++
-            if (gemmaCalls == 1) {
-                releaseGemma.await()
-                error("model unavailable")
-            }
-            listOf(card)
-        }, { databaseCalls++; GuidedResult.Complete(listOf(card)) })
+        val state = GuidedSelectionState(this,
+            { databaseCalls++; GuidedResult.Complete(listOf(card)) },
+            { releaseExtended.await(); GuidedResult.Complete(listOf(saved)) })
         state.selection = criteria
         state.search()
         yield()
-        assertEquals(GuidedResult.Loading(), state.gemma)
         assertEquals(GuidedResult.Complete(listOf(card)), state.database)
+        assertEquals(GuidedResult.Loading(), state.extended)
         assertFalse(state.canSearch)
         state.search()
         assertEquals(1, databaseCalls)
-        releaseGemma.complete(Unit)
+        releaseExtended.complete(Unit)
         yield()
-        assertEquals(GuidedResult.Error, state.gemma)
-        state.selection = criteria.copy(body = "Full-Bodied")
-        state.retryGemma()
-        state.retryGemma()
-        yield()
-        assertEquals(2, gemmaCalls)
-        assertEquals(1, databaseCalls)
-        assertEquals(criteria, state.submitted)
-        assertEquals(GuidedResult.Complete(listOf(card)), state.gemma)
+        assertEquals(GuidedResult.Complete(listOf(saved)), state.extended)
     }
 
-    @Test fun databaseFailureLooksEmptyAndDoesNotCancelGemma() = runBlocking {
+    @Test fun databaseFailureLooksEmptyAndDoesNotCancelExtendedDb() = runBlocking {
         var logged = false
         val databaseGate = CompletableDeferred<Unit>()
         val state = GuidedSelectionState(this,
-            { listOf(card) }, { databaseGate.await(); error("parse failure") }, { logged = true })
+            { databaseGate.await(); error("parse failure") },
+            { GuidedResult.Complete(listOf(card)) }, { logged = true })
         state.selection = criteria
         state.search()
         yield()
-        assertEquals(GuidedResult.Complete(listOf(card)), state.gemma)
+        assertEquals(GuidedResult.Complete(listOf(card)), state.extended)
         assertEquals(GuidedResult.Loading(), state.database)
         databaseGate.complete(Unit)
         yield()
@@ -142,9 +133,9 @@ class GuidedSelectionStateTest {
         val newer = card.copy(name = "New search")
         val state = GuidedSelectionState(this, {
             calls++
-            if (calls == 1) withContext(NonCancellable) { obsolete.await(); listOf(card) }
-            else listOf(newer)
-        }, { GuidedResult.Complete(emptyList()) })
+            if (calls == 1) withContext(NonCancellable) { obsolete.await(); GuidedResult.Complete(listOf(card)) }
+            else GuidedResult.Complete(listOf(newer))
+        })
         state.selection = criteria
         state.search()
         yield()
@@ -152,40 +143,12 @@ class GuidedSelectionStateTest {
         assertTrue(state.canSearch)
         state.search()
         yield()
-        assertEquals(GuidedResult.Complete(listOf(newer)), state.gemma)
+        assertEquals(GuidedResult.Complete(listOf(newer)), state.database)
         obsolete.complete(Unit)
         yield()
         yield()
-        assertEquals(GuidedResult.Complete(listOf(newer)), state.gemma)
+        assertEquals(GuidedResult.Complete(listOf(newer)), state.database)
         assertEquals("Full-Bodied", state.submitted?.body)
-    }
-
-    @Test fun gemmaPublishesEachCompactCardWhileTheSearchIsStillRunning() = runBlocking {
-        val publishSecond = CompletableDeferred<Unit>()
-        val finish = CompletableDeferred<Unit>()
-        val second = card.copy(name = "Second wine")
-        val state = GuidedSelectionState(
-            scope = this,
-            gemmaSearch = { _, onUpdate ->
-                onUpdate(listOf(card))
-                publishSecond.await()
-                onUpdate(listOf(card, second))
-                finish.await()
-                listOf(card, second)
-            },
-            databaseSearch = { GuidedResult.Complete(emptyList()) },
-        )
-        state.selection = criteria
-
-        state.search()
-        yield()
-        assertEquals(GuidedResult.Loading(listOf(card)), state.gemma)
-        publishSecond.complete(Unit)
-        yield()
-        assertEquals(GuidedResult.Loading(listOf(card, second)), state.gemma)
-        finish.complete(Unit)
-        yield()
-        assertEquals(GuidedResult.Complete(listOf(card, second)), state.gemma)
     }
 
     @Test fun webSearchOnlyRunsWhenRequestedAndUsesTheSubmittedSelections() = runBlocking {
@@ -193,8 +156,7 @@ class GuidedSelectionStateTest {
         val webCard = card.copy(name = "Web wine")
         val state = GuidedSelectionState(
             scope = this,
-            gemmaSearch = { emptyList() },
-            databaseSearch = { GuidedResult.Complete(emptyList()) },
+            databaseSearch = none,
             webSearch = { queries += it.webQuery; listOf(webCard) },
         )
         state.selection = criteria
@@ -212,8 +174,7 @@ class GuidedSelectionStateTest {
     @Test fun webSearchFailureShowsErrorAndANewSearchClearsIt() = runBlocking {
         val state = GuidedSelectionState(
             scope = this,
-            gemmaSearch = { emptyList() },
-            databaseSearch = { GuidedResult.Complete(emptyList()) },
+            databaseSearch = none,
             webSearch = { error("offline") },
         )
         state.selection = criteria

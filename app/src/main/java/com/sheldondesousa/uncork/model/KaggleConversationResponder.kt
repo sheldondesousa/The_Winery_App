@@ -858,20 +858,7 @@ class KaggleConversationResponder(
             source = WineSuggestionSource.KAGGLE,
         )
 
-    private fun CachedWineOption.toSuggestion(): WineSuggestion = WineSuggestion(
-        name = name,
-        winery = winery,
-        country = country,
-        province = province,
-        variety = variety,
-        body = body ?: "Unknown",
-        tannin = tannin ?: "Unknown",
-        acidity = acidity ?: "Unknown",
-        flavorNotes = flavorNotes.takeIf(List<String>::isNotEmpty)?.joinToString(", ") ?: "Unknown",
-        suggestedPairing = suggestedPairing ?: "Unknown",
-        webSummary = webSummary ?: "Unknown",
-        source = WineSuggestionSource.CACHE,
-    )
+    private fun CachedWineOption.toSuggestion(): WineSuggestion = toCacheSuggestion()
 
     private fun WineSuggestion.toCachedWineOption(): CachedWineOption = CachedWineOption(
         name = name,
@@ -1024,3 +1011,19 @@ class KaggleConversationResponder(
         )
     }
 }
+
+/** A saved web result as an "Extended db" card; shared by Chat and Find. */
+internal fun CachedWineOption.toCacheSuggestion(): WineSuggestion = WineSuggestion(
+    name = name,
+    winery = winery,
+    country = country,
+    province = province,
+    variety = variety,
+    body = body ?: "Unknown",
+    tannin = tannin ?: "Unknown",
+    acidity = acidity ?: "Unknown",
+    flavorNotes = flavorNotes.takeIf(List<String>::isNotEmpty)?.joinToString(", ") ?: "Unknown",
+    suggestedPairing = suggestedPairing ?: "Unknown",
+    webSummary = webSummary ?: "Unknown",
+    source = WineSuggestionSource.CACHE,
+)

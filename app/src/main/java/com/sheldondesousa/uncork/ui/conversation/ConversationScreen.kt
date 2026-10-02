@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
@@ -72,9 +73,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.theme.Hairline
+import com.sheldondesousa.uncork.ui.theme.ChatResultCardBackground
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
+import com.sheldondesousa.uncork.ui.theme.ResultCardBackground
 import com.sheldondesousa.uncork.ui.theme.Wine
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
@@ -373,6 +376,7 @@ private fun MessageBubble(
     onQuickReplySelected: (String) -> Unit = {},
 ) {
     val isUser = message.author == MessageAuthor.User
+    val hasWineResults = message.sourceResults.isNotEmpty() || message.wineSuggestions.isNotEmpty()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -395,22 +399,32 @@ private fun MessageBubble(
             )
         } else {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .height(IntrinsicSize.Min),
+                modifier = if (hasWineResults) {
+                    Modifier.fillMaxWidth()
+                } else {
+                    Modifier
+                        .fillMaxWidth(0.92f)
+                        .height(IntrinsicSize.Min)
+                },
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .background(Ink.copy(alpha = 0.50f)),
-                )
+                if (!hasWineResults) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                            .background(Ink.copy(alpha = 0.50f)),
+                    )
+                }
                 Column(
-                    modifier = Modifier
-                        .padding(start = 18.dp, top = 4.dp, bottom = 4.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(Color.Black.copy(alpha = 0.05f))
-                        .padding(horizontal = 14.dp, vertical = 16.dp),
+                    modifier = if (hasWineResults) {
+                        Modifier.fillMaxWidth()
+                    } else {
+                        Modifier
+                            .padding(start = 18.dp, top = 4.dp, bottom = 4.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(ChatResultCardBackground)
+                            .padding(horizontal = 14.dp, vertical = 16.dp)
+                    },
                 ) {
                     // A search-type response has no top-of-bubble text (each master card below
                     // carries its own) — skip the Text entirely rather than reserving a full
@@ -461,6 +475,7 @@ private fun MessageBubble(
                             SourceResultCard(
                                 sourceResult = sourceResult,
                                 onSuggestionClick = onSuggestionClick,
+                                cardBackground = ChatResultCardBackground,
                                 onRetry = if (quickRepliesEnabled) {
                                     { onQuickReplySelected("Try Again") }
                                 } else {
@@ -485,6 +500,7 @@ private fun MessageBubble(
                                         suggestions = groupSuggestions,
                                     ),
                                     onSuggestionClick = onSuggestionClick,
+                                    cardBackground = ChatResultCardBackground,
                                 )
                             }
                         }
@@ -558,14 +574,14 @@ private val LeftRuleShape = RoundedCornerShape(
 /** A line separator between two consecutive search-type blocks (Kaggle, Cache, Gemma, …). */
 @Composable
 private fun SearchTypeDivider() {
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(20.dp))
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(0.75.dp)
+            .height(1.5.dp)
             .background(Wine),
     )
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(20.dp))
 }
 
 /**
@@ -578,6 +594,7 @@ internal fun SourceResultCard(
     sourceResult: SourceResult,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onRetry: (() -> Unit)? = null,
+    cardBackground: Color = ResultCardBackground,
 ) {
     val displayedSuggestions = sourceResult.suggestions.filter { it.name.isUsefulCardValue() }
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -593,12 +610,17 @@ internal fun SourceResultCard(
                 if (sourceResult.source == WineSuggestionSource.GEMMA) {
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         displayedSuggestions.forEach { suggestion ->
-                            SuggestionCard(suggestion = suggestion, onClick = { onSuggestionClick(suggestion) })
+                            SuggestionCard(
+                                suggestion = suggestion,
+                                onClick = { onSuggestionClick(suggestion) },
+                                background = cardBackground,
+                            )
                         }
                         repeat((3 - displayedSuggestions.size).coerceAtLeast(0)) { index ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .background(cardBackground, RoundedCornerShape(10.dp))
                                     .border(1.dp, Hairline, RoundedCornerShape(10.dp))
                                     .padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -664,6 +686,7 @@ internal fun SourceResultCard(
                         SuggestionCard(
                             suggestion = suggestion,
                             onClick = { onSuggestionClick(suggestion) },
+                            background = cardBackground,
                         )
                     }
                 }
@@ -674,8 +697,12 @@ internal fun SourceResultCard(
 
 /** A single wine suggestion, containerized in its own bordered card. */
 @Composable
-private fun SuggestionCard(suggestion: WineSuggestion, onClick: () -> Unit) {
-    WineResultCard(wine = suggestion, onClick = onClick)
+private fun SuggestionCard(
+    suggestion: WineSuggestion,
+    onClick: () -> Unit,
+    background: Color,
+) {
+    WineResultCard(wine = suggestion, onClick = onClick, containerColor = background)
 }
 
 /**
@@ -687,15 +714,17 @@ private fun SuggestionCard(suggestion: WineSuggestion, onClick: () -> Unit) {
 private fun SourceLabel(source: WineSuggestionSource) {
     Text(
         text = source.label(),
+        modifier = Modifier.semantics { heading() },
         color = Wine,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontSize = 20.sp,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Medium,
     )
 }
 
 private fun WineSuggestionSource.label(): String = when (this) {
     WineSuggestionSource.GEMMA -> "AI Sommelier"
-    WineSuggestionSource.KAGGLE -> "Reviews"
+    WineSuggestionSource.KAGGLE -> "Reviewed Wines"
     WineSuggestionSource.CACHE -> "Extended db"
     WineSuggestionSource.WEB_SEARCH -> "Web Search"
 }

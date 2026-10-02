@@ -26,6 +26,12 @@ internal data class GuidedReviewQuery(
                 clauses += filter.sql
                 arguments += filter.arguments
             }
+            if (criteria.variety.isNotBlank()) {
+                val names = GrapeVarieties.all.firstOrNull { it.name == criteria.variety }?.databaseNames
+                    ?: return GuidedReviewQuery("", emptyArray(), knownEmpty = true)
+                clauses += "variety COLLATE NOCASE IN (${names.joinToString(",") { "?" }})"
+                arguments += names
+            }
             fun evidence(value: String, phrases: Map<String, List<String>>) {
                 if (value.isBlank()) return
                 val matches = phrases.getValue(value)
@@ -49,7 +55,7 @@ internal data class GuidedReviewQuery(
             check(clauses.isNotEmpty())
             return GuidedReviewQuery(
                 "SELECT * FROM wine_reviews WHERE ${clauses.joinToString(" AND ")} " +
-                    "ORDER BY points IS NULL ASC, points DESC, winery ASC, id ASC LIMIT 3",
+                    "ORDER BY points IS NULL ASC, points DESC, winery ASC, id ASC LIMIT 10",
                 arguments.toTypedArray(),
             )
         }

@@ -710,6 +710,7 @@ class GemmaConversationResponder(
             type = criteria.wineType.ifBlank { WinePreferences.UNKNOWN },
             country = criteria.country.ifBlank { WinePreferences.UNKNOWN },
             province = criteria.province.ifBlank { WinePreferences.UNKNOWN },
+            variety = criteria.variety.ifBlank { WinePreferences.UNKNOWN },
             sweetness = criteria.sweetness.ifBlank { WinePreferences.UNKNOWN },
             tannin = criteria.tannin.ifBlank { WinePreferences.UNKNOWN },
             acidity = criteria.acidity.ifBlank { WinePreferences.UNKNOWN },
@@ -940,7 +941,6 @@ class GemmaConversationResponder(
             "Where it's grown",
             "Production facts",
             "Flavours",
-            "Best pairings",
         )
         private val EDUCATION_SECTION = Regex(
             pattern = "^\\s*\\*\\*(Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*\\s*(.*?)(?=^\\s*\\*\\*(?:Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*|\\z)",
@@ -1062,7 +1062,7 @@ class GemmaConversationResponder(
         internal fun normalizeWineEducation(response: String): String? {
             val sections = EDUCATION_SECTION.findAll(response.trim()).map { match ->
                 match.groupValues[1] to match.groupValues[2].trim()
-            }.toList()
+            }.filterNot { it.first == "Best pairings" }.toList()
             if (sections.map { it.first } != EDUCATION_HEADINGS) return null
             if (sections.any { it.second.isBlank() }) return null
             return sections.joinToString("\n\n") { (heading, content) -> "**$heading:** $content" }

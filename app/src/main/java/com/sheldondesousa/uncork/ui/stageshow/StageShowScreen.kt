@@ -12,14 +12,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,11 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -43,8 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
+import com.sheldondesousa.uncork.ui.components.AppBottomBar
 import com.sheldondesousa.uncork.ui.components.AppHeader
-import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.ui.components.ElevatedBottomAction
 import com.sheldondesousa.uncork.ui.components.displayStyleType
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
@@ -115,15 +112,14 @@ private enum class WineSource { AI, Kaggle }
 fun StageShowRoute(
     wine: StageWine,
     onBack: () -> Unit,
-    initiallyFavorite: Boolean = false,
-    onFavoriteChange: (WineSuggestion, Boolean) -> Unit = { _, _ -> },
+    onHome: () -> Unit = onBack,
+    onAsk: () -> Unit = {},
     loadDetails: (suspend (WineSuggestion, (WineSuggestion) -> Unit) -> WineSuggestion)? = null,
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = onBack)
 
     var source by remember { mutableStateOf(WineSource.AI) }
-    var isFavorite by remember(wine, initiallyFavorite) { mutableStateOf(initiallyFavorite) }
     var displayedWine by remember(wine) { mutableStateOf(wine) }
     var detailsLoading by remember(wine, loadDetails) {
         mutableStateOf(loadDetails != null && !wine.ai.profileComplete)
@@ -158,9 +154,8 @@ fun StageShowRoute(
     ) {
         AppHeader(
             title = "Summary",
-            icon = BackArrowIcon,
-            onIconClick = onBack,
-            iconContentDescription = "Back",
+            icon = Icons.Outlined.Description,
+            iconContentDescription = "Summary",
             modifier = Modifier.padding(horizontal = 22.dp),
             contentPadding = PaddingValues(vertical = 16.dp),
             dividerInset = 0.dp,
@@ -267,42 +262,27 @@ fun StageShowRoute(
                 WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
             }
 
-            LongDetail("SUGGESTED PAIRING", profile.suggestedPairing, detailsLoading)
         }
 
-        Spacer(Modifier.height(28.dp))
-        Text(
-            text = wine.userRating?.let { "YOUR RATING · $it / 10" } ?: "YOU HAVE NOT TRIED THIS WINE",
-            color = if (wine.userRating == null) InkSubtle else Ink,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 1.4.sp,
-        )
+        wine.userRating?.let { rating ->
+            Spacer(Modifier.height(28.dp))
+            Text(
+                text = "YOUR RATING · $rating / 10",
+                color = Ink,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 1.4.sp,
+            )
+        }
 
         Spacer(Modifier.height(32.dp))
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Hairline)
-                .navigationBarsPadding()
-                .height(72.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Spacer(
-                modifier = Modifier
-                    .requiredSize(104.dp)
-                    .offset(y = (-24).dp)
-                    .clip(CircleShape)
-                    .background(Parchment),
-            )
-            SaveButton(
-                selected = isFavorite,
-                onClick = {
-                    isFavorite = !isFavorite
-                    onFavoriteChange(displayedWine.toWineSuggestion(), isFavorite)
-                },
+        AppBottomBar(onBack = onBack, onHome = onHome) {
+            ElevatedBottomAction(
+                label = "Ask",
+                contentDescription = "Ask AI Sommelier",
+                onClick = onAsk,
             )
         }
     }
@@ -342,43 +322,6 @@ fun StageWine.toWineSuggestion(): WineSuggestion = WineSuggestion(
     favoriteRating = userRating,
     isFavorite = true,
 )
-
-@Composable
-private fun SaveButton(selected: Boolean, onClick: () -> Unit) {
-    Box(contentAlignment = Alignment.Center) {
-        // A shadow-only layer, offset further up (negative Y) than the button itself, so the
-        // shadow reads as cast upward rather than Compose's default downward elevation shadow.
-        Box(
-            Modifier
-                .requiredSize(88.dp)
-                .offset(y = ButtonOffsetY + ShadowOffsetY)
-                .shadow(elevation = 6.dp, shape = CircleShape, clip = false),
-        )
-        Box(
-            modifier = Modifier
-                .requiredSize(88.dp)
-                .offset(y = ButtonOffsetY)
-                .clip(CircleShape)
-                .background(if (selected) Wine.copy(alpha = 0.18f) else Wine)
-                .clickable(role = Role.Switch, onClick = onClick)
-                .semantics {
-                    role = Role.Switch
-                    contentDescription = "Save favorite, ${if (selected) "on" else "off"}"
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = if (selected) "Saved" else "Save",
-                color = if (selected) Wine else Parchment,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-private val ButtonOffsetY = (-24).dp
-private val ShadowOffsetY = (-6).dp
 
 @Composable
 private fun SourceSelector(
@@ -503,7 +446,7 @@ private fun GemmaEducationDetails(value: String, loading: Boolean) {
 internal fun wineEducationSections(value: String): List<Pair<String, String>> =
     EDUCATION_SECTION.findAll(value).map { match ->
         match.groupValues[1] to match.groupValues[2].trim()
-    }.filter { it.second.isNotBlank() }.toList()
+    }.filter { it.first != "Best pairings" && it.second.isNotBlank() }.toList()
 
 private val EDUCATION_SECTION = Regex(
     pattern = "^\\s*\\*\\*(Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*\\s*(.*?)(?=^\\s*\\*\\*(?:Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*|\\z)",

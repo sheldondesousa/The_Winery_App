@@ -68,6 +68,13 @@ class WineReviewRepositoryTest {
         assertTrue(fallback.usedProvinceFallback)
         assertTrue(fallback.reviews.isNotEmpty())
         assertTrue(fallback.reviews.all { it.review.country == "Italy" })
+
+        val ranked = repository.findGuided(GuidedCriteria(country = "Italy"))
+        assertEquals(10, ranked.reviews.size)
+        assertEquals(
+            ranked.reviews.mapNotNull { it.review.points }.sortedDescending(),
+            ranked.reviews.mapNotNull { it.review.points },
+        )
     }
 
     @Test
