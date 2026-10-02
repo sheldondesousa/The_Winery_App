@@ -187,4 +187,44 @@ class GuidedSelectionStateTest {
         yield()
         assertEquals(GuidedResult.Complete(listOf(card, second)), state.gemma)
     }
+
+    @Test fun webSearchOnlyRunsWhenRequestedAndUsesTheSubmittedSelections() = runBlocking {
+        val queries = mutableListOf<String>()
+        val webCard = card.copy(name = "Web wine")
+        val state = GuidedSelectionState(
+            scope = this,
+            gemmaSearch = { emptyList() },
+            databaseSearch = { GuidedResult.Complete(emptyList()) },
+            webSearch = { queries += it.webQuery; listOf(webCard) },
+        )
+        state.selection = criteria
+        state.search()
+        yield()
+        assertEquals(GuidedResult.Idle, state.web)
+        assertTrue(queries.isEmpty())
+
+        state.searchWeb()
+        yield()
+        assertEquals(GuidedResult.Complete(listOf(webCard)), state.web)
+        assertEquals(listOf("Red wine France Bordeaux"), queries)
+    }
+
+    @Test fun webSearchFailureShowsErrorAndANewSearchClearsIt() = runBlocking {
+        val state = GuidedSelectionState(
+            scope = this,
+            gemmaSearch = { emptyList() },
+            databaseSearch = { GuidedResult.Complete(emptyList()) },
+            webSearch = { error("offline") },
+        )
+        state.selection = criteria
+        state.search()
+        yield()
+        state.searchWeb()
+        yield()
+        assertEquals(GuidedResult.Error, state.web)
+
+        state.search()
+        yield()
+        assertEquals(GuidedResult.Idle, state.web)
+    }
 }

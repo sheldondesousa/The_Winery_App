@@ -55,6 +55,16 @@ data class GuidedCriteria(
         country.ifBlank { "Any country" },
         province.ifBlank { "Any province" },
     ).joinToString(" · ")
+    /** Plain-language search text for the web search, e.g. "Red wine France Bordeaux Dry Full-Bodied". */
+    val webQuery: String get() = buildList {
+        add(if (wineType.isNotBlank()) "$wineType wine" else "wine")
+        if (country.isNotBlank()) add(country)
+        if (province.isNotBlank()) add(province)
+        if (sweetness.isNotBlank()) add(sweetness)
+        if (body.isNotBlank()) add(body)
+        if (tannin.isNotBlank()) add("$tannin tannins")
+        if (acidity.isNotBlank()) add("$acidity acidity")
+    }.joinToString(" ")
     val description: String get() = buildList {
         if (wineType.isNotBlank()) add(wineType)
         if (country.isNotBlank() || province.isNotBlank()) add(locationLabel)
@@ -79,6 +89,7 @@ class GuidedSelectionState(
     private val databaseSearch: suspend (GuidedCriteria) -> GuidedResult.Complete,
     private val reportDatabaseError: (Exception) -> Unit = {},
     private val locations: Map<String, List<String>> = WineRegions.catalog,
+    private val webSearch: suspend (GuidedCriteria) -> List<WineSuggestion> = { emptyList() },
 ) {
     constructor(
         scope: CoroutineScope,
@@ -86,12 +97,14 @@ class GuidedSelectionState(
         databaseSearch: suspend (GuidedCriteria) -> GuidedResult.Complete,
         reportDatabaseError: (Exception) -> Unit = {},
         locations: Map<String, List<String>> = WineRegions.catalog,
+        webSearch: suspend (GuidedCriteria) -> List<WineSuggestion> = { emptyList() },
     ) : this(
         scope = scope,
         gemmaSearch = { criteria, _ -> gemmaSearch(criteria) },
         databaseSearch = databaseSearch,
         reportDatabaseError = reportDatabaseError,
         locations = locations,
+        webSearch = webSearch,
     )
     val countries: List<String> get() = locations.keys.sortedWith { a, b ->
         java.text.Collator.getInstance(java.util.Locale.ENGLISH).compare(a, b)
@@ -110,9 +123,13 @@ class GuidedSelectionState(
         private set
     var database by mutableStateOf<GuidedResult>(GuidedResult.Idle)
         private set
+    // Only ever loaded when the user taps "Web Search" on the results page — never automatically.
+    var web by mutableStateOf<GuidedResult>(GuidedResult.Idle)
+        private set
     private var generation = 0L
     private var gemmaJob: Job? = null
     private var databaseJob: Job? = null
+    private var webJob: Job? = null
     val canSearch: Boolean get() = selection.valid &&
         !(selection == submitted && (gemma is GuidedResult.Loading || database is GuidedResult.Loading))
 
@@ -122,10 +139,12 @@ class GuidedSelectionState(
         val request = ++generation
         gemmaJob?.cancel()
         databaseJob?.cancel()
+        webJob?.cancel()
         submitted = criteria
         showResults = true
         gemma = GuidedResult.Loading()
         database = GuidedResult.Loading()
+        web = GuidedResult.Idle
         startGemma(criteria, request)
         databaseJob = scope.launch {
             val result = try {
@@ -138,6 +157,25 @@ class GuidedSelectionState(
                 GuidedResult.Complete(emptyList())
             }
             if (request == generation) database = result
+        }
+    }
+
+    /** Runs the Brave web search for the submitted selections. Safe to tap again after a failure. */
+    fun searchWeb() {
+        val criteria = submitted ?: return
+        if (web is GuidedResult.Loading) return
+        val request = generation
+        web = GuidedResult.Loading()
+        webJob = scope.launch {
+            val result = try {
+                GuidedResult.Complete(webSearch(criteria))
+            } catch (cancelled: CancellationException) {
+                if (request == generation) web = GuidedResult.Error
+                throw cancelled
+            } catch (_: Exception) {
+                GuidedResult.Error
+            }
+            if (request == generation) web = result
         }
     }
 

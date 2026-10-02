@@ -45,7 +45,7 @@ class GuidedSelectionScreenTest {
         compose.onNodeWithText("Submit").assertIsEnabled().performClick()
         compose.onNodeWithText("Results").assertIsDisplayed()
         compose.onNodeWithText("AI Sommelier").assertIsDisplayed()
-        compose.onNodeWithText("Reviewed Wines").assertIsDisplayed()
+        compose.onNodeWithText("Reviews").assertIsDisplayed()
         compose.onAllNodesWithText("No results found").assertCountEquals(2)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Submit").assertIsDisplayed()
@@ -98,6 +98,6 @@ class GuidedSelectionScreenTest {
         compose.onNodeWithText("Château Margaux").assertIsDisplayed()
         compose.onNodeWithText("Preparing wine 2…").assertIsDisplayed()
         compose.onNodeWithText("Preparing wine 3…").assertIsDisplayed()
-        compose.onNodeWithText("Reviewed Wines").assertIsDisplayed()
+        compose.onNodeWithText("Reviews").assertIsDisplayed()
     }
 }

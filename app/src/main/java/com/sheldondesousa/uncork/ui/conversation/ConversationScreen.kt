@@ -451,11 +451,12 @@ private fun MessageBubble(
                     val hasLeadingContent = message.text.isNotBlank() ||
                         (message.quickReplies.isNotEmpty() && quickRepliesEnabled)
                     if (message.sourceResults.isNotEmpty()) {
-                        // One master card per search type, in the order each actually resolved —
-                        // a card still in flight shows a loader, and one that resolved with
-                        // nothing says so, rather than the search silently vanishing.
+                        // One master card per search type, always in the fixed display order
+                        // (AI Sommelier, Reviews, Extended db, Web Search) regardless of which
+                        // resolved first — a card still in flight shows a loader, and one that
+                        // resolved with nothing says so, rather than the search silently vanishing.
                         if (hasLeadingContent) Spacer(Modifier.height(16.dp))
-                        message.sourceResults.forEachIndexed { groupIndex, sourceResult ->
+                        message.sourceResults.sortedBy { it.source.ordinal }.forEachIndexed { groupIndex, sourceResult ->
                             if (groupIndex > 0) SearchTypeDivider()
                             SourceResultCard(
                                 sourceResult = sourceResult,
@@ -474,7 +475,7 @@ private fun MessageBubble(
                             // One card per source group — a card's individual pill was replaced
                             // by a single response-level card, since every card in a given
                             // response already comes from the same source.
-                            val sourceGroups = suggestions.groupBy { it.source }
+                            val sourceGroups = suggestions.groupBy { it.source }.toSortedMap()
                             sourceGroups.entries.forEachIndexed { groupIndex, (source, groupSuggestions) ->
                                 if (groupIndex > 0) SearchTypeDivider()
                                 SourceResultCard(
@@ -694,8 +695,8 @@ private fun SourceLabel(source: WineSuggestionSource) {
 
 private fun WineSuggestionSource.label(): String = when (this) {
     WineSuggestionSource.GEMMA -> "AI Sommelier"
-    WineSuggestionSource.KAGGLE -> "Reviewed Wines"
-    WineSuggestionSource.CACHE -> "Cache db"
+    WineSuggestionSource.KAGGLE -> "Reviews"
+    WineSuggestionSource.CACHE -> "Extended db"
     WineSuggestionSource.WEB_SEARCH -> "Web Search"
 }
 

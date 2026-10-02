@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.guided
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -25,7 +26,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -273,14 +277,22 @@ private fun GuidedResultsScreen(
         ) {
             submitted?.let { criteria ->
                 val tags = criteria.tags()
-                if (tags.isNotEmpty()) {
-                    Row {
-                        Text("Tags:", fontWeight = FontWeight.Bold, color = Ink,
-                            modifier = Modifier.padding(top = 6.dp, end = 8.dp))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            tags.forEach { CriteriaTag(it) }
-                        }
-                    }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Tags: ") }
+                            append(tags.joinToString(" | "))
+                        },
+                        color = Ink,
+                        modifier = Modifier.weight(1f).padding(end = 12.dp),
+                    )
+                    OutlinedButton(
+                        onClick = state::searchWeb,
+                        enabled = state.web !is GuidedResult.Loading,
+                        modifier = Modifier.testTag("web-search-button"),
+                        border = BorderStroke(1.dp, Wine.copy(alpha = if (state.web is GuidedResult.Loading) 0.3f else 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Wine),
+                    ) { Text("Web Search") }
                 }
             }
             if (submitted != null && submitted != state.selection) {
@@ -298,6 +310,14 @@ private fun GuidedResultsScreen(
                 result = state.database,
                 onSuggestionClick = onSuggestionClick,
             )
+            if (state.web != GuidedResult.Idle) {
+                GuidedSourceSection(
+                    source = WineSuggestionSource.WEB_SEARCH,
+                    result = state.web,
+                    onSuggestionClick = onSuggestionClick,
+                    onRetry = state::searchWeb,
+                )
+            }
         }
     }
 }
@@ -309,18 +329,6 @@ private fun GuidedCriteria.tags(): List<String> = buildList {
     if (tannin.isNotBlank()) add("Tannin: $tannin")
     if (body.isNotBlank()) add("Body: $body")
     if (acidity.isNotBlank()) add("Acidity: $acidity")
-}
-
-@Composable
-private fun CriteriaTag(text: String) {
-    Text(
-        text,
-        color = Wine,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.background(Wine.copy(alpha = 0.12f), CircleShape)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    )
 }
 
 @Composable

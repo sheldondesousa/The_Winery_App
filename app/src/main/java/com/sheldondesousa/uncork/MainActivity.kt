@@ -24,6 +24,7 @@ import com.sheldondesousa.uncork.eval.GemmaEvalDebugScreen
 import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.BraveSearchHttpClient
 import com.sheldondesousa.uncork.model.BraveWineWebSearchDataSource
+import com.sheldondesousa.uncork.model.WineWebSearchRequest
 import com.sheldondesousa.uncork.model.KaggleConversationResponder
 import com.sheldondesousa.uncork.model.ModelFileManager
 import com.sheldondesousa.uncork.ui.conversation.AppTab
@@ -119,6 +120,27 @@ class MainActivity : ComponentActivity() {
                         },
                         reportDatabaseError = { error ->
                             Log.w("GuidedSelection", "Database search failed.", error)
+                        },
+                        webSearch = { criteria ->
+                            // A missing key is a failure the user can see ("could not be completed"),
+                            // not a silent "No results found".
+                            check(BuildConfig.BRAVE_SEARCH_API_KEY.isNotBlank()) {
+                                "Brave Search API key is not configured."
+                            }
+                            webSearch.search(
+                                WineWebSearchRequest(
+                                    originalQuery = criteria.webQuery,
+                                    gemmaSuggestions = emptyList(),
+                                ),
+                            ).filter { it.name.isNotBlank() && !it.name.equals("Unknown", ignoreCase = true) }
+                                .map { option ->
+                                    option.copy(
+                                        summary = "Unknown",
+                                        reviewSummary = "Unknown",
+                                        source = WineSuggestionSource.WEB_SEARCH,
+                                        requestContext = option.requestContext ?: criteria.description,
+                                    )
+                                }
                         },
                     )
                 }
