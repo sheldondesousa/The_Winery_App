@@ -155,7 +155,8 @@ data class WinePreferences(
             WinePreferences(
                 type = json.preference("type"),
                 country = json.preference("country"),
-                province = json.preference("province"),
+                province = json.preference("province").takeUnless { it.equals(UNKNOWN, ignoreCase = true) }
+                    ?: json.preference("region"),
                 body = json.preference("body"),
                 tannin = json.preference("tannin"),
                 acidity = json.preference("acidity"),

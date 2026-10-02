@@ -678,7 +678,7 @@ private fun SuggestionCard(suggestion: WineSuggestion, onClick: () -> Unit) {
 }
 
 /**
- * A single label at the top of a search-type card, distinguishing Kaggle db / Cache db / Gemma /
+ * A single label at the top of a search-type card, distinguishing reviewed wines, cache, AI, and
  * Web Search — the same distinction Find surfaces via its "AI Sommelier" vs "Database" sections.
  * Plain text, no chip background, so it reads as a heading rather than a tappable pill.
  */
@@ -693,14 +693,14 @@ private fun SourceLabel(source: WineSuggestionSource) {
 }
 
 private fun WineSuggestionSource.label(): String = when (this) {
-    WineSuggestionSource.GEMMA -> "Gemma"
-    WineSuggestionSource.KAGGLE -> "Kaggle db"
+    WineSuggestionSource.GEMMA -> "AI Sommelier"
+    WineSuggestionSource.KAGGLE -> "Reviewed Wines"
     WineSuggestionSource.CACHE -> "Cache db"
     WineSuggestionSource.WEB_SEARCH -> "Web Search"
 }
 
 // The fuller name used only in the "Here are a few options from …" body line — the header tag
-// itself stays short ("Gemma"), everything else uses the same name in both places.
+// itself stays concise, while the intro can use a fuller source description.
 private fun WineSuggestionSource.introLabel(): String = when (this) {
     WineSuggestionSource.GEMMA -> "Gemma Knowledge"
     else -> label()

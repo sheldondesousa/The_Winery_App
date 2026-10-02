@@ -45,11 +45,13 @@ import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.ui.components.displayStyleType
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkSubtle
 import com.sheldondesousa.uncork.ui.theme.Parchment
 import com.sheldondesousa.uncork.ui.theme.Wine
+import org.json.JSONObject
 
 data class WineProfile(
     val winery: String,
@@ -115,7 +117,7 @@ fun StageShowRoute(
     onBack: () -> Unit,
     initiallyFavorite: Boolean = false,
     onFavoriteChange: (WineSuggestion, Boolean) -> Unit = { _, _ -> },
-    loadDetails: (suspend (WineSuggestion) -> WineSuggestion)? = null,
+    loadDetails: (suspend (WineSuggestion, (WineSuggestion) -> Unit) -> WineSuggestion)? = null,
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = onBack)
@@ -128,7 +130,11 @@ fun StageShowRoute(
     }
     LaunchedEffect(wine) {
         if (loadDetails != null && !wine.ai.profileComplete) {
-            val enriched = runCatching { loadDetails(wine.toWineSuggestion()) }.getOrNull()
+            val enriched = runCatching {
+                loadDetails(wine.toWineSuggestion()) { partial ->
+                    displayedWine = displayedWine.copy(ai = partial.toStageWine().ai)
+                }
+            }.getOrNull()
             if (enriched != null) {
                 displayedWine = displayedWine.copy(ai = enriched.toStageWine().ai)
             }
@@ -140,6 +146,9 @@ fun StageShowRoute(
     } else {
         displayedWine.ai
     }
+    val requestedKeys = profile.requestContext
+        ?.takeIf { profile.source == WineSuggestionSource.GEMMA && it.trimStart().startsWith("{") }
+        ?.let(::requestedPreferenceKeys)
 
     Column(
         modifier = modifier
@@ -148,7 +157,7 @@ fun StageShowRoute(
             .statusBarsPadding(),
     ) {
         AppHeader(
-            title = "Attributes",
+            title = "Summary",
             icon = BackArrowIcon,
             onIconClick = onBack,
             iconContentDescription = "Back",
@@ -172,19 +181,21 @@ fun StageShowRoute(
             lineHeight = 46.sp,
             fontWeight = FontWeight.Medium,
         )
-        if (detailsLoading && !profile.winery.isResolvedValue()) {
-            PendingFieldLoader(
-                label = "WINERY",
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        } else {
-            Text(
-                text = profile.winery,
-                modifier = Modifier.padding(top = 8.dp),
-                color = InkSubtle,
-                fontSize = 17.sp,
-                lineHeight = 23.sp,
-            )
+        if (requestedKeys == null) {
+            if (detailsLoading && !profile.winery.isResolvedValue()) {
+                PendingFieldLoader(
+                    label = "WINERY",
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            } else {
+                Text(
+                    text = profile.winery,
+                    modifier = Modifier.padding(top = 8.dp),
+                    color = InkSubtle,
+                    fontSize = 17.sp,
+                    lineHeight = 23.sp,
+                )
+            }
         }
         if (source == WineSource.Kaggle && profile.verified) {
             Text(
@@ -217,35 +228,47 @@ fun StageShowRoute(
         }
 
         Spacer(Modifier.height(36.dp))
-        ShortDetailsGrid(
-            details = buildList {
+        if (requestedKeys != null) {
+            ShortDetailsGrid(
+                details = listOf(
+                    "VARIETY" to profile.variety,
+                    "TYPE" to profile.wineType.displayStyleType(),
+                    "COUNTRY" to profile.country,
+                    "REGION/PROVINCE" to profile.province,
+                ),
+            )
+            GemmaEducationDetails(profile.summary, detailsLoading)
+        } else {
+            ShortDetailsGrid(
+                details = buildList {
                 add("VARIETY" to profile.variety)
                 add("COUNTRY" to profile.country)
                 add("PROVINCE" to profile.province)
                 if (detailsLoading || profile.sweetness != "Unknown") {
                     add("SWEETNESS" to profile.sweetness)
                 }
-                add("BODY" to profile.body.removeSuffix("-Bodied"))
+                add("BODY" to profile.body)
                 add("TANNIN" to profile.tannin)
                 add("ACIDITY" to profile.acidity)
                 profile.rating?.let { add("RATING" to it.toString()) }
-            },
-            loading = detailsLoading,
-        )
-        LongDetail("FLAVOR NOTES", profile.flavorNotes, detailsLoading)
-
-        when (profile.source) {
-            WineSuggestionSource.GEMMA -> LongDetail(
-                "SUMMARY",
-                profile.summary.takeIf { it.isResolvedValue() } ?: "Unknown",
-                detailsLoading,
+                },
+                loading = detailsLoading,
             )
-            WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
-            WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
-            WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
-        }
+            LongDetail("FLAVOR NOTES", profile.flavorNotes, detailsLoading)
 
-        LongDetail("SUGGESTED PAIRING", profile.suggestedPairing, detailsLoading)
+            when (profile.source) {
+                WineSuggestionSource.GEMMA -> LongDetail(
+                    "SUMMARY",
+                    profile.summary.takeIf { it.isResolvedValue() } ?: "Unknown",
+                    detailsLoading,
+                )
+                WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
+                WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
+                WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
+            }
+
+            LongDetail("SUGGESTED PAIRING", profile.suggestedPairing, detailsLoading)
+        }
 
         Spacer(Modifier.height(28.dp))
         Text(
@@ -284,6 +307,14 @@ fun StageShowRoute(
         }
     }
 }
+
+internal fun requestedPreferenceKeys(json: String): Set<String> = runCatching {
+    val preferences = JSONObject(json)
+    setOf("type", "country", "province", "variety", "sweetness", "body", "tannin", "acidity", "flavor", "occasion")
+        .filterTo(linkedSetOf()) { key ->
+            preferences.optString(key).let { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) }
+        }
+}.getOrDefault(emptySet())
 
 private fun String.isResolvedValue(): Boolean =
     isNotBlank() && !equals("Unknown", ignoreCase = true)
@@ -458,5 +489,25 @@ private fun LongDetail(label: String, value: String, loading: Boolean = false) {
         modifier = Modifier.fillMaxWidth(),
     )
 }
+
+@Composable
+private fun GemmaEducationDetails(value: String, loading: Boolean) {
+    val sections = wineEducationSections(value)
+    if (sections.isEmpty()) {
+        LongDetail("WINE STYLE", "Unknown", loading)
+    } else {
+        sections.forEach { (heading, content) -> LongDetail(heading.uppercase(), content) }
+    }
+}
+
+internal fun wineEducationSections(value: String): List<Pair<String, String>> =
+    EDUCATION_SECTION.findAll(value).map { match ->
+        match.groupValues[1] to match.groupValues[2].trim()
+    }.filter { it.second.isNotBlank() }.toList()
+
+private val EDUCATION_SECTION = Regex(
+    pattern = "^\\s*\\*\\*(Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*\\s*(.*?)(?=^\\s*\\*\\*(?:Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*|\\z)",
+    options = setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL),
+)
 
 private val INITIAL_CARD_FIELDS = setOf("VARIETY", "COUNTRY", "PROVINCE")

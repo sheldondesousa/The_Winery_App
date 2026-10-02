@@ -45,6 +45,16 @@ class GemmaConversationResponder(
     private val usedConversationOpeners = mutableSetOf<String>()
 
     private var chatMode = ChatMode.Undecided
+
+    /** Which path handled the most recent turn: GEMMA_WAKE, KOTLIN_HANDLED or HANDBACK. Logging only. */
+    @Volatile
+    internal var lastRoute: String? = null
+        private set
+
+    private fun markRoute(route: String) {
+        lastRoute = route
+        logFlow("ROUTE $route mode=$chatMode")
+    }
     private var findWineStep = FindWineStep.Type
     private var chatPreferences = WinePreferences()
 
@@ -74,6 +84,7 @@ class GemmaConversationResponder(
         query: String,
         onUpdate: (ConversationStreamUpdate) -> Unit,
     ): ChatMessage = requestMutex.withLock {
+        lastRoute = null
         when (chatMode) {
             ChatMode.Undecided -> handleModeChoice(query)
             ChatMode.Curious -> handleCuriousChat(query, onUpdate)
@@ -81,7 +92,12 @@ class GemmaConversationResponder(
         }
     }
 
-    private fun handleModeChoice(query: String): ChatMessage =
+    private fun handleModeChoice(query: String): ChatMessage {
+        markRoute("KOTLIN_HANDLED")
+        return handleModeChoiceInner(query)
+    }
+
+    private fun handleModeChoiceInner(query: String): ChatMessage =
         when (matchModeChoice(query)) {
             ModeChoice.Curious -> {
                 chatMode = ChatMode.Curious
@@ -102,6 +118,7 @@ class GemmaConversationResponder(
         onUpdate: (ConversationStreamUpdate) -> Unit,
     ): ChatMessage {
         if (requestsFindWineSwitch(query)) {
+            markRoute("HANDBACK")
             chatMode = ChatMode.FindWine
             findWineStep = FindWineStep.Type
             chatPreferences = WinePreferences()
@@ -112,6 +129,7 @@ class GemmaConversationResponder(
             )
         }
 
+        markRoute("GEMMA_WAKE")
         suspend fun streamFrom(conversation: Conversation): String {
             val requestStartedAt = SystemClock.elapsedRealtime()
             var firstWordAt: Long? = null
@@ -162,12 +180,14 @@ class GemmaConversationResponder(
 
     private suspend fun handleFindWineTurn(query: String): ChatMessage {
         if (requestsContinueConversation(query)) {
+            markRoute("KOTLIN_HANDLED")
             chatMode = ChatMode.Curious
             findWineStep = FindWineStep.Type
             chatPreferences = WinePreferences()
             declinedSteps.clear()
             return plainMessage(ChatFlowText.CURIOUS_TRANSITION)
         }
+        markRoute("KOTLIN_HANDLED")
         val noPreference = isNoPreference(query)
         return when (findWineStep) {
             FindWineStep.Type -> {
@@ -285,6 +305,7 @@ class GemmaConversationResponder(
      */
     private suspend fun unmatchedFindWineAnswer(query: String, pendingQuestion: String): ChatMessage {
         if (!isLikelyDigression(query)) return plainMessage(ChatFlowText.apology(pendingQuestion))
+        markRoute("GEMMA_WAKE")
 
         val requestStartedAt = SystemClock.elapsedRealtime()
         var firstWordAt: Long? = null
@@ -353,20 +374,16 @@ class GemmaConversationResponder(
         timing.detail("backend", engineBackend)
         val instruction = timing.measure("load_prompt") { chatSearchInstruction }
         val prompt = timing.measure("prepare_preferences") {
-            val suppliedFields = preferences.resolvedGemmaCardFields()
-                .joinToString(",")
-                .ifEmpty { "none" }
-            "Resolved preferences: ${preferences.toCompactJson()}\n" +
-                "Fields supplied by the app: $suppliedFields. " +
-                "Omit those fields from every generated card."
+            preferences.toCompactJson()
         }
+        GemmaEvalTrace.active?.let { it.systemInstruction = instruction; it.userMessage = prompt }
         timing.detail("input_characters", (instruction.length + prompt.length).toString())
         timing.detail("max_output_tokens", INITIAL_CARD_MAX_OUTPUT_TOKENS.toString())
         val searchConversation = timing.measure("create_conversation") {
             searchEngine.createConversation(
                 ConversationConfig(
                     systemInstruction = Contents.of(instruction),
-                    samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.4),
+                    samplerConfig = SamplerConfig(topK = CARD_TOP_K, topP = CARD_TOP_P, temperature = CARD_TEMPERATURE),
                     maxOutputToken = INITIAL_CARD_MAX_OUTPUT_TOKENS,
                 ),
             )
@@ -376,8 +393,14 @@ class GemmaConversationResponder(
         var completeObjectCount = 0
         var rejectedCardCount = 0
 
-        fun rejectCard(candidateKey: String, reasons: List<String>) {
+        fun rejectCard(candidateKey: String, reasons: List<String>, card: WineSuggestion? = null) {
             rejectedCardCount++
+            GemmaEvalTrace.active?.repair(
+                "card_dropped", candidateKey,
+                reasons.distinct().joinToString(",") + (card?.let {
+                    " | name=${it.name}; country=${it.country}; province=${it.province}; variety=${it.variety}"
+                } ?: ""),
+            )
             timing.detail(
                 "${candidateKey}_rejected",
                 reasons.distinct().joinToString(","),
@@ -386,40 +409,32 @@ class GemmaConversationResponder(
 
         fun acceptParsedCard(card: WineSuggestion, candidateKey: String): Boolean {
             if (completedCards.size >= RECOMMENDATION_COUNT) {
-                rejectCard(candidateKey, listOf("extra_complete_object"))
+                rejectCard(candidateKey, listOf("extra_complete_object"), card)
                 return false
             }
             // Publish the compact card immediately. The detail screen asks Gemma for the
             // remaining profile fields only if the user opens this recommendation.
-            val profile = preferences.mergeIntoGemmaCard(card).copy(profileComplete = false)
-            val reasons = preferences.cardMismatchReasons(
-                    cardType = profile.wineType, cardCountry = profile.country,
-                    cardProvince = profile.province, cardBody = profile.body,
-                    cardTannin = profile.tannin, cardAcidity = profile.acidity,
-                    cardSweetness = profile.sweetness, cardVariety = profile.variety,
-                    cardFlavor = profile.preferenceFlavor,
-                    cardOccasion = profile.occasion,
-                ).map { mismatch ->
-                    if (mismatch == "type is missing or invalid") {
-                        "invalid_type"
-                    } else {
-                        "${mismatch.substringBefore(' ')}_mismatch"
-                    }
-                }.toMutableList()
+            // Keep the original request with this wine style so the detail call can answer
+            // only the preferences the user actually supplied.
+            val profile = card.copy(
+                requestContext = preferences.toCompactJson(),
+                profileComplete = false,
+            )
+            val reasons = mutableListOf<String>()
             when {
                 profile.name.isBlank() -> reasons += "blank_name"
                 profile.name.equals("Unknown Wine", true) -> reasons += "unknown_name"
                 profile.name.looksLikeFieldNameEcho() -> reasons += "field_name_echo"
                 profile.name.looksLikeHallucinatedMarkup() -> reasons += "name_contains_markup"
             }
-            if (profile.country.equals("Unknown", true)) reasons += "unknown_country"
+            reasons += missingGemmaCardFields(profile)
             if (completedCards.any {
                     it.name.equals(profile.name, true) && it.country.equals(profile.country, true) &&
                         it.province.equals(profile.province, true) && it.variety.equals(profile.variety, true)
                 }
             ) reasons += "duplicate_card"
             if (reasons.isNotEmpty()) {
-                rejectCard(candidateKey, reasons)
+                rejectCard(candidateKey, reasons, card)
                 return false
             }
             completedCards += profile
@@ -433,6 +448,7 @@ class GemmaConversationResponder(
             val candidateKey = "candidate_$completeObjectCount"
             val card = payload.toWineSuggestionOrNull()
             if (card == null) {
+                GemmaEvalTrace.active?.let { it.parseFailures++; it.repair("json_parse_failed", candidateKey, payload.take(300)) }
                 rejectCard(candidateKey, listOf("json_parse_failed"))
                 return
             }
@@ -460,6 +476,7 @@ class GemmaConversationResponder(
                                 lastWordAt = now
                             }
                             append(content.text)
+                            GemmaEvalTrace.active?.let { it.raw.append(content.text); it.phase = "stream_parse" }
                             val parsingStarted = SystemClock.elapsedRealtime()
                             cardStream.append(content.text).forEach(::acceptCard)
                             incrementalParsingMs += SystemClock.elapsedRealtime() - parsingStarted
@@ -489,8 +506,14 @@ class GemmaConversationResponder(
             DebugLatencyLog.record("[Gemma] card search: time to first word", firstWord - requestStartedAt)
             DebugLatencyLog.record("[Gemma] card search: first word to last word", lastWordAt - firstWord)
         }
-        val parsedSuggestions = timing.measure("parse_response") {
-            extractSuggestions(response).take(RECOMMENDATION_COUNT)
+        GemmaEvalTrace.active?.phase = "final_parse"
+        // Validate every parsed card before the three-card limit is applied. An incomplete
+        // early card must not crowd out a later complete one in the final response.
+        val parsedSuggestions = timing.measure("parse_response") { extractSuggestions(response) }
+        GemmaEvalTrace.active?.let {
+            it.parsedCards = parsedSuggestions.size
+            it.parseOk = parsedSuggestions.isNotEmpty() && it.parseFailures == 0
+            it.phase = "final_validate"
         }
         var recoveredCards = 0
         val suggestions = timing.measure("validate_cards") {
@@ -547,7 +570,10 @@ class GemmaConversationResponder(
         quickReplies = quickReplies,
     )
 
-    suspend fun enrichWineDetails(card: WineSuggestion): WineSuggestion = withContext(Dispatchers.Default) {
+    suspend fun enrichWineDetails(
+        card: WineSuggestion,
+        onPartial: (WineSuggestion) -> Unit = {},
+    ): WineSuggestion = withContext(Dispatchers.Default) {
         val timing = StageShowTimingTrace(appContext.filesDir)
         val loadStartedAt = SystemClock.elapsedRealtime()
         val pendingBefore = card.pendingDetailFieldCount()
@@ -558,20 +584,28 @@ class GemmaConversationResponder(
             val enriched = requestMutex.withLock {
                 timing.duration("queue_wait", SystemClock.elapsedRealtime() - queuedAt)
                 if (card.profileComplete || card.source != WineSuggestionSource.GEMMA) return@withLock card
-                val known = card.toKnownDetailJson()
+                val detailRequest = card.toStyleCardJson()
+                GemmaEvalTrace.active?.let {
+                    it.systemInstruction = wineDetailInstruction
+                    it.userMessage = detailRequest
+                }
                 val conversation = ensureEngine().createConversation(
                     ConversationConfig(
                         systemInstruction = Contents.of(wineDetailInstruction),
-                        samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.35),
+                        samplerConfig = SamplerConfig(topK = DETAIL_TOP_K, topP = DETAIL_TOP_P, temperature = DETAIL_TEMPERATURE),
                         maxOutputToken = DETAIL_MAX_OUTPUT_TOKENS,
                     ),
                 )
                 val startedAt = SystemClock.elapsedRealtime()
                 var firstOutputAt: Long? = null
                 var lastOutputAt = startedAt
+                var lastPartialUpdateAt = 0L
+                val streamsEducationSummary = card.requestContext
+                    ?.trimStart()
+                    ?.startsWith("{") == true
                 val response = try {
                     buildString {
-                        conversation.sendMessageAsync("Known wine data: $known").collect { message ->
+                        conversation.sendMessageAsync(detailRequest).collect { message ->
                             message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
                                 if (content.text.isNotEmpty()) {
                                     val now = SystemClock.elapsedRealtime()
@@ -579,6 +613,22 @@ class GemmaConversationResponder(
                                     lastOutputAt = now
                                 }
                                 append(content.text)
+                                GemmaEvalTrace.active?.raw?.append(content.text)
+                                if (
+                                    streamsEducationSummary &&
+                                    isNotBlank() &&
+                                    (lastPartialUpdateAt == 0L ||
+                                        lastOutputAt - lastPartialUpdateAt >= DETAIL_STREAM_UPDATE_INTERVAL_MS)
+                                ) {
+                                    lastPartialUpdateAt = lastOutputAt
+                                    val partialCard = card.copy(
+                                        summary = toString(),
+                                        profileComplete = false,
+                                    )
+                                    withContext(Dispatchers.Main.immediate) {
+                                        onPartial(partialCard)
+                                    }
+                                }
                             }
                         }
                     }
@@ -594,6 +644,7 @@ class GemmaConversationResponder(
                     SystemClock.elapsedRealtime() - startedAt,
                 )
                 timing.duration("gemma_details", SystemClock.elapsedRealtime() - startedAt)
+                GemmaEvalTrace.active?.phase = "detail_parse"
                 mergeGeneratedDetails(card, response)
             }
             val pendingAfter = enriched.pendingDetailFieldCount()
@@ -612,10 +663,26 @@ class GemmaConversationResponder(
         }
     }
 
-    private fun WineSuggestion.pendingDetailFieldCount(): Int = listOf(
-        winery, wineType, sweetness, body, tannin, acidity,
-        flavorNotes, suggestedPairing, summary,
-    ).count { !it.isResolvedValue() }
+    private fun WineSuggestion.pendingDetailFieldCount(): Int =
+        if (requestContext?.trimStart()?.startsWith("{") == true) {
+            listOf(summary).count { !it.isResolvedValue() }
+        } else {
+            listOf(
+                winery, wineType, sweetness, body, tannin, acidity,
+                flavorNotes, suggestedPairing, summary,
+            ).count { !it.isResolvedValue() }
+        }
+
+    private fun WineSuggestion.toStyleCardJson(): String = JSONObject().apply {
+        put("variety", variety)
+        put("type", when (wineType.lowercase()) {
+            "rose", "rosé" -> "Rosé"
+            "sweet", "dessert" -> "Dessert"
+            else -> wineType.replaceFirstChar(Char::uppercase)
+        })
+        put("country", country)
+        put("region", province)
+    }.toString()
 
     private fun WineSuggestion.toKnownDetailJson(): String = JSONObject().apply {
         put("name", name)
@@ -649,7 +716,7 @@ class GemmaConversationResponder(
             body = criteria.body.ifBlank { WinePreferences.UNKNOWN },
         )
         fun attachRequestContext(cards: List<WineSuggestion>): List<WineSuggestion> = cards.map { card ->
-            card.copy(requestContext = criteria.description, profileComplete = false)
+            card.copy(requestContext = card.requestContext ?: preferences.toCompactJson(), profileComplete = false)
         }
         return synthesizeCards(preferences) { update ->
             onUpdate(attachRequestContext(update.suggestions))
@@ -667,7 +734,7 @@ class GemmaConversationResponder(
             val webConversation = ensureEngine().createConversation(
                 ConversationConfig(
                     systemInstruction = Contents.of(webResultSystemInstruction),
-                    samplerConfig = SamplerConfig(topK = 30, topP = 0.85, temperature = 0.35),
+                    samplerConfig = SamplerConfig(topK = DETAIL_TOP_K, topP = DETAIL_TOP_P, temperature = DETAIL_TEMPERATURE),
                     maxOutputToken = 1_536,
                 ),
             )
@@ -820,6 +887,13 @@ class GemmaConversationResponder(
         lowercase().replace(Regex("[^a-z ]"), "").replace(Regex("\\s+"), " ").trim()
 
     companion object {
+        /** A known variety, type and country are required; region may be unknown. */
+        internal fun missingGemmaCardFields(card: WineSuggestion): List<String> = buildList {
+            if (!card.variety.isResolvedValue()) add("missing_variety")
+            if (!card.wineType.isResolvedValue()) add("missing_wine_type")
+            if (!card.country.isResolvedValue()) add("missing_country")
+        }
+
         internal fun Throwable.isContextCapacityError(): Boolean =
             generateSequence(this) { it.cause }.any { cause ->
                 cause.message?.contains(
@@ -859,6 +933,18 @@ class GemmaConversationResponder(
         private val JSON_OBJECT = Regex(
             pattern = "[{].+?[}]",
             options = setOf(RegexOption.DOT_MATCHES_ALL),
+        )
+        private val EDUCATION_HEADINGS = listOf(
+            "Overview",
+            "Taste",
+            "Where it's grown",
+            "Production facts",
+            "Flavours",
+            "Best pairings",
+        )
+        private val EDUCATION_SECTION = Regex(
+            pattern = "^\\s*\\*\\*(Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*\\s*(.*?)(?=^\\s*\\*\\*(?:Overview|Taste|Where it's grown|Production facts|Flavours|Best pairings):\\*\\*|\\z)",
+            options = setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL),
         )
 
         internal fun extractSuggestions(response: String): List<WineSuggestion> {
@@ -910,35 +996,107 @@ class GemmaConversationResponder(
             original: WineSuggestion,
             response: String,
         ): WineSuggestion {
-            val payload = WINE_DETAILS_MARKER.find(response)?.groupValues?.get(1)
+            if (original.requestContext?.trimStart()?.startsWith("{") == true) {
+                val education = normalizeWineEducation(response) ?: run {
+                    GemmaEvalTrace.active?.let {
+                        it.parseOk = false
+                        it.repair("education_format_invalid", "response", "required headings missing")
+                    }
+                    return original
+                }
+                GemmaEvalTrace.active?.let { it.parseOk = true; it.parsedCards = 1 }
+                return original.copy(summary = education, profileComplete = true)
+            }
+            val markerPayload = WINE_DETAILS_MARKER.find(response)?.groupValues?.get(1)
+            val payload = markerPayload
                 ?: JSON_OBJECT.find(response)?.value
-                ?: return original
-            val details = payload.toWineSuggestionOrNull() ?: return original
-            fun keepKnown(current: String, generated: String): String =
-                if (current.isResolvedValue()) current else generated
+                ?: run {
+                    GemmaEvalTrace.active?.let { it.parseOk = false; it.repair("no_json_found", "response", "card returned unchanged") }
+                    return original
+                }
+            if (markerPayload == null) {
+                GemmaEvalTrace.active?.repair("markers_missing", "response", "used first raw JSON object instead of [WINE_DETAILS] block")
+            }
+            val details = payload.toWineSuggestionOrNull() ?: run {
+                GemmaEvalTrace.active?.let { it.parseOk = false; it.repair("json_parse_failed", "response", payload.take(300)) }
+                return original
+            }
+            GemmaEvalTrace.active?.let { it.parseOk = true; it.parsedCards = 1 }
+            val requested = original.requestContext
+                ?.takeIf { it.trimStart().startsWith("{") }
+                ?.let { runCatching { JSONObject(it) }.getOrNull() }
+            fun keepKnown(field: String, current: String, generated: String): String {
+                if (current.isResolvedValue()) {
+                    if (generated.isResolvedValue() && generated != current) {
+                        GemmaEvalTrace.active?.repair("generated_ignored_known_value", field, "kept $current, discarded $generated")
+                    }
+                    return current
+                }
+                return generated
+            }
+            fun requestedValue(requestKey: String, field: String, current: String, generated: String): String {
+                if (requested != null && requested.optString(requestKey).let {
+                        it.isBlank() || it.equals("Unknown", ignoreCase = true)
+                    }
+                ) return current
+                return keepKnown(field, current, generated)
+            }
             return original.copy(
-                winery = keepKnown(original.winery, details.winery),
-                wineType = keepKnown(original.wineType, details.wineType),
-                sweetness = keepKnown(original.sweetness, details.sweetness),
-                body = keepKnown(original.body, details.body),
-                tannin = keepKnown(original.tannin, details.tannin),
-                acidity = keepKnown(original.acidity, details.acidity),
-                flavorNotes = keepKnown(original.flavorNotes, details.flavorNotes),
-                suggestedPairing = keepKnown(original.suggestedPairing, details.suggestedPairing),
-                summary = keepKnown(original.summary, details.summary),
+                winery = if (requested != null) {
+                    original.winery
+                } else {
+                    keepKnown("winery", original.winery, details.winery)
+                },
+                wineType = keepKnown("wine_type", original.wineType, details.wineType),
+                sweetness = requestedValue("sweetness", "sweetness", original.sweetness, details.sweetness),
+                body = requestedValue("body", "body", original.body, details.body),
+                tannin = requestedValue("tannin", "tannin", original.tannin, details.tannin),
+                acidity = requestedValue("acidity", "acidity", original.acidity, details.acidity),
+                flavorNotes = requestedValue("flavor", "flavor_notes", original.flavorNotes, details.flavorNotes),
+                suggestedPairing = requestedValue("occasion", "suggested_pairing", original.suggestedPairing, details.suggestedPairing),
+                summary = keepKnown("summary", original.summary, details.summary),
                 profileComplete = true,
             )
+        }
+
+        internal fun normalizeWineEducation(response: String): String? {
+            val sections = EDUCATION_SECTION.findAll(response.trim()).map { match ->
+                match.groupValues[1] to match.groupValues[2].trim()
+            }.toList()
+            if (sections.map { it.first } != EDUCATION_HEADINGS) return null
+            if (sections.any { it.second.isBlank() }) return null
+            return sections.joinToString("\n\n") { (heading, content) -> "**$heading:** $content" }
         }
 
         private fun String.toWineSuggestionOrNull(): WineSuggestion? = runCatching {
             val json = JSONObject(trim())
             val rawCountry = json.knownString("country")
-            val rawProvince = json.knownString("province")
+            val rawProvince = json.knownString("province").let { location ->
+                // If both synonyms appear, a real region beats an "Unknown" province.
+                if (location.isResolvedValue()) location else json.knownString("region")
+            }
+            val rawWineType = json.knownString("wine_type")
+            val province = rawProvince
+            val country = canonicalCountry(rawCountry) ?: rawCountry
+            val wineType = canonicalWineType(rawWineType) ?: "Unknown"
+            GemmaEvalTrace.active?.let { trace ->
+                if (country != rawCountry) trace.repair("label_rewritten", "country", "$rawCountry -> $country")
+                if (wineType != rawWineType) trace.repair("label_rewritten", "wine_type", "$rawWineType -> $wineType")
+                val rawSummary = json.knownString("summary")
+                if (rawSummary.length > MAX_SUMMARY_CHARACTERS) {
+                    trace.repair("summary_truncated", "summary", "${rawSummary.length} chars cut to $MAX_SUMMARY_CHARACTERS")
+                }
+            }
             WineSuggestion(
-                name = json.knownString("name", fallback = "Unknown Wine"),
-                province = canonicalProvince(rawProvince) ?: rawProvince,
-                country = canonicalCountry(rawCountry) ?: rawCountry,
-                wineType = canonicalWineType(json.knownString("wine_type")) ?: "Unknown",
+                // Card 1 now returns a wine style rather than a bottle. Use its variety as
+                // the stable title/identity expected by the existing navigation and favorites.
+                name = json.knownString(
+                    "name",
+                    fallback = json.knownString("variety", fallback = "Unknown Wine"),
+                ),
+                province = province,
+                country = country,
+                wineType = wineType,
                 winery = json.knownString("winery"),
                 variety = json.knownString("variety"),
                 sweetness = json.level("sweetness"),
@@ -951,6 +1109,8 @@ class GemmaConversationResponder(
                 suggestedPairing = json.knownString("suggested_pairing"),
                 summary = json.knownString("summary").take(MAX_SUMMARY_CHARACTERS),
             )
+        }.onFailure { error ->
+            GemmaEvalTrace.active?.repair("json_parse_failed", "payload", "${error.javaClass.simpleName}: ${take(300)}")
         }.getOrNull()
 
         private fun String.toWineSuggestions(): List<WineSuggestion> = runCatching {
@@ -1001,13 +1161,32 @@ class GemmaConversationResponder(
                     suggestion.province,
                     suggestion.variety,
                 ).joinToString("|") { it.trim().lowercase() }
+            }.also { distinct ->
+                if (distinct.size != size) {
+                    GemmaEvalTrace.active?.repair("cards_deduplicated", "cards", "$size -> ${distinct.size}")
+                }
             }
 
-        private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String =
-            optString(resolvedCardKey(key) ?: key).trim().trimEnd(':', ';', ',').trim()
-                .takeIf {
-                    it.isNotEmpty() && !it.equals("null", true) && !it.equals("none", true)
-                } ?: fallback
+        private fun JSONObject.knownString(key: String, fallback: String = "Unknown"): String {
+            val resolvedKey = resolvedCardKey(key)
+            val raw = optString(resolvedKey ?: key)
+            val cleaned = raw.trim().trimEnd(':', ';', ',').trim()
+            val result = cleaned.takeIf {
+                it.isNotEmpty() && !it.equals("null", true) && !it.equals("none", true)
+            } ?: fallback
+            GemmaEvalTrace.active?.let { trace ->
+                when {
+                    resolvedKey == null -> trace.repair("missing_field_set_to_fallback", key, "absent -> $fallback")
+                    resolvedKey != key -> trace.repair("key_renamed", key, "$resolvedKey -> $key")
+                }
+                if (resolvedKey != null && result == fallback && cleaned != fallback) {
+                    trace.repair("placeholder_set_to_fallback", key, "\"$raw\" -> $fallback")
+                } else if (resolvedKey != null && raw != result) {
+                    trace.repair("value_trimmed", key, "\"$raw\" -> \"$result\"")
+                }
+            }
+            return result
+        }
 
         /** Prefer the canonical key when present, then accept a recognised Gemma key alias. */
         private fun JSONObject.resolvedCardKey(canonicalKey: String): String? {
@@ -1036,27 +1215,44 @@ class GemmaConversationResponder(
         private fun JSONObject.stringList(key: String): String {
             val resolvedKey = resolvedCardKey(key) ?: key
             val array = optJSONArray(resolvedKey) ?: return knownString(key)
-            return buildList {
+            val joined = buildList {
                 for (index in 0 until array.length()) {
                     array.optString(index).trim().takeIf(String::isNotBlank)?.let(::add)
                 }
             }.takeIf(List<String>::isNotEmpty)?.joinToString(", ") ?: "Unknown"
+            GemmaEvalTrace.active?.repair("array_joined_to_string", key, "-> $joined")
+            return joined
         }
 
         private fun JSONObject.level(key: String): String {
             val value = knownString(key)
-            return when (key) {
-                "body" -> canonicalBody(value)
-                "tannin" -> canonicalTannin(value)
-                "acidity" -> canonicalAcidity(value)
+            // Body, tannin and acidity are shown exactly as Gemma returned them.
+            if (key == "body" || key == "tannin" || key == "acidity") return value
+            val canonical = when (key) {
                 "sweetness" -> canonicalSweetness(value)
                 else -> null
-            } ?: "Unknown"
+            }
+            GemmaEvalTrace.active?.let { trace ->
+                if (value.isResolvedValue()) {
+                    if (canonical == null) trace.repair("label_unmapped_set_unknown", key, "$value -> Unknown")
+                    else if (canonical != value) trace.repair("label_rewritten", key, "$value -> $canonical")
+                }
+            }
+            return canonical ?: "Unknown"
         }
 
         private const val RECOMMENDATION_COUNT = 3
+        // Sampling used by the card-list (Call 1) and detail-screen (Call 2) requests. Internal so
+        // the debug eval runner can record exactly what the app used.
+        internal const val CARD_TOP_K = 30
+        internal const val CARD_TOP_P = 0.85
+        internal const val CARD_TEMPERATURE = 0.4
+        internal const val DETAIL_TOP_K = 30
+        internal const val DETAIL_TOP_P = 0.85
+        internal const val DETAIL_TEMPERATURE = 0.35
         private const val INITIAL_CARD_MAX_OUTPUT_TOKENS = 384
         private const val DETAIL_MAX_OUTPUT_TOKENS = 512
+        private const val DETAIL_STREAM_UPDATE_INTERVAL_MS = 80L
         // The prompt asks Gemma for a summary "under 200 characters", but models don't hit an
         // exact count reliably — allow a 10% buffer (220) rather than hard-truncating a
         // slightly-over response mid-word.

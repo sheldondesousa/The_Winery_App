@@ -11,6 +11,7 @@ class GemmaCardFieldsTest {
         assertEquals("wine_type", GemmaCardFields.canonicalName("type"))
         assertEquals("wine_type", GemmaCardFields.canonicalName("wineType"))
         assertEquals("province", GemmaCardFields.canonicalName("wine region"))
+        assertEquals("province", GemmaCardFields.canonicalName("region"))
         assertEquals("variety", GemmaCardFields.canonicalName("grape_variety"))
         assertEquals("flavor", GemmaCardFields.canonicalName("flavourProfile"))
         assertEquals("suggested_pairing", GemmaCardFields.canonicalName("foodPairing"))

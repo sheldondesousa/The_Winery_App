@@ -5,8 +5,8 @@ package com.sheldondesousa.uncork.model
  *
  * Gemma can occasionally emit malformed text containing an unmatched `{` before the requested
  * `[WINE_CARDS]` block. Starting at the first brace would then leave the parser permanently
- * nested and hide valid objects later in the response. Wait for the marker (or a raw JSON array
- * when the marker is omitted) before tracking object braces.
+ * nested and hide valid objects later in the response. Wait for the marker or the array inside
+ * the current `{"cards":[...]}` envelope before tracking object braces.
  */
 internal class CompleteJsonObjects {
     private val preamble = StringBuilder()

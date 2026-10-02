@@ -72,4 +72,15 @@ class CompleteJsonObjectsTest {
         assertEquals("raw_array", stream.startMode)
         assertEquals(0, stream.unfinishedObjectDepth)
     }
+
+    @Test
+    fun streamsCardsFromTheNewJsonEnvelope() {
+        val stream = CompleteJsonObjects()
+        val first = """{"variety":"Malbec","type":"Red","country":"Argentina","region":"Mendoza"}"""
+        val second = """{"variety":"Tannat","type":"Red","country":"Uruguay","region":"Canelones"}"""
+        val response = """{"cards":[$first,$second]}"""
+
+        assertEquals(listOf(first, second), response.flatMap { stream.append(it.toString()) })
+        assertEquals("raw_array", stream.startMode)
+    }
 }

@@ -3,9 +3,8 @@ package com.sheldondesousa.uncork.model
 /**
  * Canonical JSON field names accepted by the Gemma card parser.
  *
- * Gemma is asked to use the canonical snake_case names, but smaller models sometimes return a
- * familiar synonym or change the casing. Kotlin resolves those keys before reading the value so
- * the rest of the app only sees its standard field names.
+ * The card prompt uses `type` and `region`; Kotlin stores those as `wine_type` and `province`.
+ * Accept either name, plus familiar variants, before reading a value.
  */
 internal object GemmaCardFields {
     private val aliasesByCanonicalName = linkedMapOf(

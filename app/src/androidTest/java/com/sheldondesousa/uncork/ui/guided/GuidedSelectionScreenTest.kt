@@ -44,8 +44,8 @@ class GuidedSelectionScreenTest {
         compose.runOnIdle { assertEquals("", state.selection.province) }
         compose.onNodeWithText("Submit").assertIsEnabled().performClick()
         compose.onNodeWithText("Results").assertIsDisplayed()
-        compose.onNodeWithText("Gemma").assertIsDisplayed()
-        compose.onNodeWithText("Kaggle db").assertIsDisplayed()
+        compose.onNodeWithText("AI Sommelier").assertIsDisplayed()
+        compose.onNodeWithText("Reviewed Wines").assertIsDisplayed()
         compose.onAllNodesWithText("No results found").assertCountEquals(2)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Submit").assertIsDisplayed()
@@ -94,10 +94,10 @@ class GuidedSelectionScreenTest {
             state.selection = GuidedCriteria(wineType = "Red")
             state.search()
         }
-        compose.onNodeWithText("Gemma").assertIsDisplayed()
+        compose.onNodeWithText("AI Sommelier").assertIsDisplayed()
         compose.onNodeWithText("Château Margaux").assertIsDisplayed()
         compose.onNodeWithText("Preparing wine 2…").assertIsDisplayed()
         compose.onNodeWithText("Preparing wine 3…").assertIsDisplayed()
-        compose.onNodeWithText("Kaggle db").assertIsDisplayed()
+        compose.onNodeWithText("Reviewed Wines").assertIsDisplayed()
     }
 }

@@ -7,6 +7,18 @@ import org.junit.Test
 
 class WinePreferencesTest {
     @Test
+    fun regionAndProvinceRequestKeysShareOneLocation() {
+        assertEquals(
+            "Rioja",
+            WinePreferences.fromJsonOrNull("""{"region":"Rioja"}""")?.province,
+        )
+        assertEquals(
+            "Rioja",
+            WinePreferences.fromJsonOrNull("""{"province":"Unknown","region":"Rioja"}""")?.province,
+        )
+    }
+
+    @Test
     fun resolvedFieldsMapDirectlyOntoSelectionCriteria() {
         val preferences = WinePreferences(
             type = "red",

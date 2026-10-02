@@ -33,7 +33,7 @@ class StageShowScreenTest {
                         variety = "Cabernet Sauvignon",
                     ).toStageWine(),
                     onBack = {},
-                    loadDetails = { awaitCancellation() },
+                    loadDetails = { _, _ -> awaitCancellation() },
                 )
             }
         }
