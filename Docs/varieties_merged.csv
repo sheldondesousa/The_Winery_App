@@ -1,0 +1,604 @@
+﻿variety,type,merged_names,reviewed_wines,in_find_shortlist,in_gemma_sheet
+Abouriou,grape,,3,No,No
+Agiorgitiko,grape,,56,No,Yes
+Aglianico,grape,,339,Yes,No
+Aidani,grape,,1,No,No
+Airen,grape,,3,No,Yes
+Albana,grape,,21,No,No
+Albanello,grape,,1,No,No
+Albariño / Alvarinho,grape,Albariño; Alvarinho,557,Yes,Yes
+Albarossa,grape,,1,No,No
+Aleatico,grape,,5,No,No
+Alfrocheiro,grape,,14,No,No
+Alicante,grape,,5,No,No
+Alicante Bouschet / Garnacha Tintorera,grape,Alicante Bouschet; Garnacha Tintorera,55,No,Yes
+Aligoté,grape,,27,No,Yes
+Altesse,grape,,6,No,No
+Alvarelhão,grape,,2,No,No
+Antão Vaz,grape,,15,No,No
+Argaman,grape,,3,No,No
+Arinto,grape,,69,No,Yes
+Arneis,grape,,77,No,No
+Asprinio,grape,,3,No,No
+Assyrtiko,grape,Assyrtico,54,No,Yes
+Athiri,grape,,1,No,No
+Auxerrois,grape,Pinot Auxerrois,38,No,No
+Avesso,grape,,6,No,No
+Azal,grape,,3,No,No
+Babić,grape,,4,No,No
+Babosa Negro,grape,,1,No,No
+Bacchus,grape,,1,No,No
+Baco Noir,grape,,15,No,No
+Baga,grape,,26,No,No
+Barbera,grape,,643,Yes,Yes
+Bastardo,grape,,2,No,No
+Biancale,grape,,1,No,No
+Biancolella,grape,,1,No,No
+Biancu Gentile,grape,,1,No,No
+Bical,grape,,13,No,No
+Black Monukka,grape,,1,No,No
+Blanc du Bois,grape,,6,No,No
+Blatina,grape,,1,No,No
+Blauburger,grape,,1,No,No
+Blauer Portugieser,grape,,2,No,No
+Blaufränkisch,grape,Franconia; Frankovka; Kekfrankos; Lemberger,257,No,Yes
+Bobal,grape,,21,No,Yes
+Bombino Bianco,grape,,2,No,No
+Bombino Nero,grape,,1,No,No
+Bonarda,grape,,98,No,No
+Bovale,grape,,3,No,No
+Boğazkere,grape,,4,No,No
+Brachetto,grape,,14,No,No
+Braucol,grape,,5,No,No
+Bual,grape,,7,No,No
+Cabernet Franc,grape,,1242,Yes,Yes
+Cabernet Moravia,grape,,2,No,No
+Cabernet Pfeffer,grape,,2,No,No
+Cabernet Sauvignon,grape,Cabernet,8832,Yes,Yes
+Canaiolo,grape,,3,No,No
+Caprettone,grape,,1,No,No
+Carcajolu,grape,,1,No,No
+Carignan,grape,Carignane; Carignano; Carineña; Mazuelo,118,Yes,Yes
+Carmenère,grape,,532,Yes,Yes
+Carricante,grape,,34,No,No
+Casavecchia,grape,,3,No,No
+Castelão,grape,,29,No,Yes
+Catalanesca,grape,,1,No,No
+Catarratto,grape,,28,No,No
+Cayuga,grape,,2,No,No
+Centesimino,grape,,1,No,No
+Cercial,grape,Cerceal,4,No,No
+Cesanese,grape,Cesanese d'Affile,6,No,No
+Chambourcin,grape,,17,No,No
+Chancellor,grape,,2,No,No
+Charbono,grape,,24,No,No
+Chardonel,grape,,1,No,No
+Chardonnay,grape,Morillon,10813,Yes,Yes
+Chasselas / Gutedel,grape,Chasselas,8,No,Yes
+Chelois,grape,,2,No,No
+Chenin Blanc,grape,,544,Yes,Yes
+Chinuri,grape,,2,No,No
+Ciliegiolo,grape,,3,No,No
+Cinsault,grape,,38,No,No
+Clairette,grape,,3,No,No
+Cococciola,grape,,1,No,No
+Coda di Volpe,grape,,17,No,No
+Colombard,grape,,23,No,No
+Colorino,grape,,1,No,No
+Cortese,grape,,65,No,Yes
+Corvina,grape,,21,Yes,Yes
+Counoise,grape,,11,No,No
+Códega do Larinho,grape,,4,No,No
+Dafni,grape,,1,No,No
+Debit,grape,,2,No,No
+Diamond,grape,,1,No,No
+Dolcetto,grape,,168,No,No
+Dornfelder,grape,,26,No,Yes
+Doña Blanca,grape,,1,No,No
+Duras,grape,,7,No,No
+Durella,grape,,8,No,No
+Ekigaïna,grape,,1,No,No
+Elbling,grape,,3,No,Yes
+Emir,grape,,3,No,No
+Encruzado,grape,,34,No,No
+Erbaluce,grape,,2,No,No
+Espadeiro,grape,,1,No,No
+Falanghina,grape,,82,No,No
+Fer Servadou,grape,,2,No,No
+Fernão Pires,grape,,34,No,No
+Feteasca,grape,,2,No,No
+Feteasca Neagra,grape,,6,No,No
+Feteascǎ Regalǎ,grape,,5,No,No
+Fiano,grape,,135,No,No
+Folle Blanche,grape,,1,No,No
+Forcallà,grape,,1,No,No
+Francisa,grape,,1,No,No
+Frappato,grape,,38,No,No
+Freisa,grape,,2,No,No
+Friulano / Tocai,grape,Friulano; Tocai; Tocai Friulano,139,No,No
+Frühburgunder,grape,Früburgunder,1,No,Yes
+Furmint,grape,,45,No,No
+Gaglioppo,grape,,13,No,No
+Gamay,grape,Gamay Noir,945,Yes,Yes
+Gamza,grape,,1,No,No
+Garganega / Grecanico,grape,Garganega; Grecanico,254,No,No
+Gewürztraminer,grape,Roter Traminer; Traminer,978,Yes,Yes
+Glera / Prosecco,grape,Glera; Prosecco,802,Yes,No
+Godello,grape,,76,No,No
+Gouveio,grape,,2,No,No
+Graciano,grape,,40,No,No
+Gragnano,grape,,2,No,No
+Graševina / Welschriesling,grape,Graševina; Welschriesling,25,No,Yes
+Grechetto,grape,,14,No,No
+Greco,grape,Greco Bianco,110,No,No
+Grenache / Garnacha,grape,Cannonau; Garnacha; Grenache; Grenache Noir,944,Yes,Yes
+Grenache Blanc / Garnacha Blanca,grape,Garnacha Blanca; Grenache Blanc,153,No,No
+Grenache Gris,grape,,1,No,No
+Grignolino,grape,,2,No,No
+Grillo,grape,,119,No,No
+Grolleau,grape,,2,No,No
+Groppello,grape,,1,No,No
+Gros Manseng,grape,,22,No,No
+Gros Plant,grape,,1,No,No
+Grüner Veltliner,grape,,1197,Yes,Yes
+Hondarrabi Zuri,grape,,16,No,No
+Hárslevelü,grape,,2,No,No
+Incrocio Manzoni,grape,,3,No,No
+Insolia / Ansonica,grape,Ansonica; Insolia; Inzolia,57,No,No
+Irsai Oliver,grape,,1,No,No
+Jacquez,grape,,3,No,No
+Jacquère,grape,,23,No,No
+Jampal,grape,,1,No,No
+Kadarka,grape,,2,No,No
+Kalecik Karasi,grape,,13,No,No
+Kangoun,grape,,1,No,No
+Karalahna,grape,,1,No,No
+Karasakiz,grape,,1,No,No
+Kerner,grape,,25,No,Yes
+Kinali Yapincak,grape,,1,No,No
+Kisi,grape,,5,No,No
+Kotsifali,grape,,1,No,No
+Kuntra,grape,,1,No,No
+Lagrein,grape,,72,No,No
+Lambrusco,grape,,47,No,No
+Lambrusco di Sorbara,grape,,18,No,No
+Lambrusco Grasparossa,grape,,17,No,No
+Lambrusco Salamino,grape,,2,No,No
+Listán Negro,grape,,2,No,No
+Loin de l'Oeil,grape,,9,No,No
+Loureiro,grape,,28,No,No
+Macabeo / Viura,grape,Macabeo; Viura,124,No,Yes
+Madeleine Angevine,grape,,2,No,No
+Magliocco,grape,,3,No,No
+Malagousia,grape,Malagouzia,13,No,No
+Malbec,grape,,2446,Yes,Yes
+Malvar,grape,,2,No,No
+Malvasia,grape,,43,No,Yes
+Malvasia Bianca,grape,,16,No,No
+Malvasia di Candia,grape,,2,No,No
+Malvasia Fina,grape,,2,No,No
+Malvasia Istriana,grape,,7,No,No
+Malvasia Nera,grape,,5,No,No
+Mandilaria,grape,,2,No,No
+Mansois,grape,,4,No,No
+Mantonico,grape,,7,No,No
+Manzoni,grape,,7,No,No
+Marawi,grape,,2,No,No
+Maria Gomes,grape,,1,No,No
+Marquette,grape,,2,No,No
+Marsanne,grape,,61,Yes,No
+Marselan,grape,,4,No,No
+Marzemino,grape,,3,No,No
+Maturana,grape,,6,No,No
+Mauzac,grape,,7,No,No
+Mavrodaphne,grape,,5,No,No
+Mavrokalavryta,grape,,1,No,No
+Mavrotragano,grape,,1,No,No
+Mavroudi,grape,,1,No,No
+Mavrud,grape,,7,No,No
+Melon,grape,,256,No,No
+Mencía,grape,Jaen,168,No,Yes
+Merlot,grape,,2888,Yes,Yes
+Meseguera,grape,,1,No,No
+Misket,grape,,1,No,No
+Mission,grape,,6,No,No
+Molinara,grape,,1,No,No
+Mondeuse,grape,,15,No,No
+Monica,grape,,3,No,No
+Montepulciano,grape,,199,No,No
+Morava,grape,,1,No,No
+Morio Muskat,grape,,2,No,No
+Moscadello,grape,,6,No,No
+Moscatel (unspecified),grape,Moscatel; Muscadel; Muscatel,57,No,No
+Moscatel Roxo,grape,,6,No,No
+Moscato Rosa,grape,,2,No,No
+Moschofilero,grape,,31,No,No
+Mourvèdre / Monastrell,grape,Mataro; Monastrell; Mourvèdre,350,Yes,Yes
+Mtsvane,grape,,4,No,No
+Muscadelle,grape,,7,No,No
+Muscadine,grape,,2,No,No
+Muscat Blanc à Petits Grains / Moscato,grape,Gelber Muskateller; Moscato; Moscato Giallo; Moscato di Noto; Muscat; Muscat Blanc; Muscat Blanc à Petits Grains; Muscat Canelli; Muskat; Muskateller,550,Yes,No
+Muscat Hamburg,grape,Black Muscat,14,No,No
+Muscat of Alexandria / Zibibbo,grape,Moscatel Graúdo; Moscatel de Alejandría; Muscat d'Alexandrie; Muscat of Alexandria; Zibibbo,39,No,No
+Muskat Ottonel,grape,,21,No,No
+Müller-Thurgau,grape,Rivaner,44,No,Yes
+Narince,grape,,6,No,No
+Nascetta,grape,,6,No,No
+Nasco,grape,,2,No,No
+Nebbiolo,grape,,2599,Yes,Yes
+Negrette,grape,,16,No,No
+Negroamaro,grape,,75,No,Yes
+Nerello Cappuccio,grape,,5,No,No
+Nerello Mascalese,grape,,107,No,No
+Nero d'Avola,grape,,324,Yes,Yes
+Nero di Troia,grape,Uva di Troia,27,No,No
+Neuburger,grape,,8,No,No
+Nielluccio,grape,Nielluciu,3,No,No
+Norton,grape,,15,No,No
+Nosiola,grape,,7,No,No
+Nuragus,grape,,3,No,No
+Okuzgozu,grape,,8,No,No
+Ondenc,grape,,1,No,No
+Orange Muscat,grape,,18,No,No
+Orangetraube,grape,,1,No,No
+Pallagrello,grape,,9,No,No
+Pallagrello Bianco,grape,,5,No,No
+Pallagrello Nero,grape,,4,No,No
+Palomino,grape,,14,No,No
+Pansa Blanca,grape,,13,No,No
+Papaskarasi,grape,,2,No,No
+Parellada,grape,Paralleda; Parraleta,2,No,Yes
+Passerina,grape,,21,No,No
+País,grape,,1,No,No
+Pecorino,grape,,46,No,No
+Pedro Ximénez,grape,,33,No,No
+Perricone,grape,,9,No,No
+Petit Courbu,grape,,1,No,No
+Petit Manseng,grape,,54,No,No
+Petit Meslier,grape,,1,No,No
+Petit Verdot,grape,Petite Verdot,281,No,Yes
+Petite Sirah / Durif,grape,Durif; Petite Sirah,701,Yes,No
+Picapoll,grape,,1,No,No
+Picolit,grape,,26,No,No
+Piedirosso,grape,,19,No,No
+Pignoletto,grape,,4,No,No
+Pignolo,grape,,1,No,No
+Pinot Blanc,grape,Pinot Bianco; Weissburgunder,579,Yes,Yes
+Pinot Gris / Pinot Grigio,grape,Grauburgunder; Pinot Grigio; Pinot Gris; Tokay Pinot Gris,2308,Yes,Yes
+Pinot Meunier,grape,Schwartzriesling,40,No,Yes
+Pinot Noir,grape,Blauburgunder; Pinot Nero; Spätburgunder,12462,Yes,Yes
+Pinotage,grape,,126,Yes,Yes
+Piquepoul,grape,Picpoul; Piquepoul Blanc,17,No,No
+Plavac Mali,grape,,16,No,No
+Plyto,grape,,2,No,No
+Portuguiser,grape,,1,No,No
+Posip,grape,,7,No,No
+Poulsard,grape,,3,No,No
+Premsal,grape,,1,No,No
+Prieto Picudo,grape,,14,No,No
+Prié Blanc,grape,,6,No,No
+Prunelard,grape,,1,No,No
+Pugnitello,grape,,3,No,No
+Rabigato,grape,,2,No,No
+Raboso,grape,,13,No,No
+Ramisco,grape,,1,No,No
+Rara Neagra,grape,,2,No,No
+Rebo,grape,,2,No,No
+Rebula,grape,,3,No,No
+Refosco,grape,,10,No,No
+Ribolla Gialla,grape,,73,No,No
+Rieslaner,grape,,5,No,No
+Riesling,grape,Johannisberg Riesling; Ryzlink Rýnský; White Riesling,4781,Yes,Yes
+Rkatsiteli,grape,,30,No,Yes
+Robola,grape,,4,No,No
+Roditis,grape,,4,No,No
+Romorantin,grape,,3,No,No
+Roscetto,grape,,1,No,No
+Rosenmuskateller,grape,,2,No,No
+Roter Veltliner,grape,,11,No,No
+Rotgipfler,grape,,21,No,No
+Roussanne,grape,,157,Yes,Yes
+Roviello,grape,,2,No,No
+Ruché,grape,,10,No,No
+Rufete,grape,,2,No,No
+Sacy,grape,,2,No,No
+Sagrantino,grape,,98,No,No
+Sangiovese,grape,Prugnolo Gentile; Sangiovese Grosso,3198,Yes,Yes
+Saperavi,grape,,32,No,No
+Sauvignon Blanc,grape,Fumé Blanc; Sauvignon,4911,Yes,Yes
+Sauvignon Gris,grape,,14,No,No
+Sauvignon Musqué,grape,,1,No,No
+Sauvignonasse,grape,,1,No,No
+Savagnin,grape,Gelber Traminer,22,No,No
+Savatiano,grape,,4,No,No
+Scheurebe,grape,Sämling,30,No,Yes
+Schiava,grape,,21,No,No
+Sciaccerellu,grape,,4,No,No
+Sercial,grape,,1,No,No
+Seyval Blanc,grape,,15,No,No
+Sideritis,grape,,1,No,No
+Siegerrebe,grape,,1,No,No
+Silvaner,grape,Sylvaner,82,No,Yes
+Siria,grape,,11,No,No
+Sirica,grape,,2,No,No
+Sousão / Vinhão,grape,Sousão; Souzao; Vinhão,12,No,No
+St. Laurent,grape,,79,No,Yes
+St. Vincent,grape,,1,No,No
+Susumaniello,grape,,6,No,No
+Symphony,grape,,4,No,No
+Syrah / Shiraz,grape,Shiraz; Syrah,4607,Yes,Yes
+Sémillon,grape,,133,Yes,Yes
+Tamianka,grape,,1,No,No
+Tamjanika,grape,,1,No,No
+Tannat,grape,,161,No,No
+Tempranillo,grape,Aragonez; Aragonês; Tinta Roriz; Tinta de Toro; Tinta del Pais; Tinta del Toro; Tinto Fino; Tinto del Pais,1968,Yes,Yes
+Tempranillo Blanco,grape,,9,No,No
+Teran,grape,,7,No,No
+Teroldego,grape,Teroldego Rotaliano,29,No,No
+Terrantez,grape,,1,No,No
+Thrapsathiri,grape,,1,No,No
+Timorasso,grape,,4,No,No
+Tinta Amarela,grape,,1,No,No
+Tinta Barroca,grape,,5,No,No
+Tinta Cao,grape,,1,No,No
+Tinta Fina,grape,,10,No,No
+Tinta Francisca,grape,,3,No,No
+Tinta Madeira,grape,,1,No,No
+Tinta Miúda,grape,,2,No,No
+Tinta Negra Mole,grape,,1,No,No
+Tintilia,grape,,1,No,No
+Tinto Velasco,grape,,1,No,No
+Tokay,grape,,5,No,No
+Torbato,grape,,1,No,No
+Torontel,grape,,1,No,No
+Torrontés,grape,,234,Yes,No
+Touriga,grape,,2,No,No
+Touriga Franca,grape,,6,No,Yes
+Touriga Nacional,grape,,179,Yes,Yes
+Trajadura,grape,,1,No,No
+Traminette,grape,,9,No,No
+Trebbiano Spoletino,grape,,7,No,No
+Trebbiano Toscano / Ugni Blanc,grape,Trebbiano; Ugni Blanc,52,No,No
+Treixadura,grape,,2,No,No
+Trepat,grape,,9,No,No
+Trincadeira,grape,,23,No,No
+Trollinger,grape,,2,No,No
+Trousseau,grape,,6,No,No
+Trousseau Gris,grape,,2,No,No
+Turbiana / Trebbiano di Lugana,grape,Trebbiano di Lugana; Turbiana,137,No,No
+Tămâioasă Românească,grape,,2,No,No
+Uvalino,grape,,1,No,No
+Valdiguié,grape,,5,No,No
+Valvin Muscat,grape,,1,No,No
+Veltliner,grape,,4,No,No
+Verdeca,grape,,5,No,No
+Verdejo,grape,,266,No,Yes
+Verdelho,grape,,59,No,Yes
+Verdicchio,grape,,148,No,Yes
+Verdil,grape,,1,No,No
+Verdosilla,grape,,1,No,No
+Verduzzo,grape,Verduzzo Friulano,8,No,No
+Vermentino,grape,Favorita; Pigato; Rolle,213,Yes,Yes
+Vermentino Nero,grape,,1,No,No
+Vernaccia,grape,,124,No,No
+Vespaiolo,grape,,1,No,No
+Vespolina,grape,,2,No,No
+Vidadillo,grape,,1,No,No
+Vidal,grape,Vidal Blanc,61,No,No
+Vignoles,grape,,10,No,No
+Vilana,grape,,4,No,No
+Viognier,grape,,919,Yes,Yes
+Viosinho,grape,,4,No,No
+Vital,grape,,1,No,No
+Vitovska,grape,,3,No,No
+Vranec,grape,,4,No,No
+Xarel-lo,grape,,19,No,No
+Xinomavro,grape,,30,No,No
+Xynisteri,grape,Xinisteri,3,No,No
+Yapincak,grape,,2,No,No
+Zelen,grape,,1,No,No
+Zierfandler,grape,,14,No,No
+Zinfandel / Primitivo,grape,Primitivo; Zinfandel,2734,Yes,Yes
+Zlahtina,grape,,2,No,No
+Zweigelt,grape,,182,No,No
+Çalkarası,grape,,2,No,No
+Žilavka,grape,,1,No,No
+Alsace white blend,blend,,50,Yes,No
+Alvarinho-Chardonnay,blend,,5,No,No
+Apple,excluded,,2,No,No
+Austrian Red Blend,blend,,59,Yes,No
+Austrian white blend,blend,,71,Yes,No
+Baga-Touriga Nacional,blend,,2,No,No
+Barbera-Nebbiolo,blend,,1,No,No
+Bobal-Cabernet Sauvignon,blend,,1,No,No
+Bordeaux-style Red Blend,blend,,6445,Yes,No
+Bordeaux-style White Blend,blend,,991,Yes,No
+Cabernet Blend,blend,,75,No,No
+Cabernet Franc-Cabernet Sauvignon,blend,,16,No,No
+Cabernet Franc-Carmenère,blend,,2,No,No
+Cabernet Franc-Lemberger,blend,,2,No,No
+Cabernet Franc-Malbec,blend,,3,No,No
+Cabernet Franc-Merlot,blend,,17,No,No
+Cabernet Merlot,blend,,21,No,No
+Cabernet Sauvignon Grenache,blend,,2,No,No
+Cabernet Sauvignon-Barbera,blend,,1,No,No
+Cabernet Sauvignon-Cabernet Franc,blend,,21,No,No
+Cabernet Sauvignon-Carmenère,blend,,41,No,No
+Cabernet Sauvignon-Malbec,blend,,16,No,No
+Cabernet Sauvignon-Merlot,blend,,114,No,No
+Cabernet Sauvignon-Merlot-Shiraz,blend,,2,No,No
+Cabernet Sauvignon-Sangiovese,blend,,7,No,No
+Cabernet Sauvignon-Shiraz,blend,,26,No,No
+Cabernet Sauvignon-Syrah,blend,,97,No,No
+Cabernet Sauvignon-Tempranillo,blend,,12,No,No
+Cabernet-Malbec,blend,,1,No,No
+Cabernet-Shiraz,blend,,2,No,No
+Cabernet-Syrah,blend,,12,No,No
+Carignan-Grenache,blend,,8,No,No
+Carignan-Syrah,blend,,2,No,No
+Cariñena-Garnacha,blend,,2,No,No
+Carmenère-Cabernet Sauvignon,blend,,7,No,No
+Carmenère-Syrah,blend,,6,No,No
+Champagne Blend,blend,,1092,Yes,No
+Chardonnay Weissburgunder,blend,,2,No,No
+Chardonnay-Albariño,blend,,2,No,No
+Chardonnay-Pinot Blanc,blend,,4,No,No
+Chardonnay-Pinot Gris,blend,,1,No,No
+Chardonnay-Riesling,blend,,1,No,No
+Chardonnay-Sauvignon,blend,,6,No,No
+Chardonnay-Sauvignon Blanc,blend,,4,No,No
+Chardonnay-Semillon,blend,,6,No,No
+Chardonnay-Viognier,blend,,32,No,No
+Chenin Blanc-Chardonnay,blend,,28,No,No
+Chenin Blanc-Sauvignon Blanc,blend,,6,No,No
+Chenin Blanc-Viognier,blend,,11,No,No
+Claret,style / label,,33,No,No
+Colombard-Sauvignon Blanc,blend,,17,No,No
+Colombard-Ugni Blanc,blend,,7,No,No
+"Corvina, Rondinella, Molinara",blend,,574,No,No
+Edelzwicker,blend,,4,No,No
+G-S-M,blend,,169,No,No
+Garnacha Blend,blend,,2,No,No
+Garnacha-Cabernet,blend,,1,No,No
+Garnacha-Cariñena,blend,,1,No,No
+Garnacha-Monastrell,blend,,3,No,No
+Garnacha-Syrah,blend,,12,No,No
+Garnacha-Tempranillo,blend,,5,No,No
+Gewürztraminer-Riesling,blend,,7,No,No
+Grenache Blend,blend,,9,No,No
+Grenache-Carignan,blend,,16,No,No
+Grenache-Mourvèdre,blend,,5,No,No
+Grenache-Shiraz,blend,,3,No,No
+Grenache-Syrah,blend,,50,No,No
+Gros and Petit Manseng,blend,,44,No,No
+Loureiro-Arinto,blend,,1,No,No
+Macabeo-Chardonnay,blend,,4,No,No
+Macabeo-Moscatel,blend,,1,No,No
+Madeira Blend,blend,,3,Yes,No
+Malagouzia-Chardonnay,blend,,1,No,No
+Malbec Blend,blend,,3,No,No
+Malbec-Bonarda,blend,,5,No,No
+Malbec-Cabernet,blend,,3,No,No
+Malbec-Cabernet Franc,blend,,11,No,No
+Malbec-Cabernet Sauvignon,blend,,54,No,No
+Malbec-Carménère,blend,,1,No,No
+Malbec-Merlot,blend,,86,No,No
+Malbec-Petit Verdot,blend,,2,No,No
+Malbec-Syrah,blend,,17,No,No
+Malbec-Tannat,blend,,13,No,No
+Malbec-Tempranillo,blend,,2,No,No
+Malvasia-Viura,blend,,3,No,No
+Maria Gomes-Bical,blend,,1,No,No
+Marsanne-Roussanne,blend,,22,No,No
+Marsanne-Viognier,blend,,2,No,No
+Meritage,blend,,240,No,No
+Merlot-Argaman,blend,,1,No,No
+Merlot-Cabernet,blend,,10,No,No
+Merlot-Cabernet Franc,blend,,23,No,No
+Merlot-Cabernet Sauvignon,blend,,33,No,No
+Merlot-Grenache,blend,,1,No,No
+Merlot-Malbec,blend,,6,No,No
+Merlot-Petite Verdot,blend,,1,No,No
+Merlot-Shiraz,blend,,1,No,No
+Merlot-Syrah,blend,,2,No,No
+Merlot-Tannat,blend,,3,No,No
+Merseguera-Sauvignon Blanc,blend,,1,No,No
+Monastrell-Petit Verdot,blend,,2,No,No
+Monastrell-Syrah,blend,,19,No,No
+Moschofilero-Chardonnay,blend,,1,No,No
+Mourvèdre-Syrah,blend,,3,No,No
+Other,excluded,,1,No,No
+Pinot Blanc-Chardonnay,blend,,4,No,No
+Pinot Blanc-Pinot Noir,blend,,1,No,No
+Pinot Blanc-Viognier,blend,,1,No,No
+Pinot Grigio-Sauvignon Blanc,blend,,1,No,No
+Pinot Gris-Gewürztraminer,blend,,1,No,No
+Pinot Noir-Gamay,blend,,17,No,No
+Pinot Noir-Syrah,blend,,3,No,No
+Pinot-Chardonnay,blend,,5,No,No
+Pinotage-Merlot,blend,,1,No,No
+Port,style / label,,619,Yes,No
+Portuguese Red,blend,,2269,Yes,No
+Portuguese Rosé,blend,,15,Yes,No
+Portuguese Sparkling,blend,,56,Yes,No
+Portuguese White,blend,,1055,Yes,No
+Provence red blend,blend,,51,Yes,No
+Provence white blend,blend,,29,Yes,No
+Red Blend,blend,,8214,Yes,No
+Rhône-style Red Blend,blend,,1342,Yes,No
+Rhône-style White Blend,blend,,395,Yes,No
+Riesling-Chardonnay,blend,,1,No,No
+Roditis-Moschofilero,blend,,1,No,No
+Rosado,style / label,,72,No,No
+Rosato,style / label,,94,No,No
+Rosé,style / label,,3214,Yes,No
+Roussanne-Grenache Blanc,blend,,1,No,No
+Roussanne-Marsanne,blend,,5,No,No
+Roussanne-Viognier,blend,,11,No,No
+Sangiovese Cabernet,blend,,3,No,No
+Sangiovese-Cabernet Sauvignon,blend,,6,No,No
+Sangiovese-Syrah,blend,,4,No,No
+Saperavi-Merlot,blend,,2,No,No
+Sauvignon Blanc-Assyrtiko,blend,,1,No,No
+Sauvignon Blanc-Chardonnay,blend,,8,No,No
+Sauvignon Blanc-Chenin Blanc,blend,,4,No,No
+Sauvignon Blanc-Sauvignon Gris,blend,,1,No,No
+Sauvignon Blanc-Semillon,blend,,65,No,No
+Sauvignon Blanc-Verdejo,blend,,4,No,No
+Sauvignon-Sémillon,blend,,1,No,No
+Semillon-Chardonnay,blend,,5,No,No
+Semillon-Sauvignon Blanc,blend,,53,No,No
+Sherry,style / label,,83,Yes,No
+Shiraz-Cabernet,blend,,2,No,No
+Shiraz-Cabernet Sauvignon,blend,,37,No,No
+Shiraz-Grenache,blend,,14,No,No
+Shiraz-Malbec,blend,,3,No,No
+Shiraz-Mourvèdre,blend,,3,No,No
+Shiraz-Roussanne,blend,,1,No,No
+Shiraz-Tempranillo,blend,,2,No,No
+Shiraz-Viognier,blend,,38,No,No
+Silvaner-Traminer,blend,,1,No,No
+Sparkling Blend,blend,,1708,Yes,No
+Syrah-Bonarda,blend,,1,No,No
+Syrah-Cabernet,blend,,15,No,No
+Syrah-Cabernet Franc,blend,,3,No,No
+Syrah-Cabernet Sauvignon,blend,,32,No,No
+Syrah-Carignan,blend,,4,No,No
+Syrah-Grenache,blend,,53,No,No
+Syrah-Grenache-Viognier,blend,,1,No,No
+Syrah-Malbec,blend,,1,No,No
+Syrah-Merlot,blend,,6,No,No
+Syrah-Mourvèdre,blend,,17,No,No
+Syrah-Petit Verdot,blend,,2,No,No
+Syrah-Petite Sirah,blend,,15,No,No
+Syrah-Tempranillo,blend,,7,No,No
+Syrah-Viognier,blend,,15,No,No
+Tannat-Cabernet,blend,,28,No,No
+Tannat-Cabernet Franc,blend,,14,No,No
+Tannat-Merlot,blend,,11,No,No
+Tannat-Syrah,blend,,5,No,No
+Tempranillo Blend,blend,,552,No,No
+Tempranillo-Cabernet Sauvignon,blend,,48,No,No
+Tempranillo-Garnacha,blend,,30,No,No
+Tempranillo-Malbec,blend,,1,No,No
+Tempranillo-Merlot,blend,,7,No,No
+Tempranillo-Shiraz,blend,,7,No,No
+Tempranillo-Syrah,blend,,2,No,No
+Tempranillo-Tannat,blend,,1,No,No
+Tokaji,style / label,,24,No,No
+Touriga Nacional Blend,blend,,18,No,No
+Touriga Nacional-Cabernet Sauvignon,blend,,27,No,No
+Ugni Blanc-Colombard,blend,,9,No,No
+Verdejo-Sauvignon Blanc,blend,,5,No,No
+Verdejo-Viura,blend,,19,No,No
+Viognier-Chardonnay,blend,,12,No,No
+Viognier-Gewürztraminer,blend,,1,No,No
+Viognier-Grenache Blanc,blend,,3,No,No
+Viognier-Marsanne,blend,,3,No,No
+Viognier-Roussanne,blend,,7,No,No
+Viognier-Valdiguié,blend,,1,No,No
+Viura-Chardonnay,blend,,13,No,No
+Viura-Verdejo,blend,,2,No,No
+White Blend,blend,,2165,Yes,No
+White Port,style / label,,2,Yes,No
+Zierfandler-Rotgipfler,blend,,5,No,No
