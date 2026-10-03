@@ -1,5 +1,6 @@
 package com.sheldondesousa.uncork.ui.guided
 
+import com.sheldondesousa.uncork.data.reviews.ScoreBand
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
@@ -47,10 +48,11 @@ class GuidedSelectionStateTest {
         assertTrue(GuidedCriteria().constraints().isEmpty())
     }
 
-    private val none: suspend (GuidedCriteria) -> GuidedResult.Complete = { GuidedResult.Complete(emptyList()) }
+    private val noReviews: suspend (GuidedCriteria, ScoreBand, Int, Boolean, Long) -> ReviewsPage =
+        { _, _, _, _, _ -> ReviewsPage(emptyList(), hasMore = false) }
 
     @Test fun catalogProvidesAllCountriesAndAlphabeticalCascadingProvinces() = runBlocking {
-        val state = GuidedSelectionState(this, none,
+        val state = GuidedSelectionState(this, noReviews,
             locations = linkedMapOf("US" to listOf("Oregon", "California"),
                 "France" to listOf("Burgundy", "Bordeaux"), "Argentina" to listOf("Mendoza")))
         assertEquals(listOf("Argentina", "France", "US"), state.countries)
@@ -60,111 +62,147 @@ class GuidedSelectionStateTest {
     }
 
     @Test fun defaultCatalogIsTheCuratedWineRegionsList() = runBlocking {
-        val state = GuidedSelectionState(this, none)
+        val state = GuidedSelectionState(this, noReviews)
         assertEquals(WineRegions.catalog.keys.sorted(), state.countries.sorted())
         assertTrue(state.countries.isNotEmpty())
     }
 
-    @Test fun reviewsAndExtendedDbReceiveOnlyTheSameSelectedCriteria() = runBlocking {
-        val received = mutableListOf<Map<String, String>>()
-        val state = GuidedSelectionState(this,
-            { received += it.constraints(); GuidedResult.Complete(emptyList()) },
-            { received += it.constraints(); GuidedResult.Complete(emptyList()) })
+    @Test fun searchLoadsBothScoreTabsAndOpensOnTheTopTabWithTheSameSeedAndCriteria() = runBlocking {
+        val calls = mutableListOf<Triple<ScoreBand, Int, Long>>()
+        val received = mutableSetOf<Map<String, String>>()
+        val state = GuidedSelectionState(this, { c, band, offset, _, seed ->
+            received += c.constraints(); calls += Triple(band, offset, seed)
+            ReviewsPage(listOf(card.copy(name = "$band wine")), hasMore = false)
+        }, newSeed = { 42L })
         state.selection = GuidedCriteria(tannin = "Smooth")
-        state.search()
-        yield()
-        assertEquals(listOf(mapOf("tannin" to "Smooth"), mapOf("tannin" to "Smooth")), received)
-    }
-
-    @Test fun searchShowsResultsAndBackToFormPreservesSelection() = runBlocking {
-        val state = GuidedSelectionState(this, { GuidedResult.Complete(listOf(card)) })
         assertFalse(state.showResults)
-        state.selection = criteria
         state.search()
         yield()
         assertTrue(state.showResults)
-        assertEquals(GuidedResult.Complete(listOf(card)), state.database)
-        state.backToForm()
-        assertFalse(state.showResults)
-        assertEquals(criteria, state.selection)
-        assertEquals(criteria, state.submitted)
+        assertEquals(ScoreBand.Top, state.scoreTab)
+        assertEquals(setOf(mapOf("tannin" to "Smooth")), received)
+        assertEquals(setOf(ScoreBand.Top to 0, ScoreBand.Standard to 0), calls.map { it.first to it.second }.toSet())
+        assertTrue(calls.all { it.third == 42L })
+        assertEquals(listOf("Top wine"), state.visibleReviews(ScoreBand.Top).map { it.name })
+        assertEquals(listOf("Standard wine"), state.visibleReviews(ScoreBand.Standard).map { it.name })
     }
 
-    @Test fun reviewsShowWhileExtendedDbIsStillLoadingAndASecondSearchWaits() = runBlocking {
-        val releaseExtended = CompletableDeferred<Unit>()
-        val saved = card.copy(name = "Saved web wine")
-        var databaseCalls = 0
-        val state = GuidedSelectionState(this,
-            { databaseCalls++; GuidedResult.Complete(listOf(card)) },
-            { releaseExtended.await(); GuidedResult.Complete(listOf(saved)) })
+    @Test fun reviewsShowASkeletonStateWhileLoadingAndASecondSearchWaits() = runBlocking {
+        val release = CompletableDeferred<Unit>()
+        var calls = 0
+        val state = GuidedSelectionState(this, { _, _, _, _, _ ->
+            calls++; release.await(); ReviewsPage(listOf(card), hasMore = false)
+        })
         state.selection = criteria
         state.search()
         yield()
-        assertEquals(GuidedResult.Complete(listOf(card)), state.database)
-        assertEquals(GuidedResult.Loading(), state.extended)
+        assertTrue(state.tab(ScoreBand.Top).status is GuidedResult.Loading)
         assertFalse(state.canSearch)
         state.search()
-        assertEquals(1, databaseCalls)
-        releaseExtended.complete(Unit)
+        assertEquals(2, calls)
+        release.complete(Unit)
         yield()
-        assertEquals(GuidedResult.Complete(listOf(saved)), state.extended)
+        assertEquals(listOf(card), state.tab(ScoreBand.Top).cards)
+        assertTrue(state.canSearch)
+    }
+
+    @Test fun moreLoadsTheNextTenAndKeepsTheFallbackRule() = runBlocking {
+        val offsets = mutableListOf<Pair<Int, Boolean>>()
+        fun page(from: Int) = List(10) { card.copy(name = "Wine ${from + it}") }
+        val state = GuidedSelectionState(this, { _, band, offset, dropProvince, _ ->
+            if (band == ScoreBand.Top) offsets += offset to dropProvince
+            when {
+                band != ScoreBand.Top -> ReviewsPage(emptyList(), false)
+                offset == 0 -> ReviewsPage(page(0), hasMore = true, usedProvinceFallback = true)
+                else -> ReviewsPage(page(10).take(4), hasMore = false, usedProvinceFallback = true)
+            }
+        })
+        state.selection = criteria
+        state.search()
+        yield()
+        assertTrue(state.tab(ScoreBand.Top).hasMore)
+        assertEquals(10, state.tab(ScoreBand.Top).cards.size)
+        state.loadMore(ScoreBand.Top)
+        yield()
+        assertEquals(listOf(0 to false, 10 to true), offsets)
+        assertEquals(14, state.tab(ScoreBand.Top).cards.size)
+        assertFalse(state.tab(ScoreBand.Top).hasMore)
+        state.loadMore(ScoreBand.Top)
+        yield()
+        assertEquals(2, offsets.size)
+    }
+
+    @Test fun sortReordersLoadedReviewsByCountryOrVarietyAndKeepsRankingByDefault() = runBlocking {
+        val cards = listOf(
+            card.copy(name = "A", country = "Italy", variety = "Barbera"),
+            card.copy(name = "B", country = "France", variety = "Merlot"),
+            card.copy(name = "C", country = "Chile", variety = "Carmenère"),
+        )
+        val state = GuidedSelectionState(this, { _, _, _, _, _ -> ReviewsPage(cards, hasMore = false) })
+        state.selection = GuidedCriteria(wineType = "Red")
+        state.search()
+        yield()
+        assertEquals(listOf("A", "B", "C"), state.visibleReviews(ScoreBand.Top).map { it.name })
+        state.selectSort(GuidedSort.Country)
+        assertEquals(listOf("C", "B", "A"), state.visibleReviews(ScoreBand.Top).map { it.name })
+        state.selectSort(GuidedSort.Variety)
+        assertEquals(listOf("A", "C", "B"), state.visibleReviews(ScoreBand.Top).map { it.name })
+        state.search()
+        assertEquals(GuidedSort.Ranked, state.sort)
+        assertEquals(ScoreBand.Top, state.scoreTab)
     }
 
     @Test fun databaseFailureLooksEmptyAndDoesNotCancelExtendedDb() = runBlocking {
         var logged = false
-        val databaseGate = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
         val state = GuidedSelectionState(this,
-            { databaseGate.await(); error("parse failure") },
+            { _, _, _, _, _ -> gate.await(); error("parse failure") },
             { GuidedResult.Complete(listOf(card)) }, { logged = true })
         state.selection = criteria
         state.search()
         yield()
         assertEquals(GuidedResult.Complete(listOf(card)), state.extended)
-        assertEquals(GuidedResult.Loading(), state.database)
-        databaseGate.complete(Unit)
+        assertTrue(state.tab(ScoreBand.Top).status is GuidedResult.Loading)
+        gate.complete(Unit)
         yield()
         assertTrue(logged)
-        assertEquals(GuidedResult.Complete(emptyList<WineSuggestion>()), state.database)
+        assertEquals(emptyList<WineSuggestion>(), state.tab(ScoreBand.Top).cards)
+        assertFalse(state.tab(ScoreBand.Top).hasMore)
     }
 
-    @Test fun obsoleteNonCancellableResponseCannotReplaceNewResults() = runBlocking {
+    @Test fun obsoleteResponseCannotReplaceNewResults() = runBlocking {
         val obsolete = CompletableDeferred<Unit>()
         var calls = 0
         val newer = card.copy(name = "New search")
-        val state = GuidedSelectionState(this, {
+        val state = GuidedSelectionState(this, { _, band, _, _, _ ->
+            if (band != ScoreBand.Top) return@GuidedSelectionState ReviewsPage(emptyList(), false)
             calls++
-            if (calls == 1) withContext(NonCancellable) { obsolete.await(); GuidedResult.Complete(listOf(card)) }
-            else GuidedResult.Complete(listOf(newer))
+            if (calls == 1) withContext(NonCancellable) { obsolete.await(); ReviewsPage(listOf(card), false) }
+            else ReviewsPage(listOf(newer), false)
         })
         state.selection = criteria
         state.search()
         yield()
         state.selection = criteria.copy(body = "Full-Bodied")
-        assertTrue(state.canSearch)
         state.search()
         yield()
-        assertEquals(GuidedResult.Complete(listOf(newer)), state.database)
+        assertEquals(listOf(newer), state.tab(ScoreBand.Top).cards)
         obsolete.complete(Unit)
         yield()
         yield()
-        assertEquals(GuidedResult.Complete(listOf(newer)), state.database)
+        assertEquals(listOf(newer), state.tab(ScoreBand.Top).cards)
         assertEquals("Full-Bodied", state.submitted?.body)
     }
 
     @Test fun webSearchOnlyRunsWhenRequestedAndUsesTheSubmittedSelections() = runBlocking {
         val queries = mutableListOf<String>()
         val webCard = card.copy(name = "Web wine")
-        val state = GuidedSelectionState(
-            scope = this,
-            databaseSearch = none,
-            webSearch = { queries += it.webQuery; listOf(webCard) },
-        )
+        val state = GuidedSelectionState(this, noReviews, webSearch = { queries += it.webQuery; listOf(webCard) })
         state.selection = criteria
         state.search()
         yield()
         assertEquals(GuidedResult.Idle, state.web)
         assertTrue(queries.isEmpty())
-
         state.searchWeb()
         yield()
         assertEquals(GuidedResult.Complete(listOf(webCard)), state.web)
@@ -172,18 +210,13 @@ class GuidedSelectionStateTest {
     }
 
     @Test fun webSearchFailureShowsErrorAndANewSearchClearsIt() = runBlocking {
-        val state = GuidedSelectionState(
-            scope = this,
-            databaseSearch = none,
-            webSearch = { error("offline") },
-        )
+        val state = GuidedSelectionState(this, noReviews, webSearch = { error("offline") })
         state.selection = criteria
         state.search()
         yield()
         state.searchWeb()
         yield()
         assertEquals(GuidedResult.Error, state.web)
-
         state.search()
         yield()
         assertEquals(GuidedResult.Idle, state.web)

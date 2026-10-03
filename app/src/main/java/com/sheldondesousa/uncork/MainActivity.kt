@@ -13,9 +13,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import com.sheldondesousa.uncork.ui.guided.GuidedResult
 import com.sheldondesousa.uncork.ui.guided.GuidedSelectionScreen
 import com.sheldondesousa.uncork.ui.guided.GuidedSelectionState
+import com.sheldondesousa.uncork.ui.guided.ReviewsPage
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
+import com.sheldondesousa.uncork.data.knowledge.GrapeKnowledgeBase
 import com.sheldondesousa.uncork.data.profile.VarietyRegionDatabase
 import com.sheldondesousa.uncork.data.profile.VarietyRegionProfileRepository
 import com.sheldondesousa.uncork.data.profile.seedFromAssetsIfEmpty
@@ -30,8 +32,16 @@ import com.sheldondesousa.uncork.model.WineWebSearchRequest
 import com.sheldondesousa.uncork.model.toCacheSuggestion
 import com.sheldondesousa.uncork.model.KaggleConversationResponder
 import com.sheldondesousa.uncork.model.ModelFileManager
+import com.sheldondesousa.uncork.model.WineAskContext
+import com.sheldondesousa.uncork.model.WinePreferences
+import com.sheldondesousa.uncork.model.toGuidedCriteria
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.sheldondesousa.uncork.model.WineFactsNote
 import com.sheldondesousa.uncork.ui.conversation.AppTab
 import com.sheldondesousa.uncork.ui.conversation.ConversationRoute
+import com.sheldondesousa.uncork.ui.conversation.ConversationSessionState
+import com.sheldondesousa.uncork.ui.conversation.WineAskChat
 import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionState
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.favorites.FavoritesRoute
@@ -41,11 +51,23 @@ import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
 import com.sheldondesousa.uncork.ui.stageshow.toStageWine
+import com.sheldondesousa.uncork.ui.stageshow.toWineSuggestion
 import com.sheldondesousa.uncork.ui.theme.UncorkTheme
 import kotlinx.coroutines.launch
 
+/** One open "Ask" conversation: the wine it is about, its Gemma session and its on-screen messages. */
+private class AskSession(
+    val wine: StageWine,
+    val discussion: GemmaConversationResponder.WineDiscussion,
+    val state: ConversationSessionState,
+)
+
 class MainActivity : ComponentActivity() {
     private lateinit var gemmaResponder: GemmaConversationResponder
+
+    /** Set once the UI exists; lets Chat hand its finished answers to the shared Results page. */
+    @Volatile
+    private var resultsHandoff: (suspend (WinePreferences) -> Boolean)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,18 +102,24 @@ class MainActivity : ComponentActivity() {
                 synthesizer = gemmaResponder::synthesizeWebResults,
             )
         }
+        val askContext = WineAskContext(GrapeKnowledgeBase.load(applicationContext), wineOptionCache, wineReviewRepository)
         val conversationResponder = KaggleConversationResponder(
             gemmaResponder = gemmaResponder,
             wineReviewRepository = wineReviewRepository,
             optionCache = wineOptionCache,
             webSearch = webSearch,
+            onResultsReady = { preferences -> resultsHandoff?.invoke(preferences) ?: false },
         )
         setContent {
             UncorkTheme {
                 var modelReady by remember { mutableStateOf(false) }
                 var stageWine by remember { mutableStateOf<StageWine?>(null) }
-                var askReturnWine by remember { mutableStateOf<StageWine?>(null) }
-                var askReturnTab by remember { mutableStateOf<AppTab?>(null) }
+                var askSession by remember { mutableStateOf<AskSession?>(null) }
+                val askScope = rememberCoroutineScope()
+                fun closeAsk() {
+                    askSession?.discussion?.close()
+                    askSession = null
+                }
                 var selectedTab by remember { mutableStateOf<AppTab?>(null) }
                 var showEvalDebug by remember { mutableStateOf(false) }
                 val favorites = remember { favoritesRepository.load() }
@@ -100,10 +128,10 @@ class MainActivity : ComponentActivity() {
                 val guidedState = remember {
                     GuidedSelectionState(
                         scope = guidedScope,
-                        databaseSearch = { criteria ->
-                            val result = wineReviewRepository.findGuided(criteria)
-                            GuidedResult.Complete(
-                                cards = result.reviews.map { match ->
+                        reviewsSearch = { criteria, band, offset, dropProvince, seed ->
+                            val page = wineReviewRepository.findGuidedPage(criteria, band, offset, seed, dropProvince)
+                            ReviewsPage(
+                                cards = page.reviews.map { match ->
                                     val review = match.review
                                     WineSuggestion(
                                         name = review.name, winery = review.winery,
@@ -116,7 +144,8 @@ class MainActivity : ComponentActivity() {
                                         requestContext = criteria.description, profileComplete = true,
                                     )
                                 },
-                                usedProvinceFallback = result.usedProvinceFallback,
+                                hasMore = page.hasMore,
+                                usedProvinceFallback = page.usedProvinceFallback,
                             )
                         },
                         extendedSearch = { criteria ->
@@ -170,6 +199,21 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+                androidx.compose.runtime.SideEffect {
+                    resultsHandoff = { preferences ->
+                        val criteria = preferences.toGuidedCriteria()
+                        if (criteria == null) {
+                            false
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                guidedState.selection = criteria
+                                guidedState.search()
+                                selectedTab = AppTab.Find
+                            }
+                            true
+                        }
+                    }
+                }
                 val onTabSelected: (AppTab) -> Unit = { tab ->
                     if (selectedTab == null && tab == AppTab.Find) {
                         guidedState.backToForm()
@@ -198,23 +242,8 @@ class MainActivity : ComponentActivity() {
                         AppTab.Conversation -> ConversationRoute(
                             responder = conversationResponder,
                             state = conversationState,
-                            onSuggestionClick = {
-                                askReturnWine = null
-                                askReturnTab = null
-                                stageWine = it.toStageWine()
-                            },
-                            onBack = {
-                                val returnWine = askReturnWine
-                                val returnTab = askReturnTab
-                                askReturnWine = null
-                                askReturnTab = null
-                                if (returnWine != null && returnTab != null) {
-                                    selectedTab = returnTab
-                                    stageWine = returnWine
-                                } else {
-                                    onBackToLanding()
-                                }
-                            },
+                            onSuggestionClick = { stageWine = it.toStageWine() },
+                            onBack = onBackToLanding,
                         )
                         AppTab.Favorites -> FavoritesRoute(
                             favorites = favorites,
@@ -223,26 +252,47 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     stageWine?.let { wine ->
-                        StageShowRoute(
-                            wine = wine,
-                            onBack = { stageWine = null },
-                            onHome = {
-                                askReturnWine = null
-                                askReturnTab = null
-                                stageWine = null
-                                selectedTab = null
-                            },
-                            loadDetails = if (
-                                wine.ai.source == WineSuggestionSource.GEMMA &&
-                                !wine.ai.profileComplete
-                            ) gemmaResponder::enrichWineDetails else null,
-                            onAsk = {
-                                askReturnWine = wine
-                                askReturnTab = selectedTab
-                                stageWine = null
-                                selectedTab = AppTab.Conversation
-                            },
-                        )
+                        val ask = askSession
+                        if (ask != null && ask.wine === wine) {
+                            // Open conversation about this wine — not the Find-a-wine chat.
+                            ConversationRoute(
+                                responder = ask.discussion,
+                                state = ask.state,
+                                title = WineAskChat.TITLE,
+                                onBack = ::closeAsk,
+                            )
+                        } else {
+                            StageShowRoute(
+                                wine = wine,
+                                onBack = { stageWine = null },
+                                onHome = {
+                                    closeAsk()
+                                    stageWine = null
+                                    selectedTab = null
+                                },
+                                loadDetails = if (
+                                    wine.ai.source == WineSuggestionSource.GEMMA &&
+                                    !wine.ai.profileComplete
+                                ) gemmaResponder::enrichWineDetails else null,
+                                onAsk = {
+                                    askScope.launch {
+                                        val suggestion = wine.toWineSuggestion()
+                                        val facts = askContext.factsFor(suggestion)
+                                        closeAsk()
+                                        val discussion = gemmaResponder.startWineDiscussion(facts, WineFactsNote.reminder(suggestion))
+                                        askSession = AskSession(
+                                            wine = wine,
+                                            discussion = discussion,
+                                            state = ConversationSessionState(
+                                                WineAskChat.initialMessages(suggestion.name),
+                                            ),
+                                        )
+                                        // Gemma reads the wine's facts while the user reads the welcome and types.
+                                        discussion.warmUp()
+                                    }
+                                },
+                            )
+                        }
                     }
                 } else {
                     SplashRoute(

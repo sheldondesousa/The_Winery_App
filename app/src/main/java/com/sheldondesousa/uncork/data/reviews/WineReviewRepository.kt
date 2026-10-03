@@ -12,6 +12,16 @@ import kotlinx.coroutines.withContext
 interface WineReviewDataSource {
     suspend fun find(criteria: WineReviewCriteria): List<WineReview>
 
+    /**
+     * An even-handed sample (equal numbers from the highest, middle and lowest scored thirds) of every review of
+     * [varietyNames] (one grape's merged database spellings) from [country]. Null when there is nothing to sample.
+     */
+    suspend fun digestFor(
+        varietyNames: List<String>,
+        country: String,
+        seed: Long = 0L,
+    ): VarietyCountryDigest? = null
+
     suspend fun findExact(country: String, province: String, variety: String): List<WineReview> =
         find(WineReviewCriteria(country = country, province = province, variety = variety))
 
@@ -33,6 +43,12 @@ data class WineSelectionCriteria(
         get() = listOf(wineType, country, province, variety, body, tannin, acidity)
             .any { !it.isNullOrBlank() }
 }
+
+data class GuidedReviewPage(
+    val reviews: List<GuidedReviewMatch>,
+    val hasMore: Boolean,
+    val usedProvinceFallback: Boolean = false,
+)
 
 data class GuidedDatabaseResult(
     val reviews: List<GuidedReviewMatch>,
@@ -77,6 +93,38 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
         )
     }
 
+    /**
+     * One page of the Find results for a single score tab. On the first page, falls back to a country-only match
+     * when the curated province has no literal match (see [findGuided]); later pages pass [dropProvince] back in
+     * so they keep using the same rule.
+     */
+    suspend fun findGuidedPage(
+        criteria: com.sheldondesousa.uncork.ui.guided.GuidedCriteria,
+        band: ScoreBand,
+        offset: Int,
+        seed: Long,
+        dropProvince: Boolean = false,
+    ): GuidedReviewPage {
+        suspend fun load(drop: Boolean): List<WineReview> {
+            val q = GuidedReviewQuery.from(
+                criteria, dropProvince = drop, band = band, offset = offset,
+                limit = GuidedReviewQuery.PAGE_SIZE + 1, seed = seed,
+            )
+            return if (q.knownEmpty) emptyList() else query(sql = q.sql, arguments = q.arguments)
+        }
+        var usedFallback = dropProvince
+        var rows = load(dropProvince)
+        if (rows.isEmpty() && offset == 0 && !dropProvince && criteria.province.isNotBlank()) {
+            rows = load(true)
+            usedFallback = rows.isNotEmpty()
+        }
+        return GuidedReviewPage(
+            reviews = rows.take(GuidedReviewQuery.PAGE_SIZE).map { GuidedReviewMatch.from(it, criteria) },
+            hasMore = rows.size > GuidedReviewQuery.PAGE_SIZE,
+            usedProvinceFallback = usedFallback,
+        )
+    }
+
     override suspend fun find(criteria: WineReviewCriteria): List<WineReview> {
         val fields = buildList {
             criteria.country?.takeIf(String::isNotBlank)?.let { add("country" to it) }
@@ -92,6 +140,52 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
                 "ORDER BY points DESC, winery ASC LIMIT 3",
             arguments = fields.map { (_, value) -> value }.toTypedArray(),
         )
+    }
+
+    override suspend fun digestFor(
+        varietyNames: List<String>,
+        country: String,
+        seed: Long,
+    ): VarietyCountryDigest? {
+        val names = varietyNames.filter { it.isNotBlank() }.distinct()
+        if (names.isEmpty() || country.isBlank()) return null
+        val base = "country=? COLLATE NOCASE AND variety COLLATE NOCASE IN (${names.joinToString(",") { "?" }}) " +
+            "AND province IS NOT NULL AND province<>'' AND province NOT LIKE '% Other' AND points IS NOT NULL"
+        val baseArgs = arrayOf(country, *names.toTypedArray())
+        return withContext(Dispatchers.IO) {
+            installer.ensureInstalled().openReadOnly().use { database ->
+                val pool = database.rawQuery("SELECT id, points, province FROM wine_reviews WHERE $base", baseArgs).use { c ->
+                    buildList { while (c.moveToNext()) add(PoolReview(c.getLong(0), c.getInt(1), c.getString(2))) }
+                }
+                val bands = ReviewSampler.sample(pool, seed)
+                val pickedIds = bands.flatMap { it.picked }.map { it.id }
+                if (pickedIds.isEmpty()) return@use null
+                val text = database.rawQuery(
+                    "SELECT id, review_summary FROM wine_reviews WHERE id IN (${pickedIds.joinToString(",")})", null,
+                ).use { c ->
+                    buildMap { while (c.moveToNext()) put(c.getLong(0), c.getString(1).orEmpty()) }
+                }
+                VarietyCountryDigest(
+                    variety = names.first(),
+                    country = country,
+                    totalReviews = pool.size,
+                    averagePoints = pool.mapNotNull { it.points }.average().takeIf { !it.isNaN() },
+                    bands = bands.map { band ->
+                        ReviewBandDigest(
+                            name = band.name,
+                            minPoints = band.pool.mapNotNull { it.points }.minOrNull(),
+                            maxPoints = band.pool.mapNotNull { it.points }.maxOrNull(),
+                            poolSize = band.pool.size,
+                            reviews = band.picked.mapNotNull { pick ->
+                                ReviewExcerpts.shorten(text[pick.id].orEmpty(), maxChars = 140)
+                                    .takeIf { it.isNotBlank() }
+                                    ?.let { SampledReview(pick.province, pick.points, it) }
+                            },
+                        )
+                    },
+                )
+            }
+        }
     }
 
     override suspend fun findByKeywords(userQuery: String): List<WineReview> {

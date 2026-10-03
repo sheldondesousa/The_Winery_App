@@ -2,8 +2,10 @@ package com.sheldondesousa.uncork.ui.guided
 
 import com.sheldondesousa.uncork.data.reviews.FindPhraseEvidence
 import com.sheldondesousa.uncork.data.reviews.GrapeVarieties
+import com.sheldondesousa.uncork.data.reviews.ScoreBand
 import com.sheldondesousa.uncork.data.reviews.WineTypeVarietyMap
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
@@ -90,18 +92,49 @@ sealed interface GuidedResult {
     data object Error : GuidedResult
 }
 
+/** One page of reviews for one score tab. [hasMore] says whether a "More" button should be offered. */
+data class ReviewsPage(
+    val cards: List<WineSuggestion>,
+    val hasMore: Boolean,
+    val usedProvinceFallback: Boolean = false,
+)
+
+/** What one score tab currently shows. */
+data class ReviewTab(
+    val status: GuidedResult = GuidedResult.Idle,
+    val cards: List<WineSuggestion> = emptyList(),
+    val hasMore: Boolean = false,
+    val loadingMore: Boolean = false,
+    val usedProvinceFallback: Boolean = false,
+)
+
+/** The single sort on the results page. [Ranked] is the default: highest score first. */
+enum class GuidedSort(val label: String) {
+    Ranked("Top ranked"),
+    Country("By Country"),
+    Variety("By Variety"),
+}
+
 /**
  * Kept above navigation so tab/profile changes do not restart requests or lose results. Find shows
- * only stored data: the reviewed-wines database, then the extended (previously saved web results)
- * db, with a live web search offered on demand. AI Sommelier (Gemma) is Chat-only.
+ * only stored data: the reviewed-wines database (two score tabs, ten at a time), then the extended
+ * (previously saved web results) db, with a live web search offered on demand. AI Sommelier (Gemma)
+ * is Chat-only.
  */
 class GuidedSelectionState(
     private val scope: CoroutineScope,
-    private val databaseSearch: suspend (GuidedCriteria) -> GuidedResult.Complete,
+    private val reviewsSearch: suspend (
+        criteria: GuidedCriteria,
+        band: ScoreBand,
+        offset: Int,
+        dropProvince: Boolean,
+        seed: Long,
+    ) -> ReviewsPage,
     private val extendedSearch: suspend (GuidedCriteria) -> GuidedResult.Complete = { GuidedResult.Complete(emptyList()) },
     private val reportDatabaseError: (Exception) -> Unit = {},
     private val locations: Map<String, List<String>> = WineRegions.catalog,
     private val webSearch: suspend (GuidedCriteria) -> List<WineSuggestion> = { emptyList() },
+    private val newSeed: () -> Long = { kotlin.random.Random.nextLong(1L, 2_000_000_000L) },
 ) {
     val countries: List<String> get() = locations.keys.sortedWith { a, b ->
         java.text.Collator.getInstance(java.util.Locale.ENGLISH).compare(a, b)
@@ -116,43 +149,61 @@ class GuidedSelectionState(
         private set
     var showResults by mutableStateOf(false)
         private set
-    var database by mutableStateOf<GuidedResult>(GuidedResult.Idle)
+    /** Which score tab is open. 91–100 is the default. */
+    var scoreTab by mutableStateOf(ScoreBand.Top)
         private set
+    var sort by mutableStateOf(GuidedSort.Ranked)
+        private set
+    private val reviewTabs = mutableStateMapOf<ScoreBand, ReviewTab>()
     var extended by mutableStateOf<GuidedResult>(GuidedResult.Idle)
         private set
     // Only ever loaded when the user taps "Web Search" on the results page — never automatically.
     var web by mutableStateOf<GuidedResult>(GuidedResult.Idle)
         private set
     private var generation = 0L
-    private var databaseJob: Job? = null
+    private var seed = 0L
+    private val reviewJobs = mutableMapOf<ScoreBand, Job>()
     private var extendedJob: Job? = null
     private var webJob: Job? = null
+
+    fun tab(band: ScoreBand): ReviewTab = reviewTabs[band] ?: ReviewTab()
+
+    /** The loaded reviews for a tab in the chosen sort order. Sorting reorders what is loaded; it never hides results. */
+    fun visibleReviews(band: ScoreBand): List<WineSuggestion> {
+        val cards = tab(band).cards
+        val collator = java.text.Collator.getInstance(java.util.Locale.ENGLISH)
+        return when (sort) {
+            GuidedSort.Ranked -> cards
+            GuidedSort.Country -> cards.sortedWith(compareBy(collator) { it.country })
+            GuidedSort.Variety -> cards.sortedWith(compareBy(collator) { it.variety })
+        }
+    }
+
+    fun selectTab(band: ScoreBand) { scoreTab = band }
+    fun selectSort(value: GuidedSort) { sort = value }
+
     val canSearch: Boolean get() = selection.valid &&
-        !(selection == submitted && (database is GuidedResult.Loading || extended is GuidedResult.Loading))
+        !(selection == submitted && (ScoreBand.entries.any { tab(it).status is GuidedResult.Loading } ||
+            extended is GuidedResult.Loading))
 
     fun search() {
         if (!canSearch) return
         val criteria = selection
         val request = ++generation
-        databaseJob?.cancel()
+        seed = newSeed()
+        reviewJobs.values.forEach { it.cancel() }
+        reviewJobs.clear()
         extendedJob?.cancel()
         webJob?.cancel()
         submitted = criteria
         showResults = true
-        database = GuidedResult.Loading()
-        extended = GuidedResult.Loading()
+        scoreTab = ScoreBand.Top
+        sort = GuidedSort.Ranked
         web = GuidedResult.Idle
-        databaseJob = scope.launch {
-            val result = try {
-                databaseSearch(criteria)
-            } catch (cancelled: CancellationException) {
-                if (request == generation) database = GuidedResult.Complete(emptyList())
-                throw cancelled
-            } catch (error: Exception) {
-                reportDatabaseError(error)
-                GuidedResult.Complete(emptyList())
-            }
-            if (request == generation) database = result
+        extended = GuidedResult.Loading()
+        ScoreBand.entries.forEach { band ->
+            reviewTabs[band] = ReviewTab(status = GuidedResult.Loading())
+            reviewJobs[band] = scope.launch { loadPage(criteria, band, request, offset = 0, dropProvince = false, first = true) }
         }
         extendedJob = scope.launch {
             val result = try {
@@ -166,6 +217,45 @@ class GuidedSelectionState(
             }
             if (request == generation) extended = result
         }
+    }
+
+    /** Loads the next ten reviews for a tab. Does nothing if there are no more or a page is already loading. */
+    fun loadMore(band: ScoreBand) {
+        val criteria = submitted ?: return
+        val current = tab(band)
+        if (!current.hasMore || current.loadingMore) return
+        val request = generation
+        reviewTabs[band] = current.copy(loadingMore = true)
+        reviewJobs[band] = scope.launch {
+            loadPage(criteria, band, request, offset = current.cards.size, dropProvince = current.usedProvinceFallback, first = false)
+        }
+    }
+
+    private suspend fun loadPage(
+        criteria: GuidedCriteria,
+        band: ScoreBand,
+        request: Long,
+        offset: Int,
+        dropProvince: Boolean,
+        first: Boolean,
+    ) {
+        val page = try {
+            reviewsSearch(criteria, band, offset, dropProvince, seed)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            reportDatabaseError(error)
+            ReviewsPage(emptyList(), hasMore = false, usedProvinceFallback = dropProvince)
+        }
+        if (request != generation) return
+        val previous = if (first) emptyList() else tab(band).cards
+        reviewTabs[band] = ReviewTab(
+            status = GuidedResult.Complete(previous + page.cards, page.usedProvinceFallback),
+            cards = previous + page.cards,
+            hasMore = page.hasMore,
+            loadingMore = false,
+            usedProvinceFallback = page.usedProvinceFallback,
+        )
     }
 
     /** Runs the Brave web search for the submitted selections. Safe to tap again after a failure. */

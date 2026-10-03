@@ -11,6 +11,9 @@ import org.junit.Rule
 import org.junit.Test
 
 class GuidedSelectionScreenTest {
+    private val noReviews: suspend (GuidedCriteria, com.sheldondesousa.uncork.data.reviews.ScoreBand, Int, Boolean, Long) -> ReviewsPage =
+        { _, _, _, _, _ -> ReviewsPage(emptyList(), hasMore = false) }
+
     @get:Rule val compose = createComposeRule()
 
     @Test fun anySelectionEnablesSearchAndSheetsPopulateFields() {
@@ -18,7 +21,7 @@ class GuidedSelectionScreenTest {
         var homeTapped = false
         compose.setContent {
             val scope = rememberCoroutineScope()
-            state = remember { GuidedSelectionState(scope, { GuidedResult.Complete(emptyList()) },
+            state = remember { GuidedSelectionState(scope, noReviews,
                 locations = mapOf("France" to listOf("Bordeaux", "Burgundy"),
                     "Italy" to listOf("Tuscany"))) }
             UncorkTheme { GuidedSelectionScreen(state, {}, {}, onHome = { homeTapped = true }) }
@@ -63,7 +66,7 @@ class GuidedSelectionScreenTest {
         lateinit var state: GuidedSelectionState
         compose.setContent {
             val scope = rememberCoroutineScope()
-            state = remember { GuidedSelectionState(scope, { GuidedResult.Complete(emptyList()) }) }
+            state = remember { GuidedSelectionState(scope, noReviews) }
             UncorkTheme { GuidedSelectionScreen(state, {}, {}) }
         }
         compose.onNodeWithTag("tannin-tile").performScrollTo().performClick()
@@ -87,7 +90,7 @@ class GuidedSelectionScreenTest {
             state = remember {
                 GuidedSelectionState(
                     scope = scope,
-                    databaseSearch = { GuidedResult.Complete(emptyList()) },
+                    reviewsSearch = noReviews,
                     extendedSearch = { GuidedResult.Complete(listOf(saved)) },
                     webSearch = { emptyList() },
                 )

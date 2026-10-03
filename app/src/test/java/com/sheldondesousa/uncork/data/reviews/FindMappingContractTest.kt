@@ -60,7 +60,7 @@ class FindMappingContractTest {
         val query = GuidedReviewQuery.from(GuidedCriteria(country = "France"))
 
         assertTrue(query.sql.contains("ORDER BY points IS NULL ASC, points DESC"))
-        assertTrue(query.sql.endsWith("LIMIT 10"))
+        assertTrue(query.sql.endsWith("LIMIT 10 OFFSET 0"))
     }
 
     @Test fun varietyListHasEveryGrapeOnceAndIsOrderedMostCommonFirst() {
@@ -81,5 +81,21 @@ class FindMappingContractTest {
         assertTrue(runCatching { GuidedReviewQuery.from(GuidedCriteria(variety = "Not a grape")) }.isFailure)
         assertTrue(GuidedCriteria(variety = "Malbec").valid)
         assertEquals(mapOf("variety" to "Malbec"), GuidedCriteria(variety = "Malbec").constraints())
+    }
+
+    @Test fun scoreTabsFilterByPointsAndPageTenAtATime() {
+        val top = GuidedReviewQuery.from(GuidedCriteria(country = "France"), band = ScoreBand.Top, offset = 10, limit = 11, seed = 99)
+        assertTrue(top.sql.contains("points BETWEEN 91 AND 100"))
+        assertTrue(top.sql.endsWith("LIMIT 11 OFFSET 10"))
+        val standard = GuidedReviewQuery.from(GuidedCriteria(country = "France"), band = ScoreBand.Standard)
+        assertTrue(standard.sql.contains("points BETWEEN 80 AND 90"))
+        assertEquals(top.sql.count { it == '?' }, top.arguments.size)
+    }
+
+    @Test fun equalScoresAreOrderedByASeededHashNotAlphabeticallyByWinery() {
+        val sql = GuidedReviewQuery.from(GuidedCriteria(country = "France"), seed = 12345).sql
+        assertFalse(sql.contains("winery ASC"))
+        assertTrue(sql.contains("ORDER BY points IS NULL ASC, points DESC, ((id * ${GuidedReviewQuery.hashMultiplier(12345)}) % 2147483647) ASC"))
+        assertNotEquals(GuidedReviewQuery.hashMultiplier(1), GuidedReviewQuery.hashMultiplier(2))
     }
 }

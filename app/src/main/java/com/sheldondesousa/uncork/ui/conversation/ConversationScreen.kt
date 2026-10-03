@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -81,6 +82,7 @@ import com.sheldondesousa.uncork.ui.theme.ResultCardBackground
 import com.sheldondesousa.uncork.ui.theme.Wine
 import com.sheldondesousa.uncork.ui.components.AppHeader
 import com.sheldondesousa.uncork.ui.components.BackArrowIcon
+import com.sheldondesousa.uncork.ui.components.ResultSkeleton
 import com.sheldondesousa.uncork.ui.components.WineResultCard
 import com.sheldondesousa.uncork.model.ChatFlowText
 import com.sheldondesousa.uncork.model.DebugLatencyLog
@@ -99,15 +101,17 @@ enum class AppTab(val label: String) {
     Favorites("My List"),
 }
 
-class ConversationSessionState {
-    val messages = mutableStateListOf(
+class ConversationSessionState(
+    initialMessages: List<ChatMessage> = listOf(
         ChatMessage(
             id = Long.MIN_VALUE,
             author = MessageAuthor.Assistant,
             text = ChatFlowText.MODE_CHOICE,
             quickReplies = listOf(ChatFlowText.CURIOUS_LABEL, ChatFlowText.FIND_WINE_LABEL),
         ),
-    )
+    ),
+) {
+    val messages = mutableStateListOf<ChatMessage>().apply { addAll(initialMessages) }
     var draft by mutableStateOf("")
     var isReplying by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
@@ -127,6 +131,7 @@ fun ConversationRoute(
     state: ConversationSessionState = rememberConversationSessionState(),
     onSuggestionClick: (WineSuggestion) -> Unit = {},
     onBack: () -> Unit = {},
+    title: String = "Chat",
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -231,6 +236,7 @@ fun ConversationRoute(
         onQuickReplySelected = ::send,
         onSuggestionClick = onSuggestionClick,
         onBack = onBack,
+        title = title,
         modifier = modifier,
     )
 }
@@ -250,6 +256,7 @@ private fun ConversationScreen(
     onQuickReplySelected: (String) -> Unit,
     onSuggestionClick: (WineSuggestion) -> Unit,
     onBack: () -> Unit,
+    title: String,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -278,7 +285,7 @@ private fun ConversationScreen(
             .imePadding(),
     ) {
         AppHeader(
-            title = "Chat",
+            title = title,
             icon = BackArrowIcon,
             onIconClick = onBack,
             iconContentDescription = "Back",
@@ -511,23 +518,21 @@ private fun MessageBubble(
     }
 }
 
-// **bold** renders bold black; ##heading## renders burgundy (used for Q3's taste characteristics).
+// **bold** renders bold black; ##heading## renders burgundy (used for Q3's taste characteristics);
+// %%heading%% renders burgundy bold (used for the Ask welcome's "I can help with:").
 private fun parseBoldMarkdown(source: String): AnnotatedString = buildAnnotatedString {
+    val delimiters = listOf("**", "##", "%%")
     var cursor = 0
 
     while (cursor < source.length) {
-        val boldOpening = source.indexOf("**", cursor).takeIf { it != -1 }
-        val headingOpening = source.indexOf("##", cursor).takeIf { it != -1 }
-        val marker = when {
-            boldOpening == null -> headingOpening
-            headingOpening == null -> boldOpening
-            else -> minOf(boldOpening, headingOpening)
-        }
-        if (marker == null) {
+        val opening = delimiters
+            .mapNotNull { delimiter -> source.indexOf(delimiter, cursor).takeIf { it != -1 }?.let { it to delimiter } }
+            .minByOrNull { it.first }
+        if (opening == null) {
             append(source.substring(cursor))
             break
         }
-        val delimiter = source.substring(marker, marker + 2)
+        val (marker, delimiter) = opening
 
         val closing = source.indexOf(delimiter, marker + 2)
         if (closing == -1) {
@@ -536,10 +541,10 @@ private fun parseBoldMarkdown(source: String): AnnotatedString = buildAnnotatedS
         }
 
         append(source.substring(cursor, marker))
-        val style = if (delimiter == "**") {
-            SpanStyle(fontWeight = FontWeight.Bold)
-        } else {
-            SpanStyle(color = Wine, fontWeight = FontWeight.Normal)
+        val style = when (delimiter) {
+            "**" -> SpanStyle(fontWeight = FontWeight.Bold)
+            "%%" -> SpanStyle(color = Wine, fontWeight = FontWeight.Bold)
+            else -> SpanStyle(color = Wine, fontWeight = FontWeight.Normal)
         }
         withStyle(style) {
             append(source.substring(marker + 2, closing))
@@ -640,7 +645,7 @@ internal fun SourceResultCard(
                         }
                     }
                 } else {
-                    Text("Searching…", color = InkSubtle, fontSize = 13.sp, fontStyle = FontStyle.Italic)
+                    ResultSkeleton()
                 }
             }
             // A genuine failure (network error, or the request was interrupted, e.g. the user
@@ -833,7 +838,11 @@ private fun MessageComposer(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            // Lift the box clear of the system gesture/navigation bar (the screen draws edge to edge),
+            // then leave a little breathing room below it. When the keyboard is open, imePadding on the
+            // screen has already consumed that space, so this adds nothing extra.
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp)
             .border(2.dp, Hairline, RoundedCornerShape(14.dp))
             .padding(start = 16.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,

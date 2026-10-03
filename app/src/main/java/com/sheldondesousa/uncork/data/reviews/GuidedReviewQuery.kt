@@ -9,7 +9,26 @@ internal data class GuidedReviewQuery(
     val knownEmpty: Boolean = false,
 ) {
     companion object {
-        fun from(criteria: GuidedCriteria, dropProvince: Boolean = false): GuidedReviewQuery {
+        const val PAGE_SIZE = 10
+
+        /** A different seed gives a different (not just shifted) ordering of equally scored wines. */
+        fun hashMultiplier(seed: Long): Long =
+            ((seed.coerceIn(0L, 2_000_000_000L) * 2_654_435_761L) % 2_147_483_629L) + 100_000_007L
+
+        /**
+         * [band] limits results to one score tab. Results are ranked by score; reviews with the same score are
+         * ordered by a hash of their id and [seed] (a fresh seed per search), not alphabetically by winery, so
+         * no winery is favoured. [offset]/[limit] page through the ranking (the repository asks for one extra
+         * row to learn whether more exist). [offset], [limit] and [seed] are numbers, never user text.
+         */
+        fun from(
+            criteria: GuidedCriteria,
+            dropProvince: Boolean = false,
+            band: ScoreBand? = null,
+            offset: Int = 0,
+            limit: Int = PAGE_SIZE,
+            seed: Long = 0L,
+        ): GuidedReviewQuery {
             require(criteria.valid) { "Select at least one supported Find option" }
             val clauses = mutableListOf<String>()
             val arguments = mutableListOf<String>()
@@ -52,10 +71,15 @@ internal data class GuidedReviewQuery(
             classified("acidity", criteria.acidity, FindPhraseEvidence.ACIDITY_LABELS)
             classified("body", criteria.body, FindPhraseEvidence.BODY_LABELS)
             evidence(criteria.sweetness, FindPhraseEvidence.SWEETNESS_EVIDENCE)
+            if (band != null) {
+                clauses += "points BETWEEN ${band.min} AND ${band.max}"
+            }
             check(clauses.isNotEmpty())
             return GuidedReviewQuery(
                 "SELECT * FROM wine_reviews WHERE ${clauses.joinToString(" AND ")} " +
-                    "ORDER BY points IS NULL ASC, points DESC, winery ASC, id ASC LIMIT 10",
+                    "ORDER BY points IS NULL ASC, points DESC, " +
+                    "((id * ${hashMultiplier(seed)}) % 2147483647) ASC, id ASC " +
+                    "LIMIT ${limit.coerceIn(1, 100)} OFFSET ${offset.coerceAtLeast(0)}",
                 arguments.toTypedArray(),
             )
         }

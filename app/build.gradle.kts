@@ -14,6 +14,12 @@ val braveSearchApiKey = localProperties.getProperty("BRAVE_SEARCH_API_KEY", "")
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
+// Recorded in the debug-only eval run_meta.json so results can be tied to the exact build.
+val gitDescribe = providers.exec {
+    commandLine("git", "describe", "--always", "--dirty")
+    isIgnoreExitValue = true
+}.standardOutput.asText.map { it.trim() }.getOrElse("unknown")
+
 android {
     namespace = "com.sheldondesousa.uncork"
     compileSdk = 37
@@ -31,7 +37,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "GIT_DESCRIBE", "\"$gitDescribe\"")
+        }
         release {
+            buildConfigField("String", "GIT_DESCRIBE", "\"n/a\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

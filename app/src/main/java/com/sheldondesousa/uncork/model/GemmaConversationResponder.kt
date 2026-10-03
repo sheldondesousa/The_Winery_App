@@ -71,6 +71,7 @@ class GemmaConversationResponder(
     private val chatSearchInstruction: String by lazy { loadPrompt("chat_search_instruction.txt") }
     private val wineDetailInstruction: String by lazy { loadPrompt("wine_detail_instruction.txt") }
     private val webResultSystemInstruction: String by lazy { loadPrompt("web_result_system_instruction.txt") }
+    private val wineDiscussionInstruction: String by lazy { loadPrompt("wine_discussion_instruction.txt") }
 
     override suspend fun replyTo(query: String): ChatMessage =
         replyToUpdates(query) {}
@@ -784,6 +785,136 @@ class GemmaConversationResponder(
         }
     }
 
+    /**
+     * Starts an open conversation about one wine (the "Ask" screen). [factsNote] is sent with the first
+     * message — and again if the conversation has to be rebuilt after the context fills — so Gemma always
+     * has the verified facts in front of it. Close it when the screen goes away.
+     */
+    private val WARM_UP_TASK =
+        "<task>Read everything above and get ready to chat about this wine. Reply with only the word READY.</task>"
+
+    fun startWineDiscussion(factsNote: String, reminder: String = ""): WineDiscussion =
+        WineDiscussion(factsNote, reminder)
+
+    inner class WineDiscussion internal constructor(
+        private val factsNote: String,
+        private val reminder: String,
+    ) : ConversationResponder, AutoCloseable {
+        private var conversation: Conversation? = null
+        private var factsSent = false
+
+        // A rough running estimate (about 4 characters per token) of how much of the context window this chat has
+        // used: the rules, every message sent and every reply. The runtime does not report real token counts.
+        private var approxTokensUsed = 0
+
+        private fun noteUsage(label: String, sentChars: Int, replyChars: Int) {
+            approxTokensUsed += (sentChars + replyChars) / 4
+            logFlow("Wine discussion $label: sent $sentChars chars, reply $replyChars chars; ~$approxTokensUsed of $ENGINE_MAX_TOKENS tokens used")
+        }
+
+        /**
+         * Reads the facts note in the background as soon as the Ask screen opens, so Gemma is already prepared
+         * when the user types their first question. The reply is discarded. Failures are ignored: the first
+         * real question then simply sends the facts itself.
+         */
+        suspend fun warmUp() {
+            requestMutex.withLock {
+                if (factsSent) return
+                runCatching {
+                    val message = "$factsNote\n\n$WARM_UP_TASK"
+                    val reply = send(message) {}
+                    factsSent = true
+                    noteUsage("warm-up", message.length, reply.length)
+                }
+            }
+        }
+
+        override suspend fun replyTo(query: String): ChatMessage = replyToUpdates(query) {}
+
+        override suspend fun replyToUpdates(
+            query: String,
+            onUpdate: (ConversationStreamUpdate) -> Unit,
+        ): ChatMessage = requestMutex.withLock {
+            markRoute("WINE_DISCUSSION")
+            suspend fun rebuild() {
+                withContext(Dispatchers.Default) {
+                    conversation?.close()
+                    conversation = null
+                }
+                factsSent = false
+            }
+            var response = try {
+                answer(query, onUpdate)
+            } catch (error: Throwable) {
+                if (!error.isContextCapacityError()) throw error
+                logFlow("Gemma context exhausted; rebuilding wine discussion and retrying turn once")
+                rebuild()
+                answer(query, onUpdate)
+            }
+            if (response.isBlank()) {
+                // An empty reply means the model ran out of room (or lost the thread), not that it has nothing to
+                // say. Start a fresh conversation with the facts and try once more.
+                logFlow("Wine discussion returned an empty reply; rebuilding and retrying once")
+                rebuild()
+                response = answer(query, onUpdate)
+            }
+            plainMessage(
+                response.ifBlank { "Sorry, I lost my train of thought for a moment. Could you ask that again?" },
+            )
+        }
+
+        private suspend fun answer(query: String, onUpdate: (ConversationStreamUpdate) -> Unit): String {
+            // Until the facts have been read, they go right before the question. After that, a short reminder
+            // does, since the first message is by then far behind the model's close-reading window.
+            val message = when {
+                !factsSent -> "$factsNote\n\nThe user says: $query"
+                reminder.isNotBlank() -> "$reminder\nThe user says: $query"
+                else -> query
+            }
+            return send(message, onUpdate).also { reply ->
+                factsSent = true
+                noteUsage("turn", message.length, reply.length)
+            }
+        }
+
+        private suspend fun send(message: String, onUpdate: (ConversationStreamUpdate) -> Unit): String {
+            val active = ensureConversation()
+            var lastText = ""
+            return buildString {
+                active.sendMessageAsync(message).collect { reply ->
+                    reply.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                        append(content.text)
+                        if (toString() != lastText) {
+                            lastText = toString()
+                            onUpdate(ConversationStreamUpdate(text = lastText, isGemmaConversationOutput = true))
+                        }
+                    }
+                }
+            }.trim()
+        }
+
+        private suspend fun ensureConversation(): Conversation {
+            conversation?.let { return it }
+            check(modelFile.isFile) { "The on-device model file is missing." }
+            return withContext(Dispatchers.Default) {
+                conversation?.let { return@withContext it }
+                approxTokensUsed = wineDiscussionInstruction.length / 4
+                ensureEngine().createConversation(
+                    ConversationConfig(
+                        systemInstruction = Contents.of(wineDiscussionInstruction),
+                        samplerConfig = SamplerConfig(topK = 40, topP = 0.90, temperature = 0.5),
+                        maxOutputToken = 512,
+                    ),
+                ).also { conversation = it }
+            }
+        }
+
+        override fun close() {
+            conversation?.close()
+            conversation = null
+        }
+    }
+
     private suspend fun ensureCuriousConversation(): Conversation {
         curiousConversation?.let { return it }
         check(modelFile.isFile) { "The on-device model file is missing." }
@@ -823,6 +954,10 @@ class GemmaConversationResponder(
             EngineConfig(
                 modelPath = modelFile.absolutePath,
                 backend = backend,
+                // The default context window was too small for the Ask screen's facts note (system rules, wine
+                // facts, grape notes and review sample are several thousand tokens): replies were cut off and then
+                // came back empty. Ask for an explicit, larger window.
+                maxNumTokens = ENGINE_MAX_TOKENS,
                 cacheDir = cacheDirectory.absolutePath,
             ),
         )
@@ -888,6 +1023,9 @@ class GemmaConversationResponder(
         lowercase().replace(Regex("[^a-z ]"), "").replace(Regex("\\s+"), " ").trim()
 
     companion object {
+        /** Context window requested from the on-device engine, in tokens. */
+        internal const val ENGINE_MAX_TOKENS = 8192
+
         /** A known variety, type and country are required; region may be unknown. */
         internal fun missingGemmaCardFields(card: WineSuggestion): List<String> = buildList {
             if (!card.variety.isResolvedValue()) add("missing_variety")

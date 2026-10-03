@@ -42,6 +42,11 @@ class KaggleConversationResponder(
     private val wineReviewRepository: WineReviewDataSource,
     private val optionCache: WineOptionCache = WineOptionCache { _, _, _ -> null },
     private val webSearch: WineWebSearchDataSource = UnavailableWineWebSearchDataSource,
+    /**
+     * Called when the Q1-Q3 questions finish. Returns true if the app took over and is showing the shared Results
+     * page itself, in which case this responder runs no search of its own (and so no AI-written wine cards).
+     */
+    private val onResultsReady: (suspend (WinePreferences) -> Boolean)? = null,
 ) : ConversationResponder {
     private val responseMutex = Mutex()
     private var pendingNextSource: PendingNextSource? = null
@@ -117,6 +122,13 @@ class KaggleConversationResponder(
         if (gemmaResponse.coverageComplete) {
             clarificationInputs.clear()
             val preferences = gemmaResponse.resolvedPreferences
+            if (preferences != null && onResultsReady?.invoke(preferences) == true) {
+                logFlow("Onboarding coverage complete; handed off to the Results page")
+                return@withLock assistantMessage(
+                    text = "I've pulled your wines up on the Results page.",
+                    historyRequest = fullRequest,
+                )
+            }
             val synthesizer = gemmaResponder as? WineCardSynthesizer
             return@withLock if (preferences != null && synthesizer != null) {
                 logFlow("Onboarding coverage complete; querying Kaggle from recorded preferences")

@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -40,6 +41,7 @@ import com.sheldondesousa.uncork.ui.conversation.SourceResult
 import com.sheldondesousa.uncork.ui.conversation.SourceResultCard
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
+import com.sheldondesousa.uncork.data.reviews.ScoreBand
 import com.sheldondesousa.uncork.ui.theme.Hairline
 import com.sheldondesousa.uncork.ui.theme.Ink
 import com.sheldondesousa.uncork.ui.theme.InkMuted
@@ -133,13 +135,22 @@ private fun GuidedSelectionFormScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Text("Choose any preferences to find a wine.", color = InkSubtle)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Enter a Spec",
+                    color = Wine,
+                    fontSize = 24.sp,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text("Choose your preference", color = InkSubtle)
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${selection.filterCount} filters applied",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.background(InkMuted.copy(alpha = 0.12f), CircleShape)
-                        .padding(horizontal = 16.dp, vertical = 8.dp))
+                    modifier = Modifier.padding(vertical = 8.dp))
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { state.selection = GuidedCriteria() }, enabled = selection.filterCount > 0) {
                     Text(
@@ -311,11 +322,8 @@ private fun GuidedResultsScreen(
             if (submitted != null && submitted != state.selection) {
                 Text("Selections changed. Go back and search again to update results.", color = Wine)
             }
-            GuidedSourceSection(
-                source = WineSuggestionSource.KAGGLE,
-                result = state.database,
-                onSuggestionClick = onSuggestionClick,
-            )
+            ResultFilters(state)
+            ReviewsSection(state, onSuggestionClick)
             GuidedSourceSection(
                 source = WineSuggestionSource.CACHE,
                 result = state.extended,
@@ -334,6 +342,100 @@ private fun GuidedResultsScreen(
     }
 }
 
+/** Score tabs on the left, the single sort on the right, at the top of the results. */
+@Composable
+private fun ResultFilters(state: GuidedSelectionState) {
+    var sortMenuOpen by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ScoreBand.entries.forEach { band ->
+            val selected = state.scoreTab == band
+            Text(
+                text = "${band.label} pts",
+                color = if (selected) Parchment else Wine,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier
+                    .testTag("score-tab-${band.label}")
+                    .clip(CircleShape)
+                    .background(if (selected) Wine else Wine.copy(alpha = 0.10f))
+                    .selectable(selected = selected, role = Role.Tab, onClick = { state.selectTab(band) })
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Box {
+            OutlinedButton(
+                onClick = { sortMenuOpen = true },
+                modifier = Modifier.testTag("sort-button"),
+                border = BorderStroke(1.dp, Wine.copy(alpha = 0.6f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Wine),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(if (state.sort == GuidedSort.Ranked) "Sort" else state.sort.label, style = MaterialTheme.typography.labelLarge)
+                Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
+                GuidedSort.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                option.label,
+                                fontWeight = if (option == state.sort) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        },
+                        onClick = {
+                            state.selectSort(option)
+                            sortMenuOpen = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The reviews for the open score tab, ten at a time, with a More button when there are more. */
+@Composable
+private fun ReviewsSection(state: GuidedSelectionState, onSuggestionClick: (WineSuggestion) -> Unit) {
+    val band = state.scoreTab
+    val tab = state.tab(band)
+    Column {
+        HorizontalDivider(thickness = 1.5.dp)
+        Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (tab.usedProvinceFallback) {
+                Text("Some results do not have an exact match.", color = InkSubtle)
+            }
+            val sourceResult = when (tab.status) {
+                is GuidedResult.Loading, GuidedResult.Idle ->
+                    SourceResult(WineSuggestionSource.KAGGLE, SourceQueryStatus.LOADING)
+                else -> SourceResult(WineSuggestionSource.KAGGLE, SourceQueryStatus.COMPLETE, state.visibleReviews(band))
+            }
+            SourceResultCard(sourceResult = sourceResult, onSuggestionClick = onSuggestionClick)
+            if (tab.hasMore || tab.loadingMore) {
+                Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.Center) {
+                    OutlinedButton(
+                        onClick = { state.loadMore(band) },
+                        enabled = !tab.loadingMore,
+                        modifier = Modifier.testTag("more-button"),
+                        border = BorderStroke(1.dp, Wine.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Wine),
+                    ) {
+                        if (tab.loadingMore) {
+                            CircularProgressIndicator(Modifier.size(16.dp), color = Wine, strokeWidth = 1.5.dp)
+                        } else {
+                            Text("More")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 private fun GuidedCriteria.tags(): List<String> = buildList {
     if (wineType.isNotBlank()) add(wineType)
     if (variety.isNotBlank()) add(variety)
@@ -349,7 +451,7 @@ private fun CategoryTitle(title: String) {
     Text(
         text = title,
         color = Wine,
-        fontSize = 20.sp,
+        fontSize = 18.sp,
         fontFamily = FontFamily.Serif,
         fontWeight = FontWeight.Medium,
         modifier = Modifier.semantics { heading() },
