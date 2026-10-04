@@ -65,6 +65,7 @@ val BackArrowIcon: ImageVector = ImageVector.Builder(
 fun AppHeader(
     title: String,
     icon: ImageVector,
+    subtitle: String? = null,
     onIconClick: (() -> Unit)? = null,
     iconContentDescription: String? = null,
     modifier: Modifier = Modifier,
@@ -79,7 +80,7 @@ fun AppHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             if (onIconClick == null) {
                 Icon(
                     imageVector = icon,
@@ -106,14 +107,30 @@ fun AppHeader(
                 }
             }
             Spacer(Modifier.width(if (onIconClick == null) 9.dp else 3.dp))
-            Text(
-                text = title,
-                modifier = Modifier.semantics { heading() },
-                color = Ink,
-                fontSize = 24.sp,
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Medium,
-            )
+            Column(Modifier.weight(1f, fill = false).padding(end = 12.dp)) {
+                Text(
+                    text = title,
+                    modifier = Modifier.semantics { heading() },
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = Ink,
+                    // A long title (a country such as "Bosnia and Herzegovina") steps down in size so it stays readable.
+                    fontSize = if (title.length > 16) 18.sp else 24.sp,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Medium,
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        modifier = Modifier.padding(top = 2.dp),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        color = Ink,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(

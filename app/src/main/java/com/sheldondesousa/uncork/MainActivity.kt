@@ -47,7 +47,10 @@ import com.sheldondesousa.uncork.ui.conversation.rememberConversationSessionStat
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.favorites.FavoritesRoute
 import com.sheldondesousa.uncork.ui.favorites.FavoritesRepository
+import com.sheldondesousa.uncork.ui.directory.WineryDirectoryRoute
 import com.sheldondesousa.uncork.ui.landing.LandingRoute
+import com.sheldondesousa.uncork.ui.menu.MenuInfoScreen
+import com.sheldondesousa.uncork.ui.menu.MenuItem
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
@@ -131,6 +134,7 @@ class MainActivity : ComponentActivity() {
                 }
                 var selectedTab by remember { mutableStateOf<AppTab?>(null) }
                 var showEvalDebug by remember { mutableStateOf(false) }
+                var menuItem by remember { mutableStateOf<MenuItem?>(null) }
                 val favorites = remember { favoritesRepository.load() }
                 val conversationState = rememberConversationSessionState()
                 val guidedScope = rememberCoroutineScope()
@@ -237,10 +241,30 @@ class MainActivity : ComponentActivity() {
                     GemmaEvalDebugScreen(onBack = { showEvalDebug = false })
                 } else if (modelReady) {
                     when (selectedTab) {
-                        null -> LandingRoute(
-                            onTabSelected = onTabSelected,
-                            onOpenEvalDebug = { showEvalDebug = true },
-                        )
+                        null -> when (menuItem) {
+                            null -> LandingRoute(
+                                onTabSelected = onTabSelected,
+                                onOpenEvalDebug = { showEvalDebug = true },
+                                onMenuItemSelected = { menuItem = it },
+                            )
+                            MenuItem.WineryDirectory -> WineryDirectoryRoute(
+                                loadDirectory = { wineriesDirectory.get() },
+                                onBack = { menuItem = null },
+                                onHome = { menuItem = null },
+                            )
+                            MenuItem.AboutUncork -> MenuInfoScreen(
+                                title = MenuItem.AboutUncork.label,
+                                message = "About Uncork is coming soon.",
+                                onBack = { menuItem = null },
+                                onHome = { menuItem = null },
+                            )
+                            MenuItem.WineProductionFacts -> MenuInfoScreen(
+                                title = MenuItem.WineProductionFacts.label,
+                                message = "Wine Production Facts are coming soon.",
+                                onBack = { menuItem = null },
+                                onHome = { menuItem = null },
+                            )
+                        }
                         AppTab.Find -> GuidedSelectionScreen(
                             state = guidedState,
                             onSuggestionClick = { stageWine = it.toStageWine() },

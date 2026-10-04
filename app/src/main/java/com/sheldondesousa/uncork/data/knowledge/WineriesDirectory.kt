@@ -1,6 +1,8 @@
 package com.sheldondesousa.uncork.data.knowledge
 
 import android.content.Context
+import java.text.Collator
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -8,6 +10,9 @@ import kotlinx.coroutines.withContext
 
 /** Where a winery is, according to the Wineries_Directory: its country and the region within it. */
 data class WineryLocation(val winery: String, val country: String, val region: String)
+
+/** A country, region or winery group in the browsable directory, with how many wineries it holds. */
+data class DirectoryCount(val name: String, val count: Int)
 
 /**
  * Wineries_Directory: a reference list of wineries with their country and region (about 30,000). Used by the Ask
@@ -34,6 +39,23 @@ class WineriesDirectory(entries: List<WineryLocation>) {
     private val regionNames: Map<String, Set<String>> = buildMap<String, MutableSet<String>> {
         keyed.forEach { k -> if (k.region.isNotBlank()) getOrPut(k.region) { mutableSetOf() } += k.country }
     }
+
+    private val collator: Collator = Collator.getInstance(Locale.ENGLISH).apply { strength = Collator.PRIMARY }
+
+    /** Every country in the directory, alphabetised, with how many wineries each has. */
+    fun countries(): List<DirectoryCount> =
+        keyed.groupingBy { it.entry.country }.eachCount().map { DirectoryCount(it.key, it.value) }
+            .sortedWith(compareBy(collator) { it.name })
+
+    /** The regions (provinces) of a country, alphabetised, with how many wineries each has. */
+    fun regions(country: String): List<DirectoryCount> =
+        keyed.filter { it.entry.country == country }.groupingBy { it.entry.region }.eachCount()
+            .map { DirectoryCount(it.key, it.value) }.sortedWith(compareBy(collator) { it.name })
+
+    /** The winery names in one region of a country, alphabetised. */
+    fun wineriesIn(country: String, region: String): List<String> =
+        keyed.filter { it.entry.country == country && it.entry.region == region }.map { it.entry.winery }
+            .distinct().sortedWith(collator)
 
     /**
      * Locations for [winery]. When the wine's [country] is known, only entries in that country count; if the name is

@@ -22,6 +22,12 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.sheldondesousa.uncork.ui.menu.MenuItem
+import com.sheldondesousa.uncork.ui.menu.MenuSheet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,7 +83,18 @@ fun LandingRoute(
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
     onOpenEvalDebug: (() -> Unit)? = null,
+    onMenuItemSelected: (MenuItem) -> Unit = {},
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
+    if (menuOpen) {
+        MenuSheet(
+            onDismiss = { menuOpen = false },
+            onSelect = { item ->
+                menuOpen = false
+                onMenuItemSelected(item)
+            },
+        )
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -130,7 +147,7 @@ fun LandingRoute(
             Spacer(Modifier.height(32.dp))
         }
         AppBottomBar {
-            ElevatedBottomAction(label = "Menu", onClick = {})
+            ElevatedBottomAction(label = "Menu", onClick = { menuOpen = true })
         }
     }
 }
