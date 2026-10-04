@@ -105,10 +105,17 @@ class ChatFlowTest {
 
     @Test
     fun tasteStepIsResolvedByAnySingleSubField() {
-        // Matches finalizePreferences' own behavior: Taste is "answered" once any one of its
-        // four sub-fields is set, not only when all four are.
+        // Taste is "answered" once any one of body, tannin or acidity is set. Sweetness is no longer part of Q3.
         assertTrue(WinePreferences(tannin = "Smooth").isStepResolved(FindWineStep.Taste))
-        assertTrue(WinePreferences(sweetness = "Sweet").isStepResolved(FindWineStep.Taste))
+        assertEquals(false, WinePreferences(sweetness = "Sweet").isStepResolved(FindWineStep.Taste))
         assertEquals(false, WinePreferences().isStepResolved(FindWineStep.Taste))
+    }
+
+    @Test
+    fun q3NoLongerAsksAboutSweetnessAndIgnoresSweetnessWords() {
+        assertTrue(!ChatFlowText.Q3_TASTE.contains("Sweetness", ignoreCase = true))
+        assertTrue(ChatFlowText.Q3_TASTE.contains("Body") && ChatFlowText.Q3_TASTE.contains("Tannin") && ChatFlowText.Q3_TASTE.contains("Acidity"))
+        assertEquals(null, matchTaste("bone dry and sweet please").sweetness)
+        assertEquals("Full-Bodied", matchTaste("full bodied and sweet").body)
     }
 }

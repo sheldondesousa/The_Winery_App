@@ -9,13 +9,12 @@ class WineAskChatTest {
         assertEquals(1, messages.size)
         val welcome = messages.single()
         assertEquals(MessageAuthor.Assistant, welcome.author)
-        assertTrue(welcome.text.startsWith(
-            "Hi there! I'm Uncork, your AI sommelier, here to help you with questions about **Estate Syrah 2018** or something from the wine world.",
-        ))
-        assertTrue(welcome.text.contains("%%I can help with:%%"))
-        listOf("This wine", "Reviews", "Grape varieties", "Aromas and flavours").forEach {
-            assertTrue("missing $it", welcome.text.contains("• $it"))
-        }
+        assertEquals(
+            "Hi! I'm Uncork, your AI sommelier. I can help you with questions about **Estate Syrah 2018**.\n\n" +
+                "%%I can help you with:%%\n" +
+                "• Grape information\n• Flavours and aromas\n• Wineries\n• Consumer reviews\n• Wine production",
+            welcome.text,
+        )
         assertTrue(welcome.quickReplies.isEmpty())
     }
 
@@ -25,8 +24,8 @@ class WineAskChatTest {
         assertEquals(2, Regex("\\*\\*").findAll(text).count())
     }
 
-    @Test fun fallsBackToThisParticularWineWhenTheNameIsMissing() {
-        assertTrue(WineAskChat.welcome("Unknown").contains("questions about this particular wine or something"))
+    @Test fun fallsBackToThisWineWhenTheNameIsMissing() {
+        assertTrue(WineAskChat.welcome("Unknown").contains("questions about this wine."))
         assertFalse(WineAskChat.welcome("").contains("**"))
     }
 

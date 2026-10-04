@@ -29,8 +29,7 @@ internal object ChatFlowText {
         "Any preference for taste?\n\n" +
             "##Body (weight)##\n**Light, Medium, Full**\n\n" +
             "##Tannin (dryness)##\n**Smooth, Moderate, Astringent**\n\n" +
-            "##Acidity (sourness)##\n**Soft, Crisp, Tart**\n\n" +
-            "##Sweetness (sugar)##\n**Bone-Dry, Off-Dry, Sweet**"
+            "##Acidity (sourness)##\n**Soft, Crisp, Tart**"
     const val CURIOUS_TRANSITION = "Happy to chat — what's on your mind about wine or pairings?"
     const val FIND_WINE_HANDOVER_INTRO =
         "Sure, Let's find you a wine. But first, I'm going to need some details to assist you better."
@@ -156,7 +155,7 @@ internal fun WinePreferences.isStepResolved(step: FindWineStep): Boolean = when 
     FindWineStep.Type -> type != WinePreferences.UNKNOWN
     FindWineStep.Country -> country != WinePreferences.UNKNOWN
     FindWineStep.Taste -> body != WinePreferences.UNKNOWN || tannin != WinePreferences.UNKNOWN ||
-        acidity != WinePreferences.UNKNOWN || sweetness != WinePreferences.UNKNOWN
+        acidity != WinePreferences.UNKNOWN
 }
 
 /** First step in Type -> Country -> Taste order not yet resolved, or null once all three are. */
@@ -321,6 +320,8 @@ internal fun matchTaste(reply: String): TasteMatch {
         body = canonicalBody(reply),
         tannin = canonicalTannin(reply),
         acidity = canonicalAcidity(reply),
-        sweetness = canonicalSweetness(reply),
+        // Sweetness is no longer asked in Q3 (or offered in Find), so a stray word like "sweet" is not read as a
+        // sweetness choice.
+        sweetness = null,
     )
 }

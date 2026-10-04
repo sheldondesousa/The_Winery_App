@@ -51,14 +51,13 @@ import com.sheldondesousa.uncork.ui.theme.Wine
 
 /** One tile per field on the Find form; tapping a tile opens its options in a bottom sheet. */
 private enum class FormField(val label: String) {
-    Type("Type"), Variety("Variety"), Sweetness("Sweetness"), Tannin("Tannin"), Body("Body"), Acidity("Acidity"),
+    Type("Type"), Variety("Variety"), Tannin("Tannin"), Body("Body"), Acidity("Acidity"),
     Country("Country"), Province("Province"),
 }
 
 private fun FormField.options(): List<String> = when (this) {
     FormField.Type -> GuidedOptions.types
     FormField.Variety -> GuidedOptions.varieties
-    FormField.Sweetness -> GuidedOptions.sweetness
     FormField.Tannin -> GuidedOptions.tannin
     FormField.Body -> GuidedOptions.body
     FormField.Acidity -> GuidedOptions.acidity
@@ -69,7 +68,6 @@ private fun FormField.options(): List<String> = when (this) {
 private fun FormField.selectedValue(selection: GuidedCriteria): String = when (this) {
     FormField.Type -> selection.wineType
     FormField.Variety -> selection.variety
-    FormField.Sweetness -> selection.sweetness
     FormField.Tannin -> selection.tannin
     FormField.Body -> selection.body
     FormField.Acidity -> selection.acidity
@@ -80,7 +78,6 @@ private fun FormField.selectedValue(selection: GuidedCriteria): String = when (t
 private fun FormField.select(selection: GuidedCriteria, value: String): GuidedCriteria = when (this) {
     FormField.Type -> selection.copy(wineType = value)
     FormField.Variety -> selection.copy(variety = value)
-    FormField.Sweetness -> selection.copy(sweetness = value)
     FormField.Tannin -> selection.copy(tannin = value)
     FormField.Body -> selection.copy(body = value)
     FormField.Acidity -> selection.copy(acidity = value)
@@ -171,13 +168,10 @@ private fun GuidedSelectionFormScreen(
             HorizontalDivider()
             CategoryTitle("Taste Profile")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FormTile(FormField.Sweetness, selection, Modifier.weight(1f)) { activeField = it }
+                FormTile(FormField.Body, selection, Modifier.weight(1f)) { activeField = it }
                 FormTile(FormField.Tannin, selection, Modifier.weight(1f)) { activeField = it }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FormTile(FormField.Body, selection, Modifier.weight(1f)) { activeField = it }
-                FormTile(FormField.Acidity, selection, Modifier.weight(1f)) { activeField = it }
-            }
+            FormTile(FormField.Acidity, selection, Modifier.fillMaxWidth()) { activeField = it }
             HorizontalDivider()
             TextButton(onClick = { onTabSelected(AppTab.Conversation) }, contentPadding = PaddingValues(0.dp)) {
                 Text("Not sure what these mean? Chat with the sommelier instead.", color = InkSubtle)

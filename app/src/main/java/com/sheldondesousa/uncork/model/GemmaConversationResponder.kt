@@ -42,6 +42,17 @@ class GemmaConversationResponder(
     // deterministic Q1-Q3 flow never calls Gemma, and the final card search is a short-lived,
     // single-shot conversation created fresh in produceWineCards().
     private var curiousConversation: Conversation? = null
+
+    /**
+     * Lookups for the open conversation (Grape_Profile_Internal, Grape_Profile_Kaggle_Extracted, reviews and the
+     * Wineries_Directory), added to a question only when it needs them. Set once from the app.
+     */
+    @Volatile
+    private var curiousExtras: AskExtras? = null
+
+    fun attachCuriousExtras(extras: AskExtras?) {
+        curiousExtras = extras
+    }
     private val usedConversationOpeners = mutableSetOf<String>()
 
     private var chatMode = ChatMode.Undecided
@@ -131,14 +142,18 @@ class GemmaConversationResponder(
         }
 
         markRoute("GEMMA_WAKE")
-        suspend fun streamFrom(conversation: Conversation): String {
+        suspend fun messageFor(): String {
+            val extra = runCatching { curiousExtras?.forQuestion(query) }.getOrNull()
+            return if (extra.isNullOrBlank()) query else "<more_context>\n$extra\n</more_context>\nThe user says: $query"
+        }
+        suspend fun streamFrom(conversation: Conversation, message: String): String {
             val requestStartedAt = SystemClock.elapsedRealtime()
             var firstWordAt: Long? = null
             var lastWordAt = requestStartedAt
             var lastText = ""
             val response = buildString {
-                conversation.sendMessageAsync(query).collect { message ->
-                    message.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
+                conversation.sendMessageAsync(message).collect { reply ->
+                    reply.contents.contents.filterIsInstance<Content.Text>().forEach { content ->
                         if (content.text.isNotEmpty()) {
                             val now = SystemClock.elapsedRealtime()
                             if (firstWordAt == null) firstWordAt = now
@@ -165,7 +180,7 @@ class GemmaConversationResponder(
 
         val activeConversation = ensureCuriousConversation()
         val response = try {
-            streamFrom(activeConversation)
+            streamFrom(activeConversation, messageFor())
         } catch (error: Throwable) {
             if (!error.isContextCapacityError()) throw error
             logFlow("Gemma context exhausted; rebuilding curious conversation and retrying turn once")
@@ -173,7 +188,9 @@ class GemmaConversationResponder(
                 curiousConversation?.close()
                 curiousConversation = null
             }
-            streamFrom(ensureCuriousConversation())
+            // The new conversation has lost any lookups sent earlier, so they are sent again where needed.
+            curiousExtras?.reset()
+            streamFrom(ensureCuriousConversation(), messageFor())
         }
         val visible = response.withoutRepeatedConversationOpener(recordUsage = true)
         return plainMessage(visible.ifBlank { "Could you say a bit more about that?" })
@@ -978,6 +995,7 @@ class GemmaConversationResponder(
     override fun close() {
         curiousConversation?.close()
         curiousConversation = null
+        curiousExtras?.reset()
         engine?.close()
         engine = null
         usedConversationOpeners.clear()
@@ -996,6 +1014,7 @@ class GemmaConversationResponder(
     internal suspend fun resetConversationState() = requestMutex.withLock {
         curiousConversation?.close()
         curiousConversation = null
+        curiousExtras?.reset()
         usedConversationOpeners.clear()
         chatMode = ChatMode.Undecided
         findWineStep = FindWineStep.Type

@@ -41,16 +41,31 @@ class WineAskContext(
         return WineAskExtras(
             knowledge = knowledge,
             ownGrapes = knowledge.find(wine.variety).grapes.map { it.grape }.toSet(),
-            loadReviews = {
-                if (wine.country.isUnknown() || wine.variety.isUnknown()) null
-                else reviews.digestFor(spellings, wine.country, seed = sampleSeed(spellings.first(), wine.country))
-            },
-            ownVariety = spellings,
+            ownVariety = if (wine.variety.isUnknown()) emptyList() else spellings,
             ownCountry = wine.country.takeUnless { it.isUnknown() }.orEmpty(),
-            loadWineries = wineries?.let { provider -> { provider.get() } },
             loadKaggleExtracted = { grapeSpellings, country -> kaggleExtractedFor(grapeSpellings, country, preferredProvince = "") },
+            loadWineries = wineries?.let { provider -> { provider.get() } },
+            loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
+            loadReviews = { grapeSpellings, country -> reviewSample(grapeSpellings, country) },
         )
     }
+
+    /**
+     * Extras for Chat's open conversation. There is no open wine, so the grape and country come from the question.
+     */
+    fun extrasForChat(): AskExtras = WineAskExtras(
+        knowledge = knowledge,
+        loadKaggleExtracted = { grapeSpellings, country -> kaggleExtractedFor(grapeSpellings, country, preferredProvince = "") },
+        loadWineries = wineries?.let { provider -> { provider.get() } },
+        loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
+        loadReviews = { grapeSpellings, country -> reviewSample(grapeSpellings, country) },
+    )
+
+    private suspend fun reviewSample(spellings: List<String>, country: String) =
+        reviews.digestFor(spellings, country, seed = sampleSeed(spellings.first(), country))
+
+    private suspend fun otherCountriesFor(spellings: List<String>, country: String) =
+        reviews.topCountriesFor(spellings, excludeCountry = country)
 
     /** Every spelling of this grape in the review database (Syrah and Shiraz, etc.) counts as the same variety. */
     private fun spellingsOf(variety: String): List<String> = GrapeVarieties.all.firstOrNull { grape ->

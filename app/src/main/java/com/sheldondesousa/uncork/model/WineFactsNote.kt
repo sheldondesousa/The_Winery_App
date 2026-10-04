@@ -87,11 +87,7 @@ object WineFactsNote {
 
         if (otherCountries.isNotEmpty()) {
             appendLine()
-            appendLine(
-                "OTHER COUNTRIES with the most reviews of this grape (after you answer about this wine, offer to tell the user " +
-                    "about the grape from one of these): " +
-                    otherCountries.joinToString(", ") { "${it.country} (${it.reviewCount} reviews)" },
-            )
+            appendLine(otherCountriesLine(otherCountries))
         }
 
         if (reviews != null && !reviews.isEmpty) {
@@ -169,6 +165,11 @@ object WineFactsNote {
         }
         appendLine("</reviews>")
     }.trimEnd()
+
+    /** The countries with the most reviews of a grape, for Gemma to offer after it answers. */
+    fun otherCountriesLine(countries: List<CountryReviewCount>): String =
+        "OTHER COUNTRIES with the most reviews of this grape (after you answer, offer to tell the user about the grape from one of these): " +
+            countries.joinToString(", ") { "${it.country} (${it.reviewCount} reviews)" }
 
     /** Entries from the Wineries_Directory, sent in front of a question about wineries. */
     fun wineriesBlock(wineries: List<WineryLocation>, what: String): String = buildString {

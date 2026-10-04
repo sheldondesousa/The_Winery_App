@@ -10,26 +10,23 @@ object WineAskChat {
 
     /** What the sommelier can help with, shown to the user. Food pairings are out of scope for now. */
     val TOPICS = listOf(
-        "This wine",
-        "Reviews",
-        "Grape varieties",
-        "Aromas and flavours",
-        "Wine regions",
-        "How wine is made, stored and served",
+        "Grape information",
+        "Flavours and aromas",
+        "Wineries",
+        "Consumer reviews",
+        "Wine production",
     )
 
     /**
      * The welcome text. Uses the chat's own light markup: the wine's name is `**bold**` (black) and
-     * "I can help with:" is `%%burgundy bold%%`.
+     * "I can help you with:" is `%%burgundy bold%%`.
      */
     fun welcome(wineName: String): String {
         val name = wineName.replace("**", "").replace("##", "").replace("%%", "").trim()
-        val subject = if (name.isNotBlank() && !name.equals("Unknown", ignoreCase = true)) "**$name**" else "this particular wine"
-        return "Hi there! I'm Uncork, your AI sommelier, here to help you with questions about $subject " +
-            "or something from the wine world.\n\n" +
-            "%%I can help with:%%\n" +
-            TOPICS.joinToString("\n") { "• $it" } +
-            "\n\nWhat are you curious about?"
+        val subject = if (name.isNotBlank() && !name.equals("Unknown", ignoreCase = true)) "**$name**" else "this wine"
+        return "Hi! I'm Uncork, your AI sommelier. I can help you with questions about $subject.\n\n" +
+            "%%I can help you with:%%\n" +
+            TOPICS.joinToString("\n") { "• $it" }
     }
 
     fun initialMessages(wineName: String): List<ChatMessage> = listOf(

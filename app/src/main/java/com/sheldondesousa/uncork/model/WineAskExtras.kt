@@ -2,10 +2,11 @@ package com.sheldondesousa.uncork.model
 
 import com.sheldondesousa.uncork.data.knowledge.GrapeProfileInternal
 import com.sheldondesousa.uncork.data.knowledge.WineriesDirectory
+import com.sheldondesousa.uncork.data.reviews.CountryReviewCount
 import com.sheldondesousa.uncork.data.reviews.GrapeVarietyLookup
 import com.sheldondesousa.uncork.data.reviews.VarietyCountryDigest
 
-/** Extra context for one question in the Ask chat: added in front of the question only when the question needs it. */
+/** Extra context for one question in a chat: added in front of the question only when the question needs it. */
 interface AskExtras {
     /** Blocks to add before [query], or null when the question needs nothing extra. */
     suspend fun forQuestion(query: String): String?
@@ -38,15 +39,17 @@ object WineryIntent {
 }
 
 /**
- * Starts with only the open wine's own facts (already in the first message). Adds, in front of the question that needs
- * it: the broader review sample when the user asks what people say; notes for another grape that is in the grape notes
- * list; and, for a grape that is not in that list or for another country, what wine enthusiasts say in that country.
- * Each block is added once, since the conversation remembers it, and again after a rebuild.
+ * Extra context for a question, added in front of it only when it needs it. Used by the Ask screen (where the open wine
+ * supplies a default grape and country) and by Chat's open conversation (where there is no open wine, so the grape and
+ * country come from the question itself). Adds: the broader review sample when the user asks what people say; notes for
+ * a grape in Grape_Profile_Internal; what wine enthusiasts say (Grape_Profile_Kaggle_Extracted) for a grape without an
+ * internal profile or for another country; the other countries to offer; and Wineries_Directory entries. Each block is
+ * added once, since the conversation remembers it, and again after a rebuild.
  */
 class WineAskExtras(
     private val knowledge: GrapeProfileInternal,
     /** Grapes already covered by the first message; not sent again. */
-    private val ownGrapes: Set<String>,
+    private val ownGrapes: Set<String> = emptySet(),
     /** The open wine's grape (all its database spellings) and country, for questions that name no grape or no country. */
     private val ownVariety: List<String> = emptyList(),
     private val ownCountry: String = "",
@@ -54,26 +57,46 @@ class WineAskExtras(
     private val loadKaggleExtracted: suspend (spellings: List<String>, country: String) -> List<KaggleExtractedProfile> = { _, _ -> emptyList() },
     /** The Wineries_Directory, loaded when first needed; null if unavailable. */
     private val loadWineries: (suspend () -> WineriesDirectory?)? = null,
-    private val loadReviews: suspend () -> VarietyCountryDigest?,
+    /** Other countries with the most reviews of a grape (all spellings), leaving out [country] when it is not blank. */
+    private val loadOtherCountries: suspend (spellings: List<String>, country: String) -> List<CountryReviewCount> = { _, _ -> emptyList() },
+    private val loadReviews: suspend (spellings: List<String>, country: String) -> VarietyCountryDigest?,
 ) : AskExtras {
     private val sentGrapes = ownGrapes.toMutableSet()
     private val sentKaggleExtracted = mutableSetOf<String>()
     private val sentWineries = mutableSetOf<String>()
-    private var reviewsSent = false
+    private val sentReviews = mutableSetOf<String>()
+    private val ownGroupNames: Set<String> =
+        if (ownVariety.isEmpty()) emptySet() else GrapeVarietyLookup.findMentioned(ownVariety.joinToString(" ")).map { it.name.lowercase() }.toSet()
+    // The open wine's own grape already has its other-countries line in the first message.
+    private val offeredCountries = ownGroupNames.toMutableSet()
 
     override suspend fun forQuestion(query: String): String? {
         val blocks = mutableListOf<String>()
-        if (!reviewsSent && ReviewIntent.asksForReviews(query)) {
-            val digest = runCatching { loadReviews() }.getOrNull()
-            blocks += if (digest != null && !digest.isEmpty) {
-                WineFactsNote.reviewsBlock(digest)
+        val mentioned = GrapeVarietyLookup.findMentioned(query)
+        val countriesNamed = CountryMentions.find(query)
+
+        // The broader review sample: the grape and country come from the question, falling back to the open wine's.
+        if (ReviewIntent.asksForReviews(query)) {
+            val focus = mentioned.firstOrNull()
+            val spellings = focus?.databaseNames ?: ownVariety
+            val grapeName = focus?.name ?: ownVariety.firstOrNull().orEmpty()
+            val country = countriesNamed.firstOrNull() ?: ownCountry
+            if (spellings.isEmpty() || country.isBlank()) {
+                blocks += "WHAT WINE ENTHUSIASTS SAY\nTo summarise reviews I need both a grape and a country. Ask the user which grape and which country."
             } else {
-                "WHAT WINE ENTHUSIASTS SAY\nThere are not enough reviews of this grape from this country to summarise."
+                val key = "${grapeName.lowercase()}|${country.lowercase()}"
+                if (sentReviews.add(key)) {
+                    val digest = runCatching { loadReviews(spellings, country) }.getOrNull()
+                    blocks += if (digest != null && !digest.isEmpty) {
+                        WineFactsNote.reviewsBlock(digest)
+                    } else {
+                        "WHAT WINE ENTHUSIASTS SAY\nThere are not enough reviews of $grapeName from $country to summarise."
+                    }
+                }
             }
-            reviewsSent = true
         }
 
-        // 1. Grapes in the grape notes list come first, and are the trusted source for body, tannin and acidity.
+        // 1. Grapes in Grape_Profile_Internal come first, and are the trusted source for body, tannin and acidity.
         val inNotes = knowledge.findMentioned(query)
         val newNotes = inNotes.filter { it.grape !in sentGrapes }.take(MAX_GRAPES)
         if (newNotes.isNotEmpty()) {
@@ -81,17 +104,17 @@ class WineAskExtras(
             sentGrapes += newNotes.map { it.grape }
         }
 
-        // 2. Grapes the notes list does not have: what enthusiasts say in the user's country, if the app has it.
-        val countryNamed = CountryMentions.find(query).filterNot { it.equals(ownCountry, ignoreCase = true) }.firstOrNull()
-        val country = countryNamed ?: ownCountry
+        // 2. Grapes it does not have: what enthusiasts say in the user's country, if the app has it.
+        val countryNamed = countriesNamed.filterNot { it.equals(ownCountry, ignoreCase = true) }.firstOrNull()
+        val country = countryNamed ?: countriesNamed.firstOrNull() ?: ownCountry
         val inNotesNames = inNotes.map { it.grape }.toSet()
-        val namedGrapes = GrapeVarietyLookup.findMentioned(query)
+        val namedGrapes = mentioned
             .filter { grape -> grape.databaseNames.none { name -> knowledge.find(name).grapes.any { it.grape in inNotesNames || it.grape in ownGrapes } } }
             .filter { grape -> knowledge.find(grape.name.substringBefore(" / ")).grapes.isEmpty() }
         val regionTargets = buildList {
             namedGrapes.forEach { add(it.databaseNames to it.name) }
             // 3. Another country named for the open wine's grape: that country's style, attributed to enthusiasts.
-            if (countryNamed != null && namedGrapes.isEmpty() && ownVariety.isNotEmpty()) add(ownVariety to ownVariety.first())
+            if (countryNamed != null && namedGrapes.isEmpty() && mentioned.isEmpty() && ownVariety.isNotEmpty()) add(ownVariety to ownVariety.first())
         }
         if (country.isNotBlank()) {
             regionTargets.take(MAX_GRAPES).forEach { (spellings, grape) ->
@@ -102,6 +125,14 @@ class WineAskExtras(
                 if (styles.isNotEmpty()) blocks += WineFactsNote.kaggleExtractedBlock(styles, grape)
             }
         }
+
+        // Offer other countries once for each grape the user names.
+        mentioned.take(MAX_GRAPES).forEach { grape ->
+            if (!offeredCountries.add(grape.name.lowercase())) return@forEach
+            val others = runCatching { loadOtherCountries(grape.databaseNames, country) }.getOrNull().orEmpty()
+            if (others.isNotEmpty()) blocks += WineFactsNote.otherCountriesLine(others)
+        }
+
         // 4. Wineries: a named winery's location, or a small sample of the wineries in a place the user names.
         val wineryLoader = loadWineries
         if (wineryLoader != null && WineryIntent.asksAboutWineries(query)) {
@@ -118,7 +149,7 @@ class WineAskExtras(
                     blocks += WineFactsNote.wineriesBlock(named, "entries for wineries named in the question")
                 } else {
                     val region = directory.regionMentioned(query, countryNamed ?: ownCountry.takeIf { it.isNotBlank() })
-                    val place = region ?: countryNamed?.let { it to "" }
+                    val place = region ?: (countryNamed ?: countriesNamed.firstOrNull())?.let { it to "" }
                     val key = place?.let { "place|${it.first}|${it.second}".lowercase() }
                     if (place != null && key !in sentWineries) {
                         sentWineries += key!!
@@ -142,7 +173,9 @@ class WineAskExtras(
         sentGrapes += ownGrapes
         sentKaggleExtracted.clear()
         sentWineries.clear()
-        reviewsSent = false
+        sentReviews.clear()
+        offeredCountries.clear()
+        offeredCountries += ownGroupNames
     }
 
     private companion object {

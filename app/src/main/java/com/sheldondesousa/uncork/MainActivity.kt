@@ -107,6 +107,8 @@ class MainActivity : ComponentActivity() {
             GrapeProfileInternal.load(applicationContext), wineOptionCache, wineReviewRepository,
             WineriesDirectoryProvider(applicationContext),
         )
+        // Chat's open conversation gets the same on-demand lookups as Ask.
+        gemmaResponder.attachCuriousExtras(askContext.extrasForChat())
         val conversationResponder = KaggleConversationResponder(
             gemmaResponder = gemmaResponder,
             wineReviewRepository = wineReviewRepository,
