@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [VarietyRegionProfile::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(StringListConverter::class)
@@ -27,7 +27,7 @@ abstract class VarietyRegionDatabase : RoomDatabase() {
                     context.applicationContext,
                     VarietyRegionDatabase::class.java,
                     "variety-region-profiles.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { instance = it }
             }
@@ -75,6 +75,19 @@ abstract class VarietyRegionDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `VarietyRegionProfile` ADD COLUMN `cachedWinery` TEXT")
                 db.execSQL("ALTER TABLE `VarietyRegionProfile` ADD COLUMN `cachedSuggestedPairing` TEXT")
                 db.execSQL("ALTER TABLE `VarietyRegionProfile` ADD COLUMN `webSummary` TEXT")
+            }
+        }
+
+        /**
+         * The saved profiles named two countries differently from the reviews database, Find and Chat ("US" and
+         * "England" instead of "United States" and "United Kingdom"), so lookups missed them. Rename in place; if a
+         * row already exists under the standard name (a saved web result), keep it and drop the old one.
+         */
+        internal val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE OR IGNORE `VarietyRegionProfile` SET `country` = 'United States' WHERE `country` = 'US'")
+                db.execSQL("UPDATE OR IGNORE `VarietyRegionProfile` SET `country` = 'United Kingdom' WHERE `country` = 'England'")
+                db.execSQL("DELETE FROM `VarietyRegionProfile` WHERE `country` IN ('US', 'England')")
             }
         }
     }

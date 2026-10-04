@@ -34,6 +34,19 @@ interface VarietyRegionProfileDao {
         acidity: String?,
     ): List<VarietyRegionProfile>
 
+    /** Profiles for a grape (any of its spellings) in one country that have at least one of body, tannin or acidity. */
+    @Query(
+        """
+        SELECT * FROM VarietyRegionProfile
+        WHERE country = :country COLLATE NOCASE
+          AND variety COLLATE NOCASE IN (:varieties)
+          AND (body IS NOT NULL OR tannin IS NOT NULL OR acidity IS NOT NULL)
+        ORDER BY province ASC
+        LIMIT :limit
+        """,
+    )
+    suspend fun findStyles(country: String, varieties: List<String>, limit: Int): List<VarietyRegionProfile>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(profile: VarietyRegionProfile)
 

@@ -17,7 +17,8 @@ import com.sheldondesousa.uncork.ui.guided.ReviewsPage
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
-import com.sheldondesousa.uncork.data.knowledge.GrapeKnowledgeBase
+import com.sheldondesousa.uncork.data.knowledge.GrapeProfileInternal
+import com.sheldondesousa.uncork.data.knowledge.WineriesDirectoryProvider
 import com.sheldondesousa.uncork.data.profile.VarietyRegionDatabase
 import com.sheldondesousa.uncork.data.profile.VarietyRegionProfileRepository
 import com.sheldondesousa.uncork.data.profile.seedFromAssetsIfEmpty
@@ -102,7 +103,10 @@ class MainActivity : ComponentActivity() {
                 synthesizer = gemmaResponder::synthesizeWebResults,
             )
         }
-        val askContext = WineAskContext(GrapeKnowledgeBase.load(applicationContext), wineOptionCache, wineReviewRepository)
+        val askContext = WineAskContext(
+            GrapeProfileInternal.load(applicationContext), wineOptionCache, wineReviewRepository,
+            WineriesDirectoryProvider(applicationContext),
+        )
         val conversationResponder = KaggleConversationResponder(
             gemmaResponder = gemmaResponder,
             wineReviewRepository = wineReviewRepository,
@@ -279,7 +283,9 @@ class MainActivity : ComponentActivity() {
                                         val suggestion = wine.toWineSuggestion()
                                         val facts = askContext.factsFor(suggestion)
                                         closeAsk()
-                                        val discussion = gemmaResponder.startWineDiscussion(facts, WineFactsNote.reminder(suggestion))
+                                        val discussion = gemmaResponder.startWineDiscussion(
+                                            facts, WineFactsNote.reminder(suggestion), askContext.extrasFor(suggestion),
+                                        )
                                         askSession = AskSession(
                                             wine = wine,
                                             discussion = discussion,

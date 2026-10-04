@@ -22,6 +22,13 @@ interface WineReviewDataSource {
         seed: Long = 0L,
     ): VarietyCountryDigest? = null
 
+    /** Other countries with the most reviews of this grape, to offer the user. */
+    suspend fun topCountriesFor(
+        varietyNames: List<String>,
+        excludeCountry: String,
+        limit: Int = 3,
+    ): List<CountryReviewCount> = emptyList()
+
     suspend fun findExact(country: String, province: String, variety: String): List<WineReview> =
         find(WineReviewCriteria(country = country, province = province, variety = variety))
 
@@ -43,6 +50,8 @@ data class WineSelectionCriteria(
         get() = listOf(wineType, country, province, variety, body, tannin, acidity)
             .any { !it.isNullOrBlank() }
 }
+
+data class CountryReviewCount(val country: String, val reviewCount: Int)
 
 data class GuidedReviewPage(
     val reviews: List<GuidedReviewMatch>,
@@ -184,6 +193,25 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
                         )
                     },
                 )
+            }
+        }
+    }
+
+    override suspend fun topCountriesFor(
+        varietyNames: List<String>,
+        excludeCountry: String,
+        limit: Int,
+    ): List<CountryReviewCount> {
+        val names = varietyNames.filter { it.isNotBlank() }.distinct()
+        if (names.isEmpty()) return emptyList()
+        return withContext(Dispatchers.IO) {
+            installer.ensureInstalled().openReadOnly().use { database ->
+                database.rawQuery(
+                    "SELECT country, COUNT(*) FROM wine_reviews WHERE variety COLLATE NOCASE IN (${names.joinToString(",") { "?" }}) " +
+                        "AND country<>'' AND country<>? COLLATE NOCASE GROUP BY country ORDER BY COUNT(*) DESC, country ASC " +
+                        "LIMIT ${limit.coerceIn(1, 6)}",
+                    arrayOf(*names.toTypedArray(), excludeCountry),
+                ).use { c -> buildList { while (c.moveToNext()) add(CountryReviewCount(c.getString(0), c.getInt(1))) } }
             }
         }
     }

@@ -36,6 +36,6 @@ class VarietyRegionProfileSeedAssetTest {
     }
 
     private companion object {
-        const val SEED_ASSET_PATH = "src/main/assets/country_province_variety_profiles.json"
+        const val SEED_ASSET_PATH = "src/main/assets/grape_profile_kaggle_extracted.json"
     }
 }

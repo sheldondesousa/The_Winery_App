@@ -34,7 +34,7 @@ class VarietyRegionDatabaseTest {
     @Test
     fun seedLoadsPackagedProfilesOrSafelySkipsWhenAssetIsAbsent() = runBlocking {
         val seedAssetIsPackaged = context.assets.list("")
-            ?.contains("country_province_variety_profiles.json") == true
+            ?.contains("grape_profile_kaggle_extracted.json") == true
 
         seedFromAssetsIfEmpty(context, database)
 

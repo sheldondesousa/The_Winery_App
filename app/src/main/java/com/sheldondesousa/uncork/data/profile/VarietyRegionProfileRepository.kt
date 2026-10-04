@@ -28,6 +28,10 @@ fun interface WineOptionCache {
 class VarietyRegionProfileRepository(
     private val dao: VarietyRegionProfileDao,
 ) : WineOptionCache {
+    /** Region style rows for a grape in a country, any province, most useful first is left to the caller. */
+    suspend fun stylesFor(country: String, varieties: List<String>, limit: Int = 12): List<VarietyRegionProfile> =
+        if (varieties.isEmpty()) emptyList() else dao.findStyles(country, varieties, limit)
+
     suspend fun getOrNull(country: String, province: String, variety: String): VarietyRegionProfile? =
         dao.find(country, province, variety)
 

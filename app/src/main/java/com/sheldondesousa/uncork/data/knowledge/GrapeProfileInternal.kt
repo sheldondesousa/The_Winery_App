@@ -6,7 +6,7 @@ import org.json.JSONObject
 import java.text.Normalizer
 
 /** Curated notes for one grape, written for beginners. Reliable for the grape in general, not for any single bottle. */
-data class GrapeKnowledge(
+data class InternalGrapeProfile(
     val grape: String,
     val alsoKnownAs: String,
     val colour: String,
@@ -29,14 +29,14 @@ data class GrapeKnowledge(
  * one per component for a blend. [blendNote] explains how they were found when the variety is a blend
  * or a style label, so Gemma never presents a blend's grapes as certain when they are only typical.
  */
-data class GrapeLookup(val grapes: List<GrapeKnowledge>, val blendNote: String? = null) {
+data class GrapeLookup(val grapes: List<InternalGrapeProfile>, val blendNote: String? = null) {
     companion object {
         val NONE = GrapeLookup(emptyList())
     }
 }
 
-class GrapeKnowledgeBase(entries: List<GrapeKnowledge>) {
-    private val index: Map<String, GrapeKnowledge> = buildMap {
+class GrapeProfileInternal(entries: List<InternalGrapeProfile>) {
+    private val index: Map<String, InternalGrapeProfile> = buildMap {
         entries.forEach { entry ->
             keysOf(entry).forEach { putIfAbsent(it, entry) }
         }
@@ -68,7 +68,27 @@ class GrapeKnowledgeBase(entries: List<GrapeKnowledge>) {
         return GrapeLookup.NONE
     }
 
-    private fun singleGrape(name: String): GrapeKnowledge? {
+    /**
+     * Grapes named in free text (a user's question), longest name first, each grape once. Aliases count, so
+     * "shiraz" finds the Syrah entry. Words that are not a grape name are ignored.
+     */
+    fun findMentioned(text: String): List<InternalGrapeProfile> {
+        val tokens = normalize(text).split(' ').filter { it.isNotBlank() }
+        val used = BooleanArray(tokens.size)
+        val found = linkedMapOf<String, InternalGrapeProfile>()
+        for (length in MAX_NAME_WORDS downTo 1) {
+            for (start in 0..tokens.size - length) {
+                if ((start until start + length).any { used[it] }) continue
+                val phrase = tokens.subList(start, start + length).joinToString(" ")
+                val grape = index[phrase] ?: singleGrape(phrase) ?: continue
+                (start until start + length).forEach { used[it] = true }
+                found.putIfAbsent(grape.grape, grape)
+            }
+        }
+        return found.values.toList()
+    }
+
+    private fun singleGrape(name: String): InternalGrapeProfile? {
         index[normalize(name)]?.let { return it }
         // The database spells one grape many ways (Syrah/Shiraz, Garnacha/Grenache…); the Find variety
         // list already merged those, so try every name in the merged group.
@@ -80,16 +100,17 @@ class GrapeKnowledgeBase(entries: List<GrapeKnowledge>) {
     }
 
     companion object {
-        private const val ASSET = "knowledge/grape_knowledge.jsonl"
+        private const val MAX_NAME_WORDS = 3
+        private const val ASSET = "knowledge/grape_profile_internal.jsonl"
 
-        fun load(context: Context): GrapeKnowledgeBase =
+        fun load(context: Context): GrapeProfileInternal =
             context.assets.open(ASSET).bufferedReader().use { fromJsonLines(it.readText()) }
 
-        fun fromJsonLines(text: String): GrapeKnowledgeBase = GrapeKnowledgeBase(
+        fun fromJsonLines(text: String): GrapeProfileInternal = GrapeProfileInternal(
             text.lineSequence().filter { it.isNotBlank() }.map { line ->
                 val json = JSONObject(line)
                 fun str(key: String) = json.optString(key).trim()
-                GrapeKnowledge(
+                InternalGrapeProfile(
                     grape = str("grape"),
                     alsoKnownAs = str("also_known_as"),
                     colour = str("colour"),
@@ -137,7 +158,7 @@ class GrapeKnowledgeBase(entries: List<GrapeKnowledge>) {
                 .replace(Regex("[^a-z0-9]+"), " ")
                 .trim()
 
-        private fun keysOf(entry: GrapeKnowledge): List<String> {
+        private fun keysOf(entry: InternalGrapeProfile): List<String> {
             val names = entry.grape.split("/") +
                 entry.alsoKnownAs.split(";", ",").map { it.replace(Regex("\\(.*?\\)"), "") }
             return names.map { normalize(it) }.filter { it.isNotBlank() }

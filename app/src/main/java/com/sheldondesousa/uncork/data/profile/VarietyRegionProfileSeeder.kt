@@ -62,5 +62,5 @@ internal data class SeedVarietyRegionProfile(
 )
 
 private const val TAG = "ProfileDatabaseSeeder"
-private const val SEED_ASSET_NAME = "country_province_variety_profiles.json"
+private const val SEED_ASSET_NAME = "grape_profile_kaggle_extracted.json"
 private const val UNKNOWN_GENERATOR = "Unknown"

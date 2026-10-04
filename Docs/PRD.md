@@ -84,7 +84,7 @@ For category-level requests such as "Malbec," the AI may use learned knowledge t
 
 The app has a growing on-device Room table named `VarietyRegionProfile`, keyed by the combination of `country`, `province`, and `variety`, in that order. Each row stores those key values; nullable body, tannin, and acidity values; a list of flavor notes; generation metadata; a source value of either `kaggle_derived` or `web_search`; and one cached web-search option containing its winery, `web_summary`, and other resolved option fields.
 
-- On first launch, if the table is empty, the app reads `country_province_variety_profiles.json` from packaged assets and inserts all profiles in one Room batch operation.
+- On first launch, if the table is empty, the app reads `grape_profile_kaggle_extracted.json` from packaged assets and inserts all profiles in one Room batch operation.
 - Asset parsing and database writes run on an IO dispatcher so startup work does not block the interface.
 - Later launches skip asset seeding when the table already contains rows.
 - Replace-on-conflict inserts allow a live web-search result to add or refresh one country/province/variety combination.
@@ -138,7 +138,7 @@ These rules apply to Chat. Find uses the independent rules in Section 6A.
 - **AC3:** Given the verified model already exists in private app storage, when the app starts, then it navigates directly to the Main Conversation Screen without network access.
 - **AC4:** Given the model does not exist, then the user is asked for a Hugging Face read token, which is used for the download and is not persisted.
 - **AC4a:** Given the download or integrity verification fails, then the app retries up to three times before showing the designed error state with a manual retry option.
-- **AC4b:** Given the country-province-variety Room table is empty when the app starts, then `country_province_variety_profiles.json` is parsed from packaged assets and inserted off the main thread. Given the table already contains rows, seeding is skipped without replacing runtime additions.
+- **AC4b:** Given the country-province-variety Room table is empty when the app starts, then `grape_profile_kaggle_extracted.json` is parsed from packaged assets and inserted off the main thread. Given the table already contains rows, seeding is skipped without replacing runtime additions.
 
 ### Error Handling
 - **AC5:** Given the on-device model load fails, when the user taps retry, then the model load is re-attempted.
@@ -448,7 +448,7 @@ Status checked against the working code on 27 September 2026, including the Chat
 - [x] Wine option cards display wine name, winery when available, and `Country, Province`; keyword matches backfill mandatory profile fields
 - [x] Full, untruncated Kaggle `review_summary` is preserved through Find, Chat, My List, and the Profile Page
 - [x] Suggestions retain their Gemma, Kaggle, or web-search origin through My List; the Profile Page displays only the matching `Summary`, `Critic Review`, or `Web Summary` section
-- [x] `country_province_variety_profiles.json` is bundled and seeds all 4,119 profiles off the main thread when Room is empty
+- [x] `grape_profile_kaggle_extracted.json` is bundled and seeds all 4,119 profiles off the main thread when Room is empty
 - [x] `VarietyRegionProfile` uses the `country` + `province` + `variety` composite key, JSON flavor-note conversion, exact lookup, replace-on-conflict inserts, and non-destructive Room migrations through database version 3
 - [x] Room can store, retrieve, and replace one cached web option with its name, winery, pairing, resolved profile fields, and `web_summary`
 - [x] Profile Page navigation from Find, Chat, and My List, with the shared profile fields and null-safe rating display

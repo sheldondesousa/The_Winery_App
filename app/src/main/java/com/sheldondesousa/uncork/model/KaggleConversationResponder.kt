@@ -1006,7 +1006,7 @@ class KaggleConversationResponder(
             "argentinian" to "Argentina", "chile" to "Chile", "chilean" to "Chile",
             "australia" to "Australia", "australian" to "Australia",
             "new zealand" to "New Zealand", "south africa" to "South Africa",
-            "united states" to "US", "american" to "US", "usa" to "US",
+            "united states" to "United States", "american" to "United States", "usa" to "United States",
             "germany" to "Germany", "german" to "Germany",
             "austria" to "Austria", "austrian" to "Austria",
             "greece" to "Greece", "greek" to "Greece",

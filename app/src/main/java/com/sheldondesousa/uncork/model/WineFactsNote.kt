@@ -1,17 +1,24 @@
 package com.sheldondesousa.uncork.model
 
-import com.sheldondesousa.uncork.data.knowledge.GrapeKnowledge
+import com.sheldondesousa.uncork.data.knowledge.InternalGrapeProfile
 import com.sheldondesousa.uncork.data.knowledge.GrapeLookup
+import com.sheldondesousa.uncork.data.knowledge.WineryLocation
+import com.sheldondesousa.uncork.data.reviews.CountryReviewCount
 import com.sheldondesousa.uncork.data.reviews.VarietyCountryDigest
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 
-/** The typical style of a grape in one region, from the app's saved country/province/variety profiles. */
-data class RegionStyleFacts(
+/**
+ * The typical style of a grape in one region, from the app's saved country/province/variety profiles. These were
+ * worked out from reviewer wording, so they are what wine enthusiasts say, not verified facts about the grape.
+ */
+data class KaggleExtractedProfile(
     val body: String?,
     val tannin: String?,
     val acidity: String?,
     val flavorNotes: List<String>,
+    val province: String = "",
+    val country: String = "",
 )
 
 /**
@@ -27,8 +34,10 @@ object WineFactsNote {
     fun build(
         wine: WineSuggestion,
         grapes: GrapeLookup = GrapeLookup.NONE,
-        region: RegionStyleFacts? = null,
+        regionStyles: List<KaggleExtractedProfile> = emptyList(),
         reviews: VarietyCountryDigest? = null,
+        winery: List<WineryLocation> = emptyList(),
+        otherCountries: List<CountryReviewCount> = emptyList(),
     ): String = buildString {
         appendLine("WINE FACTS (verified for this bottle)")
         appendLine("Where this came from: ${wine.source.provenance()}")
@@ -47,49 +56,47 @@ object WineFactsNote {
         field("Critic review", wine.reviewSummary.truncated())
         field("Web summary", wine.webSummary.truncated())
 
+        if (winery.isNotEmpty()) {
+            appendLine()
+            appendLine("Wineries_Directory (a reference list of wineries and their regions; not complete)")
+            winery.forEach { appendLine("- ${it.winery}: ${it.region}, ${it.country}") }
+        }
+
         if (grapes.grapes.isNotEmpty()) {
             appendLine()
-            appendLine("GRAPE NOTES (about the grape in general, not this bottle)")
+            appendLine("Grape_Profile_Internal (about the grape in general, not this bottle)")
             grapes.blendNote?.let { appendLine(it) }
             grapes.grapes.take(MAX_GRAPES).forEach { appendGrape(it) }
         } else if (grapes.blendNote != null) {
             appendLine()
-            appendLine("GRAPE NOTES")
+            appendLine("Grape_Profile_Internal")
             appendLine(grapes.blendNote)
         } else {
             appendLine()
-            appendLine("GRAPE NOTES")
+            appendLine("Grape_Profile_Internal")
             appendLine("None available for this variety. Use general knowledge only if you are confident, and say so if not.")
         }
 
-        if (region != null && (region.body != null || region.tannin != null || region.acidity != null || region.flavorNotes.isNotEmpty())) {
+        // Order of trust for body, tannin and acidity: the grape notes first. Region style (what enthusiasts say) is
+        // only given when there are no grape notes; if neither exists the model uses its own knowledge.
+        if (grapes.grapes.isEmpty() && regionStyles.any { it.hasAnyValue() }) {
             appendLine()
-            appendLine("REGION STYLE (typical pattern for this grape in this region, not this bottle)")
-            field("Typical body", region.body)
-            field("Typical tannin", region.tannin)
-            field("Typical acidity", region.acidity)
-            field("Typical flavours", region.flavorNotes.joinToString(", "))
+            append(kaggleExtractedBlock(regionStyles, wine.variety))
+            appendLine()
+        }
+
+        if (otherCountries.isNotEmpty()) {
+            appendLine()
+            appendLine(
+                "OTHER COUNTRIES with the most reviews of this grape (after you answer about this wine, offer to tell the user " +
+                    "about the grape from one of these): " +
+                    otherCountries.joinToString(", ") { "${it.country} (${it.reviewCount} reviews)" },
+            )
         }
 
         if (reviews != null && !reviews.isEmpty) {
             appendLine()
-            appendLine(
-                "WHAT WINE ENTHUSIASTS SAY (an even sample of critic reviews of ${reviews.variety} from " +
-                    "${reviews.country}: the same number from the highest-scored, middle and lowest-scored thirds. " +
-                    "About the grape in that country, not this bottle)",
-            )
-            val average = reviews.averagePoints?.let { " average_score=\"${"%.1f".format(java.util.Locale.ROOT, it)}\"" }.orEmpty()
-            appendLine("<reviews variety=\"${reviews.variety}\" country=\"${reviews.country}\" total=\"${reviews.totalReviews}\"$average>")
-            reviews.bands.filter { it.reviews.isNotEmpty() }.forEach { band ->
-                val range = if (band.minPoints != null && band.maxPoints != null) " points=\"${band.minPoints}-${band.maxPoints}\"" else ""
-                appendLine("<band name=\"${band.name}\"$range sampled=\"${band.reviews.size}\" of=\"${band.poolSize}\">")
-                band.reviews.forEach { review ->
-                    val score = review.points?.let { ", $it" }.orEmpty()
-                    appendLine("- [${review.province}$score] ${review.excerpt}")
-                }
-                appendLine("</band>")
-            }
-            appendLine("</reviews>")
+            append(reviewsBlock(reviews))
         }
     }.trimEnd()
 
@@ -111,7 +118,71 @@ object WineFactsNote {
 
     private fun isKnown(value: String) = value.isNotBlank() && !value.equals("Unknown", ignoreCase = true)
 
-    private fun StringBuilder.appendGrape(grape: GrapeKnowledge) {
+    private fun KaggleExtractedProfile.hasAnyValue() =
+        !body.isNullOrBlank() || !tannin.isNullOrBlank() || !acidity.isNullOrBlank()
+
+    /** "full*" means thin evidence in the saved profiles; say so in words and drop the asterisk. */
+    private fun String.styleWords(): String =
+        if (endsWith("*")) "${removeSuffix("*")} (limited evidence)" else this
+
+    /**
+     * Region style for a grape: what wine enthusiasts say about body, tannin and acidity in a country, one line per
+     * province. The heading tells the model to credit enthusiasts and not state it as fact.
+     */
+    fun kaggleExtractedBlock(styles: List<KaggleExtractedProfile>, grape: String): String = buildString {
+        val rows = styles.filter { it.hasAnyValue() }
+        val country = rows.firstOrNull()?.country.orEmpty()
+        val place = if (country.isNotBlank()) " in $country" else ""
+        appendLine(
+            "Grape_Profile_Kaggle_Extracted: what wine enthusiasts say about $grape$place (worked out from reviewer wording; NOT verified " +
+                "grape facts, so credit enthusiasts when you use it, for example \"Wine enthusiasts say...\")",
+        )
+        rows.forEach { style ->
+            val label = style.province.takeIf { it.isNotBlank() } ?: "Overall"
+            val parts = buildList {
+                style.body?.takeIf { it.isNotBlank() }?.let { add("body ${it.styleWords()}") }
+                style.tannin?.takeIf { it.isNotBlank() }?.let { add("tannin ${it.styleWords()}") }
+                style.acidity?.takeIf { it.isNotBlank() }?.let { add("acidity ${it.styleWords()}") }
+                if (style.flavorNotes.isNotEmpty()) add("flavours ${style.flavorNotes.joinToString(", ")}")
+            }
+            appendLine("- $label: ${parts.joinToString("; ")}")
+        }
+    }.trimEnd()
+
+    /** The even review sample, with a heading and tags. Sent only when the user asks what people say. */
+    fun reviewsBlock(reviews: VarietyCountryDigest): String = buildString {
+        appendLine(
+            "WHAT WINE ENTHUSIASTS SAY (an even sample of critic reviews of ${reviews.variety} from " +
+                "${reviews.country}: the same number from the highest-scored, middle and lowest-scored thirds. " +
+                "About the grape in that country, not this bottle)",
+        )
+        val average = reviews.averagePoints?.let { " average_score=\"${"%.1f".format(java.util.Locale.ROOT, it)}\"" }.orEmpty()
+        appendLine("<reviews variety=\"${reviews.variety}\" country=\"${reviews.country}\" total=\"${reviews.totalReviews}\"$average>")
+        reviews.bands.filter { it.reviews.isNotEmpty() }.forEach { band ->
+            val range = if (band.minPoints != null && band.maxPoints != null) " points=\"${band.minPoints}-${band.maxPoints}\"" else ""
+            appendLine("<band name=\"${band.name}\"$range sampled=\"${band.reviews.size}\" of=\"${band.poolSize}\">")
+            band.reviews.forEach { review ->
+                val score = review.points?.let { ", $it" }.orEmpty()
+                appendLine("- [${review.province}$score] ${review.excerpt}")
+            }
+            appendLine("</band>")
+        }
+        appendLine("</reviews>")
+    }.trimEnd()
+
+    /** Entries from the Wineries_Directory, sent in front of a question about wineries. */
+    fun wineriesBlock(wineries: List<WineryLocation>, what: String): String = buildString {
+        appendLine("Wineries_Directory ($what; the directory is a reference list and is not complete)")
+        wineries.forEach { appendLine("- ${it.winery}: ${it.region}, ${it.country}") }
+    }.trimEnd()
+
+    /** Notes for grapes the user asked about, sent in front of that question. */
+    fun grapeBlock(grapes: List<InternalGrapeProfile>): String = buildString {
+        appendLine("Grape_Profile_Internal (about the grape(s) the user just asked about, from the grape notes list)")
+        grapes.forEach { appendGrape(it) }
+    }.trimEnd()
+
+    private fun StringBuilder.appendGrape(grape: InternalGrapeProfile) {
         appendLine("- ${grape.grape} (${grape.colour.lowercase()}): ${grape.summary}")
         listOf(
             "Body" to grape.body, "Acidity" to grape.acidity, "Tannin" to grape.tannin,

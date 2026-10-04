@@ -793,12 +793,13 @@ class GemmaConversationResponder(
     private val WARM_UP_TASK =
         "<task>Read everything above and get ready to chat about this wine. Reply with only the word READY.</task>"
 
-    fun startWineDiscussion(factsNote: String, reminder: String = ""): WineDiscussion =
-        WineDiscussion(factsNote, reminder)
+    fun startWineDiscussion(factsNote: String, reminder: String = "", extras: AskExtras? = null): WineDiscussion =
+        WineDiscussion(factsNote, reminder, extras)
 
     inner class WineDiscussion internal constructor(
         private val factsNote: String,
         private val reminder: String,
+        private val extras: AskExtras?,
     ) : ConversationResponder, AutoCloseable {
         private var conversation: Conversation? = null
         private var factsSent = false
@@ -842,6 +843,7 @@ class GemmaConversationResponder(
                     conversation = null
                 }
                 factsSent = false
+                extras?.reset()
             }
             var response = try {
                 answer(query, onUpdate)
@@ -865,11 +867,14 @@ class GemmaConversationResponder(
 
         private suspend fun answer(query: String, onUpdate: (ConversationStreamUpdate) -> Unit): String {
             // Until the facts have been read, they go right before the question. After that, a short reminder
-            // does, since the first message is by then far behind the model's close-reading window.
+            // does, since the first message is by then far behind the model's close-reading window. Extra context
+            // (the broader reviews, notes for another grape) sits right in front of the question that needs it.
+            val extra = runCatching { extras?.forQuestion(query) }.getOrNull()
+                ?.let { "<more_context>\n$it\n</more_context>\n" }.orEmpty()
             val message = when {
-                !factsSent -> "$factsNote\n\nThe user says: $query"
-                reminder.isNotBlank() -> "$reminder\nThe user says: $query"
-                else -> query
+                !factsSent -> "$factsNote\n\n${extra}The user says: $query"
+                reminder.isNotBlank() -> "$reminder\n${extra}The user says: $query"
+                else -> "$extra$query"
             }
             return send(message, onUpdate).also { reply ->
                 factsSent = true
