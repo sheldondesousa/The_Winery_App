@@ -22,6 +22,17 @@ interface WineReviewDataSource {
         seed: Long = 0L,
     ): VarietyCountryDigest? = null
 
+    /**
+     * A small, unranked sample of wineries that have reviews of a grape (all its spellings), optionally in one country.
+     * [totalWineries] is how many such wineries exist. The sample is spread by a seeded hash, not by score or alphabet.
+     */
+    suspend fun wineriesFor(
+        varietyNames: List<String>,
+        country: String?,
+        limit: Int = 8,
+        seed: Long = 0L,
+    ): GrapeWineriesSample? = null
+
     /** Other countries with the most reviews of this grape, to offer the user. */
     suspend fun topCountriesFor(
         varietyNames: List<String>,
@@ -51,7 +62,12 @@ data class WineSelectionCriteria(
             .any { !it.isNullOrBlank() }
 }
 
+/** A winery that has reviews of a grape in the reviews database, with how many. */
+data class GrapeWinery(val winery: String, val country: String, val province: String, val reviewCount: Int)
+
 data class CountryReviewCount(val country: String, val reviewCount: Int)
+
+data class GrapeWineriesSample(val wineries: List<GrapeWinery>, val totalWineries: Int)
 
 data class GuidedReviewPage(
     val reviews: List<GuidedReviewMatch>,
@@ -195,6 +211,32 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
                 )
             }
         }
+    }
+
+    override suspend fun wineriesFor(
+        varietyNames: List<String>,
+        country: String?,
+        limit: Int,
+        seed: Long,
+    ): GrapeWineriesSample? {
+        val names = varietyNames.filter { it.isNotBlank() }.distinct()
+        if (names.isEmpty()) return null
+        val countryClause = if (country.isNullOrBlank()) "" else " AND country=? COLLATE NOCASE"
+        val args = arrayOf(*names.toTypedArray(), *(if (country.isNullOrBlank()) emptyArray() else arrayOf(country)))
+        val all = withContext(Dispatchers.IO) {
+            installer.ensureInstalled().openReadOnly().use { database ->
+                database.rawQuery(
+                    "SELECT winery, country, MIN(province), COUNT(*) FROM wine_reviews " +
+                        "WHERE variety COLLATE NOCASE IN (${names.joinToString(",") { "?" }}) AND winery<>''$countryClause " +
+                        "GROUP BY winery, country",
+                    args,
+                ).use { c -> buildList { while (c.moveToNext()) add(GrapeWinery(c.getString(0), c.getString(1), c.getString(2).orEmpty(), c.getInt(3))) } }
+            }
+        }
+        if (all.isEmpty()) return null
+        val multiplier = GuidedReviewQuery.hashMultiplier(seed)
+        val spread = all.sortedBy { (it.winery.lowercase().hashCode().toLong() and 0x7fffffffL) * multiplier % 2147483647L }
+        return GrapeWineriesSample(spread.take(limit.coerceIn(1, 12)), all.size)
     }
 
     override suspend fun topCountriesFor(

@@ -4,6 +4,7 @@ import com.sheldondesousa.uncork.data.knowledge.InternalGrapeProfile
 import com.sheldondesousa.uncork.data.knowledge.GrapeLookup
 import com.sheldondesousa.uncork.data.knowledge.WineryLocation
 import com.sheldondesousa.uncork.data.reviews.CountryReviewCount
+import com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample
 import com.sheldondesousa.uncork.data.reviews.VarietyCountryDigest
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
@@ -170,6 +171,16 @@ object WineFactsNote {
     fun otherCountriesLine(countries: List<CountryReviewCount>): String =
         "OTHER COUNTRIES with the most reviews of this grape (after you answer, offer to tell the user about the grape from one of these): " +
             countries.joinToString(", ") { "${it.country} (${it.reviewCount} reviews)" }
+
+    /** Wineries that have reviews of a grape: a small unranked sample, never "the best". */
+    fun grapeWineriesBlock(grape: String, country: String?, sample: GrapeWineriesSample): String = buildString {
+        val where = country?.takeIf { it.isNotBlank() }?.let { " in $it" }.orEmpty()
+        appendLine(
+            "WINERIES WITH $grape REVIEWS (a small, unranked sample of the ${sample.totalWineries} wineries$where that have " +
+                "reviews of this grape in the reviews database; not the best wineries and not a complete list)",
+        )
+        sample.wineries.forEach { appendLine("- ${it.winery} (${it.province}, ${it.country}; ${it.reviewCount} review${if (it.reviewCount == 1) "" else "s"})") }
+    }.trimEnd()
 
     /** Entries from the Wineries_Directory, sent in front of a question about wineries. */
     fun wineriesBlock(wineries: List<WineryLocation>, what: String): String = buildString {

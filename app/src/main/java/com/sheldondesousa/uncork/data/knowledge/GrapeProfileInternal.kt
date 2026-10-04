@@ -151,11 +151,15 @@ class GrapeProfileInternal(entries: List<InternalGrapeProfile>) {
         private fun gsm(label: String) = listOf("Grenache", "Syrah", "Mourvèdre") to
             "$label wines are typically Grenache, Syrah and Mourvèdre; the exact grapes in this bottle are not known."
 
+        private val COMBINING_MARKS = Regex("\\p{Mn}+")
+        private val NOT_ALPHANUMERIC = Regex("[^a-z0-9]+")
+
+        // Called tens of thousands of times when the winery directory is built, so the patterns are compiled once.
         internal fun normalize(value: String): String =
             Normalizer.normalize(value, Normalizer.Form.NFD)
-                .replace(Regex("\\p{Mn}+"), "")
+                .replace(COMBINING_MARKS, "")
                 .lowercase()
-                .replace(Regex("[^a-z0-9]+"), " ")
+                .replace(NOT_ALPHANUMERIC, " ")
                 .trim()
 
         private fun keysOf(entry: InternalGrapeProfile): List<String> {

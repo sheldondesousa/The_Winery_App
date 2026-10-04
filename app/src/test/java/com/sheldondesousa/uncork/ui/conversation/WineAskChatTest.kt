@@ -12,7 +12,7 @@ class WineAskChatTest {
         assertEquals(
             "Hi! I'm Uncork, your AI sommelier. I can help you with questions about **Estate Syrah 2018**.\n\n" +
                 "%%I can help you with:%%\n" +
-                "• Grape information\n• Flavours and aromas\n• Wineries\n• Consumer reviews\n• Wine production",
+                "• Grape Varieties\n• Flavours and aromas\n• Wineries\n• Consumer reviews\n• Wine production",
             welcome.text,
         )
         assertTrue(welcome.quickReplies.isEmpty())

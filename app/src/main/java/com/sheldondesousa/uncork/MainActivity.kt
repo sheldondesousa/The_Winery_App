@@ -103,9 +103,12 @@ class MainActivity : ComponentActivity() {
                 synthesizer = gemmaResponder::synthesizeWebResults,
             )
         }
+        val wineriesDirectory = WineriesDirectoryProvider(applicationContext)
+        // Reading the 30,000-winery list takes a moment, so do it now in the background, not when Ask first opens.
+        lifecycleScope.launch(Dispatchers.IO) { runCatching { wineriesDirectory.get() } }
         val askContext = WineAskContext(
             GrapeProfileInternal.load(applicationContext), wineOptionCache, wineReviewRepository,
-            WineriesDirectoryProvider(applicationContext),
+            wineriesDirectory,
         )
         // Chat's open conversation gets the same on-demand lookups as Ask.
         gemmaResponder.attachCuriousExtras(askContext.extrasForChat())
@@ -281,23 +284,29 @@ class MainActivity : ComponentActivity() {
                                     !wine.ai.profileComplete
                                 ) gemmaResponder::enrichWineDetails else null,
                                 onAsk = {
-                                    askScope.launch {
-                                        val suggestion = wine.toWineSuggestion()
-                                        val facts = askContext.factsFor(suggestion)
-                                        closeAsk()
-                                        val discussion = gemmaResponder.startWineDiscussion(
-                                            facts, WineFactsNote.reminder(suggestion), askContext.extrasFor(suggestion),
-                                        )
-                                        askSession = AskSession(
-                                            wine = wine,
-                                            discussion = discussion,
-                                            state = ConversationSessionState(
-                                                WineAskChat.initialMessages(suggestion.name),
-                                            ),
-                                        )
-                                        // Gemma reads the wine's facts while the user reads the welcome and types.
-                                        discussion.warmUp()
-                                    }
+                                    // Open the chat straight away with its welcome message; the wine's facts are looked
+                                    // up in the background while the user reads it.
+                                    val suggestion = wine.toWineSuggestion()
+                                    closeAsk()
+                                    val discussion = gemmaResponder.startWineDiscussion(
+                                        factsProvider = {
+                                            val startedAt = System.nanoTime()
+                                            runCatching { askContext.factsFor(suggestion) }
+                                                .getOrElse { WineFactsNote.build(suggestion) }
+                                                .also {
+                                                    Log.d("UncorkFlow", "Ask facts ready in ${(System.nanoTime() - startedAt) / 1_000_000} ms (${it.length} chars)")
+                                                }
+                                        },
+                                        reminder = WineFactsNote.reminder(suggestion),
+                                        extras = askContext.extrasFor(suggestion),
+                                    )
+                                    askSession = AskSession(
+                                        wine = wine,
+                                        discussion = discussion,
+                                        state = ConversationSessionState(WineAskChat.initialMessages(suggestion.name)),
+                                    )
+                                    // Gemma reads the wine's facts while the user reads the welcome and types.
+                                    askScope.launch { discussion.warmUp() }
                                 },
                             )
                         }

@@ -493,6 +493,32 @@ class ChatExtrasTest {
         assertTrue(block.contains(": Mendoza, Argentina"))
     }
 
+    @Test fun listOfWineriesForAGrapeComesFromTheReviewsAndIsLabelledUnranked() = kotlinx.coroutines.runBlocking {
+        val calls = mutableListOf<Pair<List<String>, String?>>()
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(
+            listOf(
+                com.sheldondesousa.uncork.data.reviews.GrapeWinery("Château Example", "France", "Bordeaux", 4),
+                com.sheldondesousa.uncork.data.reviews.GrapeWinery("Solo Cellars", "France", "Loire Valley", 1),
+            ),
+            totalWineries = 120,
+        )
+        val extras = WineAskExtras(
+            knowledge = base,
+            loadGrapeWineries = { spellings, country -> calls += spellings to country; sample },
+            loadReviews = { _, _ -> null },
+        )
+        val block = extras.forQuestion("Can you give me a list of wineries for merlot?")!!
+        assertEquals(listOf(listOf("Merlot") to null), calls)
+        assertTrue(block.contains("WINERIES WITH Merlot REVIEWS (a small, unranked sample of the 120 wineries"))
+        assertTrue(block.contains("not the best wineries and not a complete list"))
+        assertTrue(block.contains("- Château Example (Bordeaux, France; 4 reviews)"))
+        assertTrue(block.contains("- Solo Cellars (Loire Valley, France; 1 review)"))
+        assertNull(extras.forQuestion("Any more wineries for merlot?"))
+        val inFrance = extras.forQuestion("wineries for merlot in France")!!
+        assertEquals("France", calls.last().second)
+        assertTrue(inFrance.contains("wineries in France"))
+    }
+
     @Test fun ordinaryWineQuestionsAddNothing() = kotlinx.coroutines.runBlocking {
         assertNull(chatExtras().forQuestion("How is wine made?"))
     }

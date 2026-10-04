@@ -46,6 +46,7 @@ class WineAskContext(
             loadKaggleExtracted = { grapeSpellings, country -> kaggleExtractedFor(grapeSpellings, country, preferredProvince = "") },
             loadWineries = wineries?.let { provider -> { provider.get() } },
             loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
+            loadGrapeWineries = { grapeSpellings, country -> grapeWineries(grapeSpellings, country) },
             loadReviews = { grapeSpellings, country -> reviewSample(grapeSpellings, country) },
         )
     }
@@ -58,11 +59,15 @@ class WineAskContext(
         loadKaggleExtracted = { grapeSpellings, country -> kaggleExtractedFor(grapeSpellings, country, preferredProvince = "") },
         loadWineries = wineries?.let { provider -> { provider.get() } },
         loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
+        loadGrapeWineries = { grapeSpellings, country -> grapeWineries(grapeSpellings, country) },
         loadReviews = { grapeSpellings, country -> reviewSample(grapeSpellings, country) },
     )
 
     private suspend fun reviewSample(spellings: List<String>, country: String) =
         reviews.digestFor(spellings, country, seed = sampleSeed(spellings.first(), country))
+
+    private suspend fun grapeWineries(spellings: List<String>, country: String?) =
+        reviews.wineriesFor(spellings, country, seed = sampleSeed(spellings.first(), country.orEmpty()))
 
     private suspend fun otherCountriesFor(spellings: List<String>, country: String) =
         reviews.topCountriesFor(spellings, excludeCountry = country)

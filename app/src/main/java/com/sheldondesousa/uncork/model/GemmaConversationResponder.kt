@@ -810,16 +810,25 @@ class GemmaConversationResponder(
     private val WARM_UP_TASK =
         "<task>Read everything above and get ready to chat about this wine. Reply with only the word READY.</task>"
 
-    fun startWineDiscussion(factsNote: String, reminder: String = "", extras: AskExtras? = null): WineDiscussion =
-        WineDiscussion(factsNote, reminder, extras)
+    fun startWineDiscussion(
+        factsProvider: suspend () -> String,
+        reminder: String = "",
+        extras: AskExtras? = null,
+    ): WineDiscussion = WineDiscussion(factsProvider, reminder, extras)
 
     inner class WineDiscussion internal constructor(
-        private val factsNote: String,
+        private val factsProvider: suspend () -> String,
         private val reminder: String,
         private val extras: AskExtras?,
     ) : ConversationResponder, AutoCloseable {
         private var conversation: Conversation? = null
         private var factsSent = false
+
+        // The facts note is built in the background after the Ask screen has opened, so the screen is never held up
+        // by the database lookups. Whichever of the warm-up or the first question needs it first builds it once.
+        private var factsNote: String? = null
+
+        private suspend fun facts(): String = factsNote ?: factsProvider().also { factsNote = it }
 
         // A rough running estimate (about 4 characters per token) of how much of the context window this chat has
         // used: the rules, every message sent and every reply. The runtime does not report real token counts.
@@ -839,7 +848,7 @@ class GemmaConversationResponder(
             requestMutex.withLock {
                 if (factsSent) return
                 runCatching {
-                    val message = "$factsNote\n\n$WARM_UP_TASK"
+                    val message = "${facts()}\n\n$WARM_UP_TASK"
                     val reply = send(message) {}
                     factsSent = true
                     noteUsage("warm-up", message.length, reply.length)
@@ -889,7 +898,7 @@ class GemmaConversationResponder(
             val extra = runCatching { extras?.forQuestion(query) }.getOrNull()
                 ?.let { "<more_context>\n$it\n</more_context>\n" }.orEmpty()
             val message = when {
-                !factsSent -> "$factsNote\n\n${extra}The user says: $query"
+                !factsSent -> "${facts()}\n\n${extra}The user says: $query"
                 reminder.isNotBlank() -> "$reminder\n${extra}The user says: $query"
                 else -> "$extra$query"
             }

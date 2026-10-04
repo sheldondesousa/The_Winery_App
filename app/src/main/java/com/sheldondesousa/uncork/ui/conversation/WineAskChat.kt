@@ -10,7 +10,7 @@ object WineAskChat {
 
     /** What the sommelier can help with, shown to the user. Food pairings are out of scope for now. */
     val TOPICS = listOf(
-        "Grape information",
+        "Grape Varieties",
         "Flavours and aromas",
         "Wineries",
         "Consumer reviews",

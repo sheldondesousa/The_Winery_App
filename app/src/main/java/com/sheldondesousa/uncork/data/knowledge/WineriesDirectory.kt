@@ -16,20 +16,23 @@ data class WineryLocation(val winery: String, val country: String, val region: S
  * "not real".
  */
 class WineriesDirectory(entries: List<WineryLocation>) {
+    private class Keyed(val entry: WineryLocation, val name: String, val country: String, val region: String)
+
+    // Each entry is normalised once; the lookups below all reuse these keys.
+    private val keyed: List<Keyed> = entries.map {
+        Keyed(it, GrapeProfileInternal.normalize(it.winery), GrapeProfileInternal.normalize(it.country), GrapeProfileInternal.normalize(it.region))
+    }
     private val byName: Map<String, List<WineryLocation>> =
-        entries.groupBy { GrapeProfileInternal.normalize(it.winery) }
+        keyed.groupBy({ it.name }, { it.entry })
 
     val size: Int = entries.size
 
     private val byPlace: Map<Pair<String, String>, List<WineryLocation>> =
-        entries.groupBy { GrapeProfileInternal.normalize(it.country) to GrapeProfileInternal.normalize(it.region) }
+        keyed.groupBy({ it.country to it.region }, { it.entry })
     private val byCountry: Map<String, List<WineryLocation>> =
-        entries.groupBy { GrapeProfileInternal.normalize(it.country) }
+        keyed.groupBy({ it.country }, { it.entry })
     private val regionNames: Map<String, Set<String>> = buildMap<String, MutableSet<String>> {
-        entries.forEach { e ->
-            val region = GrapeProfileInternal.normalize(e.region)
-            if (region.isNotBlank()) getOrPut(region) { mutableSetOf() } += GrapeProfileInternal.normalize(e.country)
-        }
+        keyed.forEach { k -> if (k.region.isNotBlank()) getOrPut(k.region) { mutableSetOf() } += k.country }
     }
 
     /**

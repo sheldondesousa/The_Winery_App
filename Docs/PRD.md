@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Author:** Sheldon
-**Last updated:** 28 September 2026
+**Last updated:** 4 October 2026
 **Platform:** Android only, native (Kotlin) — matches your Pixel 10 Pro Fold
 **On-device model:** Gemma 4 E2B instruction-tuned LiteRT-LM bundle, downloaded from Hugging Face on first launch and stored in private app storage (not Gemini Nano/AICore)
 **User:** Personal use (single user); BYOK model if ever shared
@@ -11,16 +11,19 @@
 
 A personal mobile app that recommends wine (and optionally cheese) pairings through a conversational interface. Chat opens with a Kotlin-owned mode choice — **curious about wines and pairings** or **find a wine** — rather than an open-ended greeting. Choosing "find a wine" drives a fixed, entirely Kotlin-owned Q1 (type) → Q2 (country/province) → Q3 (taste: body, tannin, acidity, sweetness) sequence: each answer is matched deterministically against curated keyword vocabularies (no model call), explicit lack-of-preference answers are valid, and an unrecognized answer either repeats the question with an apology or, when it reads as a genuine tangent or wine question, gets a brief on-device Gemma reply before the pending question is re-asked. Once Q1-Q3 all resolve, Kotlin builds the Kaggle query directly from the recorded preferences and runs it concurrently with a short-lived Gemma card-synthesis call; the cache is queried once Kaggle completes. Every response — hit or miss — is followed by a standing offer to run a broader web search, which only runs if accepted (AC10c). Newly resolved web-search profile data is written to the growing on-device `VarietyRegionProfile` Room table with source `web_search`, after checking it isn't already covered by Kaggle (AC10f). Choosing "curious about wines and pairings" instead hands the conversation to a persistent, open-ended Gemma chat scoped to wine topics; an explicit mid-chat request can switch from curious mode into the Q1-Q3 flow (the reverse direction is not currently implemented).
 
-Find is the default entry point, accepting any combination of Type, Location, Sweetness, Tannin, Body, and Acidity selections. It queries on-device Gemma and the bundled database independently, with no Chat fallback, profile-cache access, web search, or automatic History recording. See Section 6A.
+**Revision, 2–4 October 2026:** Find no longer uses Gemma. Its results come from stored data only (the reviews database, then the Extended db, with an on-demand Brave web search) and are presented in two score tabs. Chat's "find a wine" flow hands its answers to that same Results page. A new **Ask** conversation on each wine's Profile Page, and Chat's open conversation, give Gemma on-demand access to the app's reference data (Section 4, Section 6B). Sections 6, 6A and 6B carry the details; where an older statement below conflicts, the revision sections win.
+
+Find is the default entry point, accepting any combination of Type, Variety, Location, Tannin, Body, and Acidity selections (Sweetness was removed on 4 October 2026). It queries on-device Gemma and the bundled database independently, with no Chat fallback, profile-cache access, web search, or automatic History recording. See Section 6A.
 
 ## 2. MVP Scope
 
-Five screens:
+Six screens:
 1. Splash Screen
-2. Find
+2. Find (form and Results page)
 3. Main Conversation Screen
 4. Profile Page
-5. My List
+5. Ask (the AI sommelier conversation opened from a Profile Page — Section 6B)
+6. My List
 
 ## 3. Out of Scope (this MVP)
 
@@ -79,6 +82,22 @@ The Profile Page renders the shared factual fields for every option, followed by
 Implementations must preserve these strings as supplied. They must not model the fields as a Kotlin enum, sealed class, or another type restricted to `light`, `medium`, `full`, and `Unknown`.
 
 For category-level requests such as "Malbec," the AI may use learned knowledge to provide typical variety characteristics even when no exact bottle is identified. Bottle-specific winery, vintage, critic rating, or provenance claims remain `Unknown` unless a separate source supplies them. Critic rating must come from a real Kaggle match.
+
+### Reference data sources — names and roles (4 October 2026)
+
+| Name | What it is | Where it lives | Used for |
+|---|---|---|---|
+| **Reviews database** | About 119,030 critic reviews: wine, winery, country, province, variety, points (80–100), review text, and the precomputed body/tannin/acidity labels | Bundled SQLite `wine_reviews.db`, copied to app storage on first launch | Find's Reviews results; a wine's own facts; the even review sample; wineries that have reviews of a grape; the other-countries offer |
+| **Grape_Profile_Internal** | 69 curated grape entries (35 red, 34 white; 65 of the 404 single grapes): summary, body, acidity, tannin, sweetness, alcohol band, aromas, flavours, ageing, origin, key regions. Written in the project's own words; carries no source references | `assets/knowledge/grape_profile_internal.jsonl`, read into memory at startup (copy in `Docs/RAG/`) | The trusted source for a grape's characteristics |
+| **Grape_Profile_Kaggle_Extracted** | 4,119 country/province/variety profiles (body, tannin, acidity, flavour notes) extracted from reviewer wording; a trailing `*` means thin evidence; about a quarter have no body/tannin/acidity | `assets/grape_profile_kaggle_extracted.json`, seeded into the Room table `VarietyRegionProfile` on first launch | The fallback when a grape has no internal profile, or for another country; always credited to people ("Wine enthusiasts say…"), never stated as fact |
+| **Wineries_Directory** | About 30,450 wineries with country and region (cleaned from 30,589 rows) | `assets/knowledge/wineries_directory.csv`, loaded in the background at app start (original in `Docs/Wineries_Directory.csv`) | A winery's location; unranked samples of wineries in a place |
+| **Extended db** | Saved web-search results (the `web_search` rows of `VarietyRegionProfile`); starts empty | Same Room table as the Kaggle profiles, kept apart by the `source` column | Extended db sections in Find and Chat |
+
+**Order of trust for body, tannin and acidity:** Grape_Profile_Internal first; only if the grape has no internal profile, Grape_Profile_Kaggle_Extracted, credited to enthusiasts; only if neither has it, Gemma's own knowledge, flagged as general knowledge.
+
+**Variety list (4 October 2026).** The 701 raw `variety` values reduce to **404 single grapes** once aliases are merged (Syrah/Shiraz, Grenache/Garnacha, Pinot Gris/Pinot Grigio, Zinfandel/Primitivo and others), plus 189 blends, 8 style labels and 2 stray entries. The 404 power Find's Variety picker, ordered by number of reviews. The audit is in `Docs/varieties_merged.csv`.
+
+**Country names.** The saved profiles used "US" and "England" where the reviews database, Find, Chat and the Wineries_Directory use "United States" and "United Kingdom". The seed file was corrected (752 rows) and Room migration 3→4 renames existing rows; Chat's country aliases now resolve to the standard names.
 
 ### Country-province-variety profile storage
 
@@ -153,6 +172,12 @@ These rules apply to Chat. Find uses the independent rules in Section 6A.
 ## 6. Main Conversation Screen
 
 **Purpose:** Single chat-style interface, casual and personable in tone. The deterministic Q1-Q3 flow targets three option cards once it completes and requires at least one. Gemma's card synthesis and the Kaggle database query run concurrently the moment Q1-Q3 closes, using Kotlin's own recorded preferences rather than waiting on Gemma's output; the cache is queried once Kaggle completes, and the web-search layer runs only if offered and accepted. The detailed profile loads on the Profile Page.
+
+### Revision — 4 October 2026 (supersedes the older statements below where they conflict)
+
+- **Q3 no longer asks about sweetness.** It lists Body, Tannin and Acidity only; a stray "sweet" or "bone-dry" in an answer is not read as a choice. Chat's Q1 type "sweet" still exists and becomes a Sweet filter when handed to the Results page.
+- **Hand-off to the shared Results page.** When Q1-Q3 resolve, Chat converts the recorded answers into the same selections as the Find form (`WinePreferences.toGuidedCriteria()`) and opens Find's Results page. No Gemma card synthesis runs for Chat results; the chat's own multi-source path remains only as a fallback when the answers cannot be converted.
+- **Open conversation ("curious about wines") has lookups.** It uses the same on-demand extras as Ask (Section 6B): grape profiles, Kaggle-extracted style (credited to enthusiasts), an even review sample (the grape and country come from the question; if either is missing Gemma is told to ask), the other-countries offer, Wineries_Directory entries, and wineries that have reviews of a named grape. `curious_chat_instruction.txt` gained a Lookups section with the order of trust. Pairings stay out of scope.
 
 ### Navigation & Display
 - **AC1:** Given the app has passed splash, when the Main Conversation Screen loads, then a persistent text input is displayed at the bottom of the screen.
@@ -275,6 +300,17 @@ On-device timing diagnostics (`Docs/Gemma-Timing-Diagnostics.md`) measured Chat'
 
 ## 6A. Find
 
+### Revision — 3–4 October 2026 (supersedes the items marked "Superseded" below)
+
+- **Header and layout.** The form opens with the H2 "Enter a Spec" and "Choose your preference"; section titles ("Wine Style & Origin", "Taste Profile") are H3. The filter-count pill has no background. **Sweetness was removed.** Taste Profile is Body | Tannin, then Acidity.
+- **Variety filter.** A new single-select Variety tile under Type lists the 404 single grapes, most common first. A selection matches every merged database spelling at once (`GrapeVarieties`, `GuidedReviewQuery`), counts as a filter, and appears in the tags and the web-search query. Type and Variety can contradict each other (for example Red and Chardonnay) and then return nothing.
+- **Gemma removed from Find.** The AI Sommelier section, its loading placeholders, retry and "Model setup" button are gone; Find shows stored data only. AI Sommelier is for Chat and Ask.
+- **Results page.** Tags are plain text separated by " | " with a right-aligned **Web Search** button in the same row. Below: score tabs **91–100 pts** (default) and **80–90 pts**, one Sort menu (Top ranked, By Country, By Variety — it reorders the loaded rows), a pulsing skeleton while loading, ten wines per tab with a **More** button (offset paging, one extra row fetched to detect more), then **Extended db**, then Web Search results only after the button is tapped. Section order everywhere is AI Sommelier (Chat), Reviews, Extended db, Web Search; "Reviewed Wines" is now "Reviews" and "Cache db" is "Extended db".
+- **Unbiased ranking.** Results rank by points; wines with equal points are ordered by a seeded hash of the id, with a fresh seed per search and stable across paging, instead of alphabetically by winery.
+- **Web Search.** Runs Brave on demand for the submitted selections; failure or a missing key shows "Web Search could not be completed" with Try Again. Find's web results are not yet saved to the Extended db (only Chat's are).
+- **Extended db in Find.** Runs automatically with each search against the saved web results, matching type, country, province, variety, body, tannin and acidity. It shows "No results found" when a sweetness filter is present (reachable only via Chat's "sweet" type), because saved results carry no sweetness data.
+
+
 **Current design:** Find is the default tab after splash. Tab order: **Find, Chat, My List**. This supersedes the earlier Guided Selection layout, required variety/country/region choices, and ten-country shortlist.
 
 ### Layout and selection
@@ -286,7 +322,7 @@ The Find layout follows the supplied visual reference: parchment background, bur
 | **Type** | A tile that opens a bottom sheet listing Red, White, Sparkling, Rosé, Fortified as a single-select vertical list, plus an "Any type" row. Tapping a value applies it and closes the sheet immediately — there is no "select any that apply" multi-select mode and no Done button. Sweet is a Sweetness option rather than a Type. |
 | **Country** and **Province** | Two independent tiles side by side, each opening its own single-select bottom sheet (not one shared "Location" sheet). Each list is alphabetically sorted from the bundled database, with an "Any country"/"Any province" row at the top; Province narrows to the selected Country. Selecting a value applies it and closes that field's sheet immediately. Changing Country clears Province. |
 | **Taste profile** | Bold section heading with “Optional — leave blank if you're not sure.” |
-| **Sweetness** | Bone-Dry, Off-Dry, Sweet, single-select vertical list with an "Any sweetness" row. |
+| **Sweetness** | *(Removed 4 October 2026.)* Previously Bone-Dry, Off-Dry, Sweet. |
 | **Tannin** | Smooth, Moderate, Astringent, single-select vertical list with an "Any tannin" row. |
 | **Body** | Light-Bodied, Medium-Bodied, Full-Bodied (displayed without the "-Bodied" suffix), single-select vertical list with an "Any body" row. |
 | **Acidity** | Soft, Crisp, Tart, single-select vertical list with an "Any acidity" row. |
@@ -301,18 +337,18 @@ The location list is loaded directly from the bundled database, currently 43 cou
 
 ### Search and source behavior
 
-- **GS-AC1:** Find opens by default after splash and displays the sections and controls described above. No Variety selector appears.
+- **GS-AC1:** Find opens by default after splash and displays the sections and controls described above. *(Superseded 4 October 2026: a Variety selector now appears and Sweetness is gone — see the Revision above.)*
 - **GS-AC2:** Tapping the Country tile opens the alphabetically sorted country bottom sheet directly (there is no separate combined "Location" sheet). Selecting a country applies it and closes the sheet.
 - **GS-AC3:** Tapping the Province tile opens an alphabetically sorted province sheet, narrowed by Country when selected. Selecting a province applies it and closes the sheet. Changing Country clears Province.
 - **GS-AC4:** Unselected fields mean no preference and are excluded from both sources' constraints. They must not become hidden default filters.
 - **GS-AC5:** Any single selection enables Search, including Type alone, Country alone, Province alone, or any one tasting preference. An entirely empty selection disables Search.
-- **GS-AC6:** Search captures an immutable snapshot and starts on-device Gemma and Database searches independently. Both receive the same selected criteria. One source's completion, failure, or cancellation does not wait for or cancel the other. As of 27 September 2026, Gemma's results stream into the Find results list incrementally as each card resolves (`GuidedResult.Loading(cards)` carries the partial list) rather than the section staying opaque until all results are ready — the same progressive-publish behavior Chat already had (AC3-progressive).
-- **GS-AC7:** Gemma names one real, known wine per recommendation, consistent with all selected criteria. As of 27 September 2026, Find's Gemma search (`guidedSelection()`) runs on the same two-stage pipeline Chat uses (Section 6, AC3/AC4a) rather than its own dedicated prompt: the initial call uses `chat_search_instruction.txt` and returns only `name`/`country`/`province`/`variety` for up to three genuinely different, real, known wines; any attribute the user already selected on the Find form is merged in from the recorded `GuidedCriteria`/`WinePreferences` rather than requested from Gemma; the remaining profile fields (including `summary`) are generated on demand by `wine_detail_instruction.txt` the first time the card's Profile Page opens (see GS-AC10). The Find-specific `guided_instruction.txt` prompt asset is no longer referenced by any code path as a result of this change — a cleanup candidate, not documented behavior. `GuidedCriteria`'s fields were migrated from `Set<String>` to plain `String` on 25 September 2026 (see Trade-offs.md, item 8, superseded): the type itself now enforces single-select instead of relying on UI convention over a structurally multi-value type, and the now-unreachable `toggled()` multi-select helper was deleted. Validate every selected field, including Type, before displaying the recommendation. Reject contradictory/malformed output with a retryable error — including the model echoing the JSON schema's own field name back as a value, or hallucinating a markdown/URL citation in place of a name (see Bug-Log.md #7) — a valid empty recommendation array is an empty result. Do not invent a winery, critic score, or review.
-- **GS-AC8:** Database combines selected categories with AND. Each category is now a single selected value (the query builder's `classified()` helper does a plain equality match; the `IN (...)`-based OR-within-a-category union it previously built for a multi-value category was removed as unreachable once `GuidedCriteria` moved to single `String` fields — see GS-AC7). Selected Country and Province use case-insensitive equality. Type uses case-insensitive equality against the exact mapped `variety` values for the one selected type. Never infer Type from a wine name or review. An empty configured mapping returns no Database results without broadening the search. Tasting preferences use review-text phrase evidence. Return at most three matches, ranked by points descending, winery ascending, then ID ascending; null points always sort last. No keyword broadening or fallback runs.
+- **GS-AC6:** *(Superseded 4 October 2026: Find no longer starts a Gemma search; it starts the two score-tab Reviews queries and the Extended db lookup.)* Search captures an immutable snapshot and starts on-device Gemma and Database searches independently. Both receive the same selected criteria. One source's completion, failure, or cancellation does not wait for or cancel the other. As of 27 September 2026, Gemma's results stream into the Find results list incrementally as each card resolves (`GuidedResult.Loading(cards)` carries the partial list) rather than the section staying opaque until all results are ready — the same progressive-publish behavior Chat already had (AC3-progressive).
+- **GS-AC7:** *(Superseded 4 October 2026: Find has no Gemma recommendations.)* Gemma names one real, known wine per recommendation, consistent with all selected criteria. As of 27 September 2026, Find's Gemma search (`guidedSelection()`) runs on the same two-stage pipeline Chat uses (Section 6, AC3/AC4a) rather than its own dedicated prompt: the initial call uses `chat_search_instruction.txt` and returns only `name`/`country`/`province`/`variety` for up to three genuinely different, real, known wines; any attribute the user already selected on the Find form is merged in from the recorded `GuidedCriteria`/`WinePreferences` rather than requested from Gemma; the remaining profile fields (including `summary`) are generated on demand by `wine_detail_instruction.txt` the first time the card's Profile Page opens (see GS-AC10). The Find-specific `guided_instruction.txt` prompt asset is no longer referenced by any code path as a result of this change — a cleanup candidate, not documented behavior. `GuidedCriteria`'s fields were migrated from `Set<String>` to plain `String` on 25 September 2026 (see Trade-offs.md, item 8, superseded): the type itself now enforces single-select instead of relying on UI convention over a structurally multi-value type, and the now-unreachable `toggled()` multi-select helper was deleted. Validate every selected field, including Type, before displaying the recommendation. Reject contradictory/malformed output with a retryable error — including the model echoing the JSON schema's own field name back as a value, or hallucinating a markdown/URL citation in place of a name (see Bug-Log.md #7) — a valid empty recommendation array is an empty result. Do not invent a winery, critic score, or review.
+- **GS-AC8:** *(Partly superseded 4 October 2026: results are limited to a score tab, ordered by points then a seeded hash, ten per page; the Variety filter matches all merged spellings.)* Database combines selected categories with AND. Each category is now a single selected value (the query builder's `classified()` helper does a plain equality match; the `IN (...)`-based OR-within-a-category union it previously built for a multi-value category was removed as unreachable once `GuidedCriteria` moved to single `String` fields — see GS-AC7). Selected Country and Province use case-insensitive equality. Type uses case-insensitive equality against the exact mapped `variety` values for the one selected type. Never infer Type from a wine name or review. An empty configured mapping returns no Database results without broadening the search. Tasting preferences use review-text phrase evidence. Return at most three matches, ranked by points descending, winery ascending, then ID ascending; null points always sort last. No keyword broadening or fallback runs.
 - **GS-AC9:** Before searching, show guidance. After submission, Gemma and Database each render their own loading, results, or empty state as soon as ready. Both Find's and Chat's result lists share the same card layout component (`WineResultCard`) as of 27 September 2026, and Find's own result section (`GuidedSourceSection`, formerly a bespoke `ResultSection`) reuses Chat's `SourceResultCard`/`SourceQueryStatus` components rather than duplicating loading-indicator and card-list rendering.
 - **GS-AC10:** Cards open the existing Profile Page with all source fields preserved. As of 27 September 2026, a Gemma-sourced Find card is not yet `profileComplete` when it first appears — the Profile Page fires the same on-demand detail call described in Section 6, AC4a, and `summary` (along with the rest of the full profile) resolves at that point, with a per-field loading indicator shown for anything still pending. Database supplies the full Critic Review and nullable critic score; a Database card is already `profileComplete` and never triggers the on-demand call. Unavailable Database attributes remain Unknown, rather than copying search preferences as facts. No additional inference, profile-cache access, or web lookup runs beyond the one on-demand Gemma detail call above, including from My List. Explicit Save remains available.
 - **GS-AC11:** Each empty source independently shows “No matches for these selections.”
-- **GS-AC12:** A Gemma failure provides Gemma-only Retry using the submitted criteria and a route to model setup. No cloud escalation occurs.
+- **GS-AC12:** *(Superseded 4 October 2026: no Gemma in Find.)* A Gemma failure provides Gemma-only Retry using the submitted criteria and a route to model setup. No cloud escalation occurs.
 - **GS-AC13:** A Database read/parse failure presents the same empty state as zero matches; record a technical diagnostic internally.
 - **GS-AC14:** Selection edits do not change existing results. Show the submitted criteria and a message when another Search is needed. A new search resets both sections and ignores late responses from obsolete searches.
 - **GS-AC15:** Disable duplicate submission while the same criteria are running. Changed selections may start a new search. Retry cannot race a newer search.
@@ -330,8 +366,25 @@ Show the disclaimer: **“Database preferences match descriptions in critic revi
 
 ### Retained product boundaries
 
-On-device Gemma only; at most one Gemma card and three Database cards. No cloud/web fallback, `VarietyRegionProfile` access, or automatic History entries. Explicit Save uses My List. These rules are independent of Chat's fallback pipeline.
+*(Superseded 4 October 2026 — see the Revision.)* On-device Gemma only; at most one Gemma card and three Database cards. No cloud/web fallback, `VarietyRegionProfile` access, or automatic History entries. Explicit Save uses My List. These rules are independent of Chat's fallback pipeline.
 
+
+## 6B. Ask — the AI sommelier on a wine
+
+**Purpose:** An open conversation about one wine, or about wine in general, opened from the Profile Page. It is not the Find-a-wine chat: no mode choice, no Q1-Q3.
+
+### Behaviour
+- **ASK-AC1:** Tapping **Ask** on the Profile Page opens the Ask screen (title "Ask") immediately with a welcome: "Hi! I'm Uncork, your AI sommelier. I can help you with questions about **{wine name}**." followed by a burgundy bold "I can help you with:" and the topics Grape Varieties, Flavours and aromas, Wineries, Consumer reviews, Wine production. Back returns to the wine's Profile Page. Food and cheese pairings are out of scope for now, as in Open-Chat.
+- **ASK-AC2:** The wine's facts are gathered in the background while the welcome shows (the screen is never held up by lookups), and Gemma reads them before the user types (warm-up; the reply is discarded). The first message carries: the wine's own facts (source, name, winery, place, variety, score, body/tannin/acidity, flavour notes, critic review), its **Wineries_Directory** location when listed, its **Grape_Profile_Internal** entry (or, only when the grape has none, **Grape_Profile_Kaggle_Extracted** for the wine's country, credited to enthusiasts; `*` is shown as "limited evidence"), and an OTHER COUNTRIES line (top-reviewed countries for the grape) to offer.
+- **ASK-AC3:** Added in front of a question only when it needs them (`<more_context>`, each once per conversation, resent after a rebuild): the broader review sample when the user asks what people, critics or reviewers think; the Internal entry for another grape the user names; Kaggle-extracted style for a grape with no internal entry or for another country the user names; the other-countries offer for a named grape; Wineries_Directory entries for a named winery or an unranked sample of wineries in a named place; and a sample of wineries that have reviews of a named grape (never "the best"). A short reminder of the wine and the honesty rule precedes every follow-up.
+- **ASK-AC4:** The review sample is even-handed: equal numbers (12) from the highest-scored, middle and lowest-scored thirds of the reviews of that grape (all spellings) from that country, seeded so the same wine gives the same sample, with 140-character excerpts and province labels; "Other" province buckets and unscored reviews are excluded.
+- **ASK-AC5:** Order of trust for body, tannin and acidity: Grape_Profile_Internal; then Grape_Profile_Kaggle_Extracted credited to people ("Wine enthusiasts say…", "What consumers say…", "Reviewers often describe it as…"); then Gemma's own knowledge flagged as general knowledge. Gemma stays with the wine's country (or the one the user names) and offers other top-reviewed countries. Gemma never states bottle specifics beyond the facts (score, vintage, price, alcohol), never calls a wine or winery real or fake, and never recommends other wines or producers (unranked examples from a provided list are allowed).
+- **ASK-AC6:** `wine_discussion_instruction.txt` holds the rules: excited but natural tone, 2–4 plain sentences, the Open-Chat honesty/scope/safety guardrails, and varied wording for general-knowledge phrases.
+- **ASK-AC7:** The engine is configured with an 8,192-token window (`ENGINE_MAX_TOKENS`) after a smaller default caused cut-off and empty replies; an empty reply triggers one conversation rebuild and retry; the app logs a running estimate of tokens used (the runtime reports none). Changing the window forces a one-time slow GPU re-preparation (about 45 s on the test phone).
+
+### Notes
+- The first message is roughly 1,000–1,500 tokens; the rules about 1,300. Gemma closely reads only about the last 512 tokens in its local layers, which is why the per-question reminder exists.
+- Not yet verified on a physical device beyond manual spot checks of earlier builds.
 
 ## 7. Profile Page
 
@@ -363,6 +416,7 @@ On-device Gemma only; at most one Gemma card and three Database cards. No cloud/
 - **AC8:** Given the wine has a cheese pairing attached, when the Profile Page renders, then the pairing displays as a secondary section below the wine details, not as the primary focus.
 
 ### Actions
+- **AC9-Ask (4 October 2026):** The bottom bar's centre action is **Ask** (content description "Ask AI Sommelier"), which opens Section 6B's conversation for the displayed wine. This replaces the former pairing action area described below where they conflict.
 - **AC9:** Given the Profile Page is open, when it renders, then a `Suggested pairing` field and its concise content are visible upfront with the other profile details; no pairing action button is shown.
 - **AC10:** Given the Profile Page is open, when the user scrolls its content, then the circular, center-aligned burgundy `Save` control remains fixed in the bottom navigation area. Tapping it saves the wine to My List (Section 8) and changes the control to a lighter muted state labeled `Saved`. Tapping `Saved` removes the wine and restores the burgundy `Save` state. The control and My List tiles do not display heart icons.
   - **AC10a:** Personal rating is display-only on the Profile Page. A saved rating displays as `Your rating · n / 10`; when absent, the page displays `You have not tried this wine` and provides no interactive rating scale.
@@ -508,6 +562,17 @@ Status checked against the working code on 27 September 2026, including the Chat
 - [x] On-device measurement of this rework showed the initial three-card search falling from a historical 48.13s average to 6.28s, with the on-demand detail fill for an opened card separately measured at 8.68s (`Docs/Gemma-Performance-Optimization-Summary-2026-09-25.md`) — a single-run, uncontrolled measurement, not a test-enforced threshold
 - [x] The curious-chat system instruction (`curious_chat_instruction.txt`) now tells Gemma that when the user signals intent to make a selection, it should say it needs a few details first and ask for confirmation before handing back to the Q1-Q3 flow; this is prompt-level guidance for Gemma's reply text only — the actual mode switch remains driven deterministically by `requestsFindWineSwitch` regardless of how Gemma's reply is worded (AC3d-curious)
 - [x] Conversation replies now record a debug-only `user_send_to_first_token` latency (user Send tap to the first streamed Gemma conversation-output chunk, tagged `operation=chat_conversation`) via the existing `GemmaTimingTrace` mechanism, distinct from the canned-reply/card timings it already tracked
+
+### Results page, Ask and reference data — 2–4 October 2026
+
+- [x] Find: Variety filter (404 grapes), Sweetness removed, "Enter a Spec" header, score tabs (91–100 default, 80–90), Sort menu, skeleton loader, ten-at-a-time paging with More, seeded equal-score ordering, Reviews → Extended db → on-demand Brave Web Search; Gemma removed from Find
+- [x] Chat hands finished Q1-Q3 answers to the shared Results page; Q3 drops sweetness; open conversation gains the on-demand lookups
+- [x] Ask screen with grounded facts note, warm-up, per-question extras, order of trust, reminder, retry on empty reply, token-usage logging, 8,192-token window; welcome message with bold wine name and topic list
+- [x] Reference data named and wired: Grape_Profile_Internal, Grape_Profile_Kaggle_Extracted, Wineries_Directory; country names standardised with Room migration 3→4; winery list preloaded in the background
+- [x] 203 unit tests, 30 of which (`KaggleConversationResponderTest`, "SystemClock not mocked") fail as they did before these changes
+- [~] `GuidedSelectionIntegrationTest` still expects the old alphabetical tie order; `androidTest` has been compiled but not run
+- [ ] Physical-device verification of Ask/Chat lookups, the Results page, and the 8,192-token window across a long conversation
+- [ ] Find web results are not saved to the Extended db; Grape_Profile_Internal covers 65 of 404 grapes (long tail relies on Kaggle-extracted data and Gemma's own knowledge); a release-build size has not been measured (debug APK about 99 MB)
 
 ### Accessibility — 28 September 2026 (WCAG 2.0 AA text contrast pass)
 
