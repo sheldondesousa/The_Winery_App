@@ -4,5 +4,5 @@ package com.sheldondesousa.uncork.ui.menu
 enum class MenuItem(val label: String) {
     AboutUncork("About Uncork"),
     WineryDirectory("Winery Directory"),
-    WineProductionFacts("Wine Production Facts"),
+    WineProductionFacts("Wine Production"),
 }

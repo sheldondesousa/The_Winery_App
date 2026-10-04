@@ -44,9 +44,9 @@ class WineryDirectoryBrowseTest {
         assertTrue(directory.wineriesIn("Argentina", "Not a region").isEmpty())
     }
 
-    @Test fun headersKeepTheCountryAsTheTitleAndPutTheRestInASmallSubtext() {
-        assertEquals(DirectoryHeader("Country", null), directoryHeader(null, null))
-        assertEquals(DirectoryHeader("France", "Regions"), directoryHeader("France", null))
-        assertEquals(DirectoryHeader("France", "Bordeaux > Wineries"), directoryHeader("France", "Bordeaux"))
+    @Test fun headerTitleIsDirectoryAndSubtextSaysWhereTheUserIs() {
+        assertEquals(DirectoryHeader("Directory", "Select Country"), directoryHeader(null, null))
+        assertEquals(DirectoryHeader("Directory", "France > Select Region"), directoryHeader("France", null))
+        assertEquals(DirectoryHeader("Directory", "France > Bordeaux > Winery"), directoryHeader("France", "Bordeaux"))
     }
 }

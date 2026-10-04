@@ -18,6 +18,7 @@ import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.sheldondesousa.uncork.data.knowledge.GrapeProfileInternal
+import com.sheldondesousa.uncork.data.knowledge.WineProductionProvider
 import com.sheldondesousa.uncork.data.knowledge.WineriesDirectoryProvider
 import com.sheldondesousa.uncork.data.profile.VarietyRegionDatabase
 import com.sheldondesousa.uncork.data.profile.VarietyRegionProfileRepository
@@ -51,6 +52,7 @@ import com.sheldondesousa.uncork.ui.directory.WineryDirectoryRoute
 import com.sheldondesousa.uncork.ui.landing.LandingRoute
 import com.sheldondesousa.uncork.ui.menu.MenuInfoScreen
 import com.sheldondesousa.uncork.ui.menu.MenuItem
+import com.sheldondesousa.uncork.ui.production.WineProductionFactsRoute
 import com.sheldondesousa.uncork.ui.splash.SplashRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageShowRoute
 import com.sheldondesousa.uncork.ui.stageshow.StageWine
@@ -107,6 +109,7 @@ class MainActivity : ComponentActivity() {
             )
         }
         val wineriesDirectory = WineriesDirectoryProvider(applicationContext)
+        val wineProduction = WineProductionProvider(applicationContext)
         // Reading the 30,000-winery list takes a moment, so do it now in the background, not when Ask first opens.
         lifecycleScope.launch(Dispatchers.IO) { runCatching { wineriesDirectory.get() } }
         val askContext = WineAskContext(
@@ -258,9 +261,8 @@ class MainActivity : ComponentActivity() {
                                 onBack = { menuItem = null },
                                 onHome = { menuItem = null },
                             )
-                            MenuItem.WineProductionFacts -> MenuInfoScreen(
-                                title = MenuItem.WineProductionFacts.label,
-                                message = "Wine Production Facts are coming soon.",
+                            MenuItem.WineProductionFacts -> WineProductionFactsRoute(
+                                loadProduction = { wineProduction.get() },
                                 onBack = { menuItem = null },
                                 onHome = { menuItem = null },
                             )

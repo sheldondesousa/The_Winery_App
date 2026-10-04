@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Author:** Sheldon
-**Last updated:** 4 October 2026 (Menu and Winery Directory added)
+**Last updated:** 4 October 2026 (Menu, Directory and Wine Production added)
 **Platform:** Android only, native (Kotlin) — matches your Pixel 10 Pro Fold
 **On-device model:** Gemma 4 E2B instruction-tuned LiteRT-LM bundle, downloaded from Hugging Face on first launch and stored in private app storage (not Gemini Nano/AICore)
 **User:** Personal use (single user); BYOK model if ever shared
@@ -392,16 +392,17 @@ Show the disclaimer: **“Database preferences match descriptions in critic revi
 **Purpose:** A reference corner reached from the main page. It does not change Find, Chat or Ask.
 
 ### Menu
-- **MENU-AC1:** Tapping **Menu** in the main page's bottom bar opens a bottom sheet titled "Menu" with three rows, each with a trailing chevron: **About Uncork**, **Winery Directory**, **Wine Production Facts**. Tapping outside or swiping dismisses the sheet without navigating.
-- **MENU-AC2:** **Winery Directory** opens the directory (below). **About Uncork** and **Wine Production Facts** currently open a placeholder page ("… is coming soon") with the standard header and the Back/Home bottom bar; their content is not yet written.
+- **MENU-AC1:** Tapping **Menu** in the main page's bottom bar opens a bottom sheet titled "Menu" with three rows, each with a trailing chevron: **About Uncork**, **Winery Directory**, **Wine Production**. Tapping outside or swiping dismisses the sheet without navigating.
+- **MENU-AC2:** **Winery Directory** opens the directory (below). **Wine Production** opens the production-facts browser (below). **About Uncork** currently opens a placeholder page ("… is coming soon") with the standard header and the Back/Home bottom bar; its content is not yet written.
+- **MENU-AC2a (Wine Production):** One page per layer under the title **Wine Production**, with the same bold breadcrumb line as the Directory above the list: **Select Country**, then **France > Select Variety**, then **France > Merlot > Select Region - Wine Area**, then **France > Merlot > Bordeaux** above the production steps. The breadcrumb is plain text. Country page lists France first, then Spain and United States (sample); only France has a chevron. All list rows are the same height. Drill-down: France → grape → place → production steps, from `Docs/FRENCH_WINE_KNOWLEDGE_SEED.md` (asset `french_wine_production.json`). List rows (country, variety, region) look like the Directory's: black, 17 sp, chevron on the ones that open; production step headings are burgundy. A place records only what differs from the place above it; other steps show as "Inherited from {place}". Grapes with no recorded facts (all but Merlot and Chardonnay) say so rather than showing invented text.
 
 ### Winery Directory
 Browses the Wineries_Directory (Section 4): about 30,450 wineries across 44 countries, grouped by region as the data records them. The data is bundled, read in the background when the app starts, and shown with a spinner (or "could not be loaded") only if it is not ready.
 
-- **WD-AC1:** **Country page.** An alphabetised list of countries, each with its winery count and a chevron. Header title **Country**, no subtext.
-- **WD-AC2:** **Regions page.** Selecting a country opens a new page listing that country's regions/provinces, alphabetised, each with its winery count and a chevron. Header title is the country name, with the subtext **Regions**.
-- **WD-AC3:** **Wineries page.** Selecting a region opens a new page listing that region's winery names, alphabetised and de-duplicated (no further drill-down). Header title is the country name, with the subtext **{Region} > Wineries**.
-- **WD-AC4:** The subtext is 12 sp, bold, in the app's ink (black). Titles over 16 characters step down from 24 sp to 18 sp and may wrap to two lines.
+- **WD-AC1:** **Country page.** An alphabetised list of countries, each with its winery count and a chevron. Header title **Directory**; a breadcrumb line on the page above the list reads **Select Country**.
+- **WD-AC2:** **Regions page.** Selecting a country opens a new page listing that country's regions/provinces, alphabetised, each with its winery count and a chevron. Header title **Directory**; the breadcrumb above the list reads **{Country} > Select Region**.
+- **WD-AC3:** **Wineries page.** Selecting a region opens a new page listing that region's winery names, alphabetised and de-duplicated (no further drill-down). Header title **Directory**; the breadcrumb above the list reads **{Country} > {Region} > Winery**.
+- **WD-AC4:** The breadcrumb is 14 sp, bold, in the app's ink (black), and is not part of the page title. Titles over 16 characters step down from 24 sp to 18 sp and may wrap to two lines.
 - **WD-AC5:** Sorting ignores case and accents (a person's reading order: "Añelo" sorts with "An…").
 - **WD-AC6:** The bottom bar keeps the standard **Back** and **Home** buttons. Back (and the system back gesture) goes up one level and leaves the directory from the country list; Home returns to the main page from any level.
 - **WD-AC7:** The directory is read-only. Winery rows are not tappable.
@@ -598,11 +599,12 @@ Status checked against the working code on 27 September 2026, including the Chat
 - [ ] Physical-device verification of Ask/Chat lookups, the Results page, and the 8,192-token window across a long conversation
 - [ ] Find web results are not saved to the Extended db; Grape_Profile_Internal covers 65 of 404 grapes (long tail relies on Kaggle-extracted data and Gemma's own knowledge); a release-build size has not been measured (debug APK about 99 MB)
 
-### Menu and Winery Directory — 4 October 2026
+### Menu, Directory and Wine Production — 4 October 2026
 
-- [x] Main page Menu bottom sheet (About Uncork, Winery Directory, Wine Production Facts)
-- [x] Winery Directory: Country → Regions → Wineries pages, alphabetised, with counts, Back/Home bottom bar, country-as-title headers with small bold subtext (Section 6C)
-- [ ] Content for About Uncork and Wine Production Facts (placeholders only)
+- [x] Main page Menu bottom sheet (About Uncork, Winery Directory, Wine Production)
+- [x] Winery Directory: Country → Regions → Wineries pages, alphabetised, with counts, Back/Home bottom bar, "Directory" title with a breadcrumb on the page showing the path (Section 6C)
+- [x] Wine Production: France → grape → place → steps (Merlot and Chardonnay have facts; other grapes pending)
+- [ ] Content for About Uncork (placeholder only)
 - [~] `WineryDirectoryScreenTest` compiles but has not been run on a device or emulator
 
 ### Accessibility — 28 September 2026 (WCAG 2.0 AA text contrast pass)

@@ -28,18 +28,17 @@ class WineryDirectoryScreenTest {
         compose.setContent {
             UncorkTheme { WineryDirectoryRoute(loadDirectory = { directory }, onBack = { left = true }, onHome = {}) }
         }
-        compose.onNodeWithText("Country").assertIsDisplayed()
+        compose.onNodeWithText("Directory").assertIsDisplayed()
+        compose.onNodeWithText("Select Country").assertIsDisplayed()
         compose.onNodeWithTag("directory-country-France").performClick()
-        compose.onNodeWithText("France").assertIsDisplayed()
-        compose.onNodeWithText("Regions").assertIsDisplayed()
+        compose.onNodeWithText("France > Select Region").assertIsDisplayed()
         compose.onNodeWithTag("directory-region-Bordeaux").performClick()
-        compose.onNodeWithText("France").assertIsDisplayed()
-        compose.onNodeWithText("Bordeaux > Wineries").assertIsDisplayed()
+        compose.onNodeWithText("France > Bordeaux > Winery").assertIsDisplayed()
         compose.onNodeWithText("Alpha Winery").assertIsDisplayed()
         compose.onNodeWithText("Back").performClick()
-        compose.onNodeWithText("Regions").assertIsDisplayed()
+        compose.onNodeWithText("France > Select Region").assertIsDisplayed()
         compose.onNodeWithText("Back").performClick()
-        compose.onNodeWithText("Country").assertIsDisplayed()
+        compose.onNodeWithText("Select Country").assertIsDisplayed()
         compose.onNodeWithText("Back").performClick()
         compose.runOnIdle { assert(left) }
     }

@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sheldondesousa.uncork.data.knowledge.DirectoryCount
@@ -48,13 +49,13 @@ import com.sheldondesousa.uncork.ui.theme.Wine
 internal data class DirectoryHeader(val title: String, val subtitle: String?)
 
 /**
- * Countries page: "Country". Once a country is chosen its name is the title with "Regions" beneath it; once a region is
- * chosen the country stays as the title with "{Region} > Wineries" beneath it.
+ * The title is always "Directory"; a breadcrumb on the page, above the list, says where the user is: "Country", then "{Country} > Select Region", then
+ * "{Country} > {Region} > Winery".
  */
 internal fun directoryHeader(country: String?, region: String?): DirectoryHeader = when {
-    country == null -> DirectoryHeader("Country", null)
-    region == null -> DirectoryHeader(country, "Regions")
-    else -> DirectoryHeader(country, "$region > Wineries")
+    country == null -> DirectoryHeader("Directory", "Select Country")
+    region == null -> DirectoryHeader("Directory", "$country > Select Region")
+    else -> DirectoryHeader("Directory", "$country > $region > Winery")
 }
 
 /**
@@ -88,7 +89,17 @@ fun WineryDirectoryRoute(
 
     Column(modifier.fillMaxSize().background(Parchment).statusBarsPadding()) {
         val header = directoryHeader(country, region)
-        AppHeader(title = header.title, subtitle = header.subtitle, icon = Icons.Outlined.Place)
+        AppHeader(title = header.title, icon = Icons.Outlined.Place)
+        // The breadcrumb sits on the page itself, above the list, not in the page title.
+        header.subtitle?.let {
+            Text(
+                it,
+                color = Ink,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp).testTag("directory-breadcrumb"),
+            )
+        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val data = directory
             when {
