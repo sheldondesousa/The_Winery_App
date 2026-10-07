@@ -104,6 +104,21 @@ class GemmaConversationResponder(
         }
     }
 
+    /**
+     * Last check before a Gemma reply is shown: if it holds letters from another writing system, or is not one plain
+     * paragraph within the length limit, Gemma is asked once more. A reply that still has foreign letters is replaced by
+     * the app's refusal; one that is only badly formatted is tidied.
+     */
+    private suspend fun checkedReply(first: String, again: suspend () -> String): String {
+        var reply = first
+        if (ReplyCheck.needsRetry(reply)) {
+            logFlow("Reply failed the output check (foreign script: ${ReplyCheck.hasForeignScript(reply)}); asking Gemma once more")
+            reply = runCatching { again() }.getOrDefault(reply)
+        }
+        if (ReplyCheck.hasForeignScript(reply)) return ChatFlowText.NO_INFORMATION
+        return ReplyCheck.tidy(reply)
+    }
+
     private fun handleModeChoice(query: String): ChatMessage {
         markRoute("KOTLIN_HANDLED")
         return handleModeChoiceInner(query)
@@ -193,8 +208,9 @@ class GemmaConversationResponder(
         }
 
         val activeConversation = ensureCuriousConversation()
+        var sentMessage = ""
         val response = try {
-            streamFrom(activeConversation, messageFor())
+            streamFrom(activeConversation, messageFor().also { sentMessage = it })
         } catch (error: Throwable) {
             if (!error.isContextCapacityError()) throw error
             logFlow("Gemma context exhausted; rebuilding curious conversation and retrying turn once")
@@ -204,9 +220,11 @@ class GemmaConversationResponder(
             }
             // The new conversation has lost any lookups sent earlier, so they are sent again where needed.
             curiousExtras?.reset()
-            streamFrom(ensureCuriousConversation(), messageFor())
+            streamFrom(ensureCuriousConversation(), messageFor().also { sentMessage = it })
         }
-        val visible = response.withoutRepeatedConversationOpener(recordUsage = true)
+        val visible = checkedReply(response.withoutRepeatedConversationOpener(recordUsage = true)) {
+            streamFrom(ensureCuriousConversation(), sentMessage).withoutRepeatedConversationOpener(recordUsage = false)
+        }
         return plainMessage(visible.ifBlank { "Could you say a bit more about that?" })
     }
 
@@ -929,10 +947,11 @@ class GemmaConversationResponder(
                 reminder.isNotBlank() -> "$reminder\n${extra}The user says: $query"
                 else -> "$extra$query"
             }
-            return send(message, onUpdate).also { reply ->
+            val first = send(message, onUpdate).also { reply ->
                 factsSent = true
                 noteUsage("turn", message.length, reply.length)
             }
+            return checkedReply(first) { send(message) {} }
         }
 
         private suspend fun send(message: String, onUpdate: (ConversationStreamUpdate) -> Unit): String {

@@ -3,6 +3,7 @@ package com.sheldondesousa.uncork.data.knowledge
 import com.sheldondesousa.uncork.model.KaggleExtractedProfile
 import com.sheldondesousa.uncork.model.CountryMentions
 import com.sheldondesousa.uncork.model.ReviewIntent
+import com.sheldondesousa.uncork.model.ReplyCheck
 import com.sheldondesousa.uncork.model.ChatFlowText
 import com.sheldondesousa.uncork.model.ProductionIntent
 import com.sheldondesousa.uncork.model.GrapeIntent
@@ -1080,5 +1081,32 @@ class WineryTemplateTest {
 
     @Test fun anUnknownWineryStillGetsTheFixedRefusal() = kotlinx.coroutines.runBlocking {
         assertEquals(ChatFlowText.NO_INFORMATION, extras().lookup("I heard Opus One is a Bordeaux château, right?").refusal)
+    }
+}
+
+class ReplyCheckTest {
+    @Test fun lettersFromOtherWritingSystemsAreCaught() {
+        listOf("on the ασ side", "I don't មាន", "Merlot вино", "ไวน์", "יין", "نبيذ", "葡萄酒", "वाइन", "ワイン", "포도주")
+            .forEach { assertTrue(it, ReplyCheck.hasForeignScript(it)) }
+    }
+
+    @Test fun accentedLatinDigitsAndPunctuationAreFine() {
+        listOf("Château Margaux, from Saint-Émilion, is 95 points — “plush” & bold.", "Müller-Thurgau, Grüner Veltliner, Albariño and Pinot Noir at 13.5%.", "Côtes du Rhône: a blend (usually Grenache, Syrah).")
+            .forEach { assertFalse(it, ReplyCheck.hasForeignScript(it)) }
+    }
+
+    @Test fun oneShortPlainParagraphPasses() {
+        assertFalse(ReplyCheck.needsRetry("Merlot is plush and easy to like. It comes from Bordeaux, France."))
+    }
+
+    @Test fun parasListsMarkdownAndLongRepliesNeedARetryAndAreTidied() {
+        assertTrue(ReplyCheck.needsRetry("First point.\n\nSecond point."))
+        assertTrue(ReplyCheck.needsRetry("- Merlot\n- Malbec"))
+        assertTrue(ReplyCheck.needsRetry("**Merlot** is soft."))
+        assertTrue(ReplyCheck.needsRetry("Sentence. ".repeat(100)))
+        assertEquals("Merlot is soft. Malbec is bold.", ReplyCheck.tidy("**Merlot** is soft.\n\n- Malbec is bold."))
+        val long = ReplyCheck.tidy("This is a sentence about wine. ".repeat(60))
+        assertTrue(long.length <= ReplyCheck.MAX_CHARS)
+        assertTrue(long.endsWith("."))
     }
 }
