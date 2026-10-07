@@ -191,7 +191,7 @@ class WineriesDirectory(entries: List<WineryLocation>) {
         if (place.isNullOrBlank()) return country
         val p = GrapeProfileInternal.normalize(place)
         val hit = byPlace[GrapeProfileInternal.normalize(country) to p]?.firstOrNull()
-            ?: return listOf(place, country).joinToString(", ")
+            ?: return listOf(place.replaceFirstChar { it.uppercase() }, country).joinToString(", ")
         val parts = if (GrapeProfileInternal.normalize(hit.region) == p) listOf(hit.region) else listOf(hit.subRegion, hit.region)
         return (parts + hit.country).filter { it.isNotBlank() }.joinToString(", ")
     }

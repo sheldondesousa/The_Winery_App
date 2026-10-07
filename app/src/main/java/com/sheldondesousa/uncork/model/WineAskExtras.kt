@@ -201,6 +201,14 @@ object WineryIntent {
 
     fun asksAboutWineries(query: String): Boolean = PATTERN.containsMatchIn(query)
 
+    /** Several wineries wanted ("wineries in Napa", "which winery", "a good estate"), not a winery's name that contains the word. */
+    private val SEVERAL = Regex(
+        "\\b(wineries|producers|vineyards|estates|bodegas|vignerons|domaines|houses)\\b|" +
+            "\\b(a|an|any|some|one|which|what|best|top|good)\\s+(\\w+\\s+)?(winery|producer|vineyard|estate|bodega|vigneron|domaine)\\b",
+        RegexOption.IGNORE_CASE,
+    )
+    fun asksForSeveral(query: String): Boolean = SEVERAL.containsMatchIn(query)
+
     /** A question about where one particular winery is. */
     val WHERE_ONE = Regex("\\b(located|based)\\b|\\bwhere\\s+(is|are)\\b", RegexOption.IGNORE_CASE)
 
@@ -595,7 +603,7 @@ class WineAskExtras(
                         rendered[wineryBlock] = ""
                         rendered[correction] = sentence + reviewsOffer(query)
                     }
-                } else if (asksWineries) {
+                } else if (asksWineries && WineryIntent.asksForSeveral(query)) {
                     val region = directory.regionMentioned(query, countryNamed ?: ownCountry.takeIf { it.isNotBlank() })
                     val place = region ?: (countryNamed ?: countriesNamed.firstOrNull() ?: lastCountry ?: own)?.let { it to "" }
                     // A list of wineries needs a country, region or sub-region: with none, Gemma asks for one.

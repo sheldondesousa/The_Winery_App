@@ -1110,3 +1110,21 @@ class ReplyCheckTest {
         assertTrue(long.endsWith("."))
     }
 }
+
+class InventedWineryTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private fun extras() = WineAskExtras(base, loadWineries = { directory }) { _, _ -> null }
+
+    @Test fun aWineryNameWithDomaineInItIsNotTakenAsAListRequest() = kotlinx.coroutines.runBlocking {
+        assertEquals(ChatFlowText.NO_INFORMATION, extras().lookup("Tell me about Domaine des Quatre Lunes in Burgundy.").refusal)
+    }
+
+    @Test fun aSingularWineryAskWithADeterminerStillGetsASample() = kotlinx.coroutines.runBlocking {
+        assertTrue(extras().lookup("Recommend a winery in Napa Valley.").refusal!!.startsWith("Here are"))
+    }
+
+    @Test fun aBroadPlaceIsWrittenWithACapital() = kotlinx.coroutines.runBlocking {
+        assertTrue(extras().lookup("What wineries should I know in Sonoma County?").refusal!!.contains("wineries in Sonoma, United States"))
+    }
+}
