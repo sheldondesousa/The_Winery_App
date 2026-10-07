@@ -121,12 +121,8 @@ class RagCoverageTest {
     @Test fun whichWineriesInQuestionsListWineriesForEveryDirectoryCountryTheAppRecognises() = runBlocking {
         val all = directory.countries().map { it.name }
         val recognised = all.filter { com.sheldondesousa.uncork.model.CountryMentions.find("wineries in $it").isNotEmpty() }
-        // Known gap: the directory has these countries but questions cannot name them (the country list comes from the
-        // review database). If this fails because the gap was closed, remove the country from this set.
-        assertEquals(
-            setOf("Bosnia and Herzegovina", "Czech Republic", "Lebanon", "Luxembourg", "Macedonia", "Moldova", "Morocco", "Slovenia"),
-            (all - recognised.toSet()).toSet(),
-        )
+        // Every directory country can now be named in a question (the gap with the review database's list is closed).
+        assertEquals(emptySet<String>(), (all - recognised.toSet()).toSet())
         val failures = recognised.filter { c ->
             val block = extras().forQuestion("Which wineries are in $c?")
             block == null || !block.contains("Wineries_Directory") || !block.contains(c)

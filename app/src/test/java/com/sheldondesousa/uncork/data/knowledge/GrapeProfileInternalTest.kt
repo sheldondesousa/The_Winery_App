@@ -1128,3 +1128,74 @@ class InventedWineryTest {
         assertTrue(extras().lookup("What wineries should I know in Sonoma County?").refusal!!.contains("wineries in Sonoma, United States"))
     }
 }
+
+class PlaceAliasTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+
+    @Test fun usIsRecognisedInItsWrittenForms() {
+        listOf("Which US wineries make Chardonnay?", "wineries in the U.S.", "U.S.A. wineries", "Which USA wines are good?", "American wineries", "wines from the us", "us wineries please", "Which wineries are in the US?")
+            .forEach { assertEquals(it, listOf("United States"), CountryMentions.find(it)) }
+    }
+
+    @Test fun thePlainWordUsIsNotAPlace() {
+        listOf("Tell us about Merlot", "Tell us more", "Can you focus on reds?", "What does this mean for us?", "Give us a few ideas", "Is it a plus?")
+            .forEach { assertTrue(it, CountryMentions.find(it).isEmpty()) }
+    }
+
+    @Test fun everyCountryInTheDataHasAnAdjectiveOrName() {
+        val countries = directory.countries().map { it.name }
+        val missing = countries.filter { c -> CountryMentions.find(c).firstOrNull() != c }
+        assertTrue("Country names not recognised: $missing", missing.isEmpty())
+        val withoutAdjective = countries.filter { CountryMentions.adjectiveFor(it) == null }
+        // Names alone are enough for a few; the adjectives cover the rest.
+        assertTrue("No adjective for: $withoutAdjective", withoutAdjective.size <= 3)
+    }
+
+    private fun extras(winerySample: com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample?, askedCountries: MutableList<String?> = mutableListOf()) =
+        WineAskExtras(base, loadWineries = { directory }, loadGrapeWineries = { _, country, _, _ -> askedCountries += country; winerySample }) { _, _ -> null }
+
+    private fun w(name: String, country: String, province: String) = com.sheldondesousa.uncork.data.reviews.GrapeWinery(name, country, province, 3)
+
+    @Test fun usWineriesAreListedForTheUnitedStatesWithItsOwnCount() = kotlinx.coroutines.runBlocking {
+        val asked = mutableListOf<String?>()
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(listOf(w("Silver Palm", "United States", "California"), w("J. McClelland", "United States", "California")), 1204)
+        val reply = extras(sample, asked).lookup("Which US wineries make Chardonnay?").refusal!!
+        assertEquals(listOf<String?>("United States"), asked)
+        assertTrue(reply, reply.contains("1204") && !reply.contains("3392"))
+        assertTrue(reply.contains("Silver Palm") && reply.contains("J. McClelland"))
+    }
+
+    @Test fun aWineryFromAnotherCountryIsNeverShownForAStatedCountry() = kotlinx.coroutines.runBlocking {
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(listOf(w("Salon", "France", "Champagne"), w("Silver Palm", "United States", "California")), 3392)
+        val reply = extras(sample).lookup("Which US wineries make Chardonnay?").refusal!!
+        assertTrue(reply, reply.contains("Silver Palm") && !reply.contains("Salon"))
+    }
+
+    @Test fun ifNoneBelongTheWrongOnesAreNotShown() = kotlinx.coroutines.runBlocking {
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(listOf(w("Salon", "France", "Champagne")), 3392)
+        val found = extras(sample).lookup("Which US wineries make Chardonnay?")
+        val shown = (found.refusal ?: "") + (found.context ?: "")
+        assertFalse(shown, shown.contains("Salon"))
+    }
+
+    @Test fun frenchWineriesAreListedForFranceOnly() = kotlinx.coroutines.runBlocking {
+        val asked = mutableListOf<String?>()
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(listOf(w("Salon", "France", "Champagne")), 527)
+        val reply = extras(sample, asked).lookup("Which French wineries make Chardonnay?").refusal!!
+        assertEquals(listOf<String?>("France"), asked)
+        assertTrue(reply.contains("Salon") && reply.contains("527"))
+    }
+
+    @Test fun aRegionAdjectiveNamesItsRegion() = kotlinx.coroutines.runBlocking {
+        assertEquals("California", directory.regionMentioned("Which Californian wineries make Merlot?")?.second)
+        assertEquals("Tuscany", directory.regionMentioned("Name some Tuscan producers")?.second)
+    }
+
+    @Test fun tellUsAboutMerlotDoesNotStartAUsFilter() = kotlinx.coroutines.runBlocking {
+        val asked = mutableListOf<String?>()
+        val found = extras(null, asked).lookup("Tell us about Merlot")
+        assertTrue(asked.isEmpty())
+        assertTrue(found.context!!.contains("Merlot"))
+    }
+}

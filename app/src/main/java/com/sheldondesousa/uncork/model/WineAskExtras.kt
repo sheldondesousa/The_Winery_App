@@ -62,7 +62,8 @@ object FollowUp {
     /** Replaces the first country named in [previous] with [country] (as an adjective when there is one). */
     private fun swapCountry(previous: String, country: String): String {
         val words = previous.split(' ')
-        for (len in 2 downTo 1) for (i in 0..words.size - len) {
+        // Shortest window first, so "US" is replaced on its own and "Which US" does not lose its "Which".
+        for (len in 1..2) for (i in 0..words.size - len) {
             val phrase = words.subList(i, i + len).joinToString(" ").trim(',', '.', '?', '!')
             // A capitalised "US" is the country; the lower-case word "us" is not, so only the capitalised form counts here.
             if (CountryMentions.find(phrase).isNotEmpty() || phrase in setOf("US", "U.S.", "U.S.A.")) {
@@ -359,6 +360,16 @@ class WineAskExtras(
             .filter { it.isNotBlank() }.toSet()
 
     /** A follow-up turned into a standalone question; the question itself when it already stands on its own. */
+    /**
+     * A hard rule: when a list is for a stated country, a winery from any other country is dropped. If none are left the
+     * caller treats it as no result, so a wrong-country winery can never be shown.
+     */
+    private fun GrapeWineriesSample.onlyIn(country: String?): GrapeWineriesSample? {
+        if (country.isNullOrBlank()) return this
+        val kept = wineries.filter { GrapeProfileInternal.normalize(it.country) == GrapeProfileInternal.normalize(country) }
+        return if (kept.isEmpty()) null else GrapeWineriesSample(kept, totalWineries)
+    }
+
     private fun isSideInfo(block: String) =
         block.startsWith("Grape_Profile_Internal") || block.startsWith("Grape_Profile_Kaggle_Extracted") || block.startsWith("OTHER COUNTRIES")
 
@@ -563,7 +574,7 @@ class WineAskExtras(
                 val topic = WineryTopic(focus, wineryCountry, null)
                 val sample = runCatching {
                     loadGrapeWineries(focus.second, wineryCountry, WineryIntent.requestedCount(query), skipFor(topic, false))
-                }.getOrNull()
+                }.getOrNull()?.onlyIn(wineryCountry)
                 if (sample != null && sample.wineries.isNotEmpty()) {
                     remember(topic, sample.wineries.map { it.winery })
                     val block = WineFactsNote.grapeWineriesBlock(focus.first, wineryCountry, sample)
@@ -615,6 +626,7 @@ class WineAskExtras(
                     if (place != null) {
                         val topic = WineryTopic(null, null, place)
                         val sample = directory.sampleIn(place.first, place.second.takeIf { it.isNotBlank() }, WineryIntent.requestedCount(query), skipFor(topic, false))
+                            .filter { directory.belongsTo(it, place.first, place.second.takeIf { p -> p.isNotBlank() }) }
                         if (sample.isEmpty()) blocks += WineFactsNote.noNotes("wineries in ${directory.placeLabel(place.first, place.second.takeIf { it.isNotBlank() })}")
                         if (sample.isNotEmpty()) {
                             remember(topic, sample.map { it.winery })
@@ -803,7 +815,7 @@ class WineAskExtras(
         }
         val skip = skipFor(topic, more)
         if (topic.grape != null) {
-            val sample = runCatching { loadGrapeWineries(topic.grape.second, topic.country, count, skip) }.getOrNull()
+            val sample = runCatching { loadGrapeWineries(topic.grape.second, topic.country, count, skip) }.getOrNull()?.onlyIn(topic.country)
             if (sample != null && sample.wineries.isNotEmpty()) {
                 remember(topic, sample.wineries.map { it.winery })
                 return WineFactsNote.grapeWineriesList(topic.grape.first, topic.country, sample, more)
@@ -819,6 +831,7 @@ class WineAskExtras(
     private fun directoryList(directory: WineriesDirectory, topic: WineryTopic, count: Int, more: Boolean): String? {
         val place = topic.place ?: return null
         val sample = directory.sampleIn(place.first, place.second.takeIf { it.isNotBlank() }, count, skipFor(topic, more))
+            .filter { directory.belongsTo(it, place.first, place.second.takeIf { p -> p.isNotBlank() }) }
         if (sample.isEmpty()) return if (more) noMoreWineries(topic) else null
         remember(topic, sample.map { it.winery })
         return WineFactsNote.directoryWineriesList(

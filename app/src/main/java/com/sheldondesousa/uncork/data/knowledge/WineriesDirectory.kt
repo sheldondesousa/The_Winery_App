@@ -135,7 +135,8 @@ class WineriesDirectory(entries: List<WineryLocation>) {
 
     /** A region named in a question, with its country (the one in [countryHint] if the region name exists there). */
     fun regionMentioned(text: String, countryHint: String? = null): Pair<String, String>? {
-        val tokens = GrapeProfileInternal.normalize(text).split(' ').filter { it.isNotBlank() }
+        // "Californian wineries" names California.
+        val tokens = GrapeProfileInternal.normalize(text).split(' ').filter { it.isNotBlank() }.map { REGION_ADJECTIVES[it] ?: it }
         val hint = countryHint?.takeIf { it.isNotBlank() }?.let { GrapeProfileInternal.normalize(it) }
         for (length in MAX_REGION_WORDS downTo 1) {
             for (start in 0..tokens.size - length) {
@@ -196,6 +197,15 @@ class WineriesDirectory(entries: List<WineryLocation>) {
         return (parts + hit.country).filter { it.isNotBlank() }.joinToString(", ")
     }
 
+    /** Whether [winery] really is in [country] and, when given, in [place] (its region or sub-region). */
+    fun belongsTo(winery: WineryLocation, country: String, place: String? = null): Boolean {
+        if (GrapeProfileInternal.normalize(winery.country) != GrapeProfileInternal.normalize(country)) return false
+        if (place.isNullOrBlank()) return true
+        val p = GrapeProfileInternal.normalize(place)
+        return p == GrapeProfileInternal.normalize(winery.region) || p == GrapeProfileInternal.normalize(winery.subRegion) ||
+            " ${GrapeProfileInternal.normalize(winery.region)} ".contains(" $p ") || " ${GrapeProfileInternal.normalize(winery.subRegion)} ".contains(" $p ")
+    }
+
     fun countOf(country: String, region: String? = null): Int {
         val c = GrapeProfileInternal.normalize(country)
         return if (region.isNullOrBlank()) byCountry[c].orEmpty().size else poolIn(c, GrapeProfileInternal.normalize(region)).size
@@ -203,6 +213,11 @@ class WineriesDirectory(entries: List<WineryLocation>) {
 
     companion object {
         const val MAX_LOCATIONS = 3
+        /** Words people use for a region, other than its name. */
+        private val REGION_ADJECTIVES = mapOf(
+            "californian" to "california", "tuscan" to "tuscany", "sicilian" to "sicily", "piedmontese" to "piedmont",
+            "burgundian" to "burgundy", "oregonian" to "oregon",
+        )
         private const val MAX_NAME_WORDS = 5
         private const val MAX_REGION_WORDS = 3
         private const val MIN_SINGLE_WORD = 6
