@@ -35,6 +35,9 @@ data class KaggleExtractedProfile(
 object WineFactsNote {
     private const val MAX_REVIEW_CHARS = 600
     private const val MAX_GRAPES = 3
+
+    /** Stops Gemma from claiming what a winery is known for: the directory holds names and places only. */
+    const val LOCATION_ONLY = "The directory lists location only. Do not say what a winery is known for unless the context says so."
     private const val MAX_WINE_REVIEW_CHARS = 160
 
     fun build(
@@ -68,6 +71,7 @@ object WineFactsNote {
             appendLine()
             appendLine("Wineries_Directory (a reference list of wineries and their regions; not complete)")
             winery.forEach { appendLine("- ${it.winery}: ${it.place}, ${it.country}") }
+            appendLine(LOCATION_ONLY)
         }
 
         if (grapes.grapes.isNotEmpty()) {
@@ -264,6 +268,7 @@ object WineFactsNote {
     fun wineriesBlock(wineries: List<WineryLocation>, what: String): String = buildString {
         appendLine("Wineries_Directory ($what; the directory is a reference list and is not complete)")
         wineries.forEach { appendLine("- ${it.winery}: ${it.place}, ${it.country}") }
+        appendLine(LOCATION_ONLY)
     }.trimEnd()
 
     /** Notes for grapes the user asked about, sent in front of that question. */

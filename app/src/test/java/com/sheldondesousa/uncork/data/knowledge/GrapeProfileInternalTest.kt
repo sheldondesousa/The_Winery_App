@@ -941,3 +941,17 @@ class RetrievalCleanUpTest {
         }
     }
 }
+
+class WineryOverclaimNoteTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private val note = "The directory lists location only. Do not say what a winery is known for unless the context says so."
+
+    @Test fun everyWineryChunkCarriesTheLocationOnlyNote() = kotlinx.coroutines.runBlocking {
+        val e = { WineAskExtras(base, loadWineries = { directory }) { _, _ -> null } }
+        assertTrue(e().forQuestion("Where is Nichelini Family Winery?")!!.contains(note))
+        assertTrue(e().forQuestion("Name a few famous wineries in Bordeaux.")!!.contains(note))
+        val wine = WineSuggestion(name = "Wine", winery = "Château Margaux", province = "Margaux", country = "France")
+        assertTrue(WineFactsNote.build(wine, winery = directory.find(wine.winery, wine.country)).contains(note))
+    }
+}
