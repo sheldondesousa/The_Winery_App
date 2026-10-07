@@ -24,16 +24,22 @@ internal object GemmaRagEvalRunner {
     private class RecordingExtras(private val inner: AskExtras) : AskExtras {
         val chunks = mutableListOf<String>()
         var rewritten: String? = null
-        override suspend fun forQuestion(query: String): String? = inner.forQuestion(query)?.also { chunks += it.split("\n\n").filter { c -> c.isNotBlank() } }
+        /** Time spent looking things up for the current turn (the app's retrieval, before any Gemma call). */
+        var retrievalMs = 0L
+        private suspend fun <T> timed(block: suspend () -> T): T {
+            val start = SystemClock.elapsedRealtime()
+            return try { block() } finally { retrievalMs += SystemClock.elapsedRealtime() - start }
+        }
+        override suspend fun forQuestion(query: String): String? = timed { inner.forQuestion(query) }?.also { chunks += it.split("\n\n").filter { c -> c.isNotBlank() } }
         override suspend fun lookup(query: String): com.sheldondesousa.uncork.model.AskLookup =
-            inner.lookup(query).also { found ->
+            timed { inner.lookup(query) }.also { found ->
                 found.context?.let { chunks += it.split("\n\n").filter { c -> c.isNotBlank() } }
                 // A refusal is recorded too, so the eval can see that retrieval was empty.
                 found.refusal?.let { chunks += "[refusal] $it" }
                 // Kept apart from the chunks: the rewrite is a log field, never counted as something retrieved.
                 rewritten = found.rewritten
             }
-        override suspend fun wineryList(query: String): String? = inner.wineryList(query)?.also { chunks += it }
+        override suspend fun wineryList(query: String): String? = timed { inner.wineryList(query) }?.also { chunks += it }
         override fun reset() = inner.reset()
     }
 
@@ -67,6 +73,9 @@ internal object GemmaRagEvalRunner {
         )
         val total = conversations.length() * 2
         var completed = 0
+        // One entry per turn, for the medians written at the end: RAG on or off, which path answered, and the timings.
+        class TurnTiming(val ragOn: Boolean, val route: String, val firstWordMs: Long, val retrievalMs: Long?)
+        val timings = mutableListOf<TurnTiming>()
 
         GemmaConversationResponder(appContext, modelFileManager.modelFile).use { responder ->
             responder.prepare()
@@ -90,10 +99,22 @@ internal object GemmaRagEvalRunner {
                             val user = userTurns.getString(t)
                             recorder?.chunks?.clear()
                             recorder?.rewritten = null
-                            val reply = (discussion?.replyTo(user) ?: responder.replyTo(user)).text
+                            recorder?.retrievalMs = 0L
+                            // Time to first word: from sending the question to the first text the user would see. An answer the
+                            // app writes itself arrives all at once, so for those it equals the total time.
+                            val turnStart = SystemClock.elapsedRealtime()
+                            var firstWordMs: Long? = null
+                            val onUpdate: (com.sheldondesousa.uncork.ui.conversation.ConversationStreamUpdate) -> Unit = { update ->
+                                if (firstWordMs == null && update.text.isNotBlank()) firstWordMs = SystemClock.elapsedRealtime() - turnStart
+                            }
+                            val reply = (discussion?.replyToUpdates(user, onUpdate) ?: responder.replyToUpdates(user, onUpdate)).text
+                            val totalMs = SystemClock.elapsedRealtime() - turnStart
+                            timings += TurnTiming(ragOn, responder.lastRoute ?: "UNKNOWN", firstWordMs ?: totalMs, recorder?.retrievalMs)
                             turns.put(
                                 JSONObject().put("user", user).put("reply", reply).put("route", responder.lastRoute)
-                                    .put("retrieved_chunks", JSONArray(recorder?.chunks.orEmpty())).put("rewritten_question", recorder?.rewritten ?: JSONObject.NULL),
+                                    .put("retrieved_chunks", JSONArray(recorder?.chunks.orEmpty())).put("rewritten_question", recorder?.rewritten ?: JSONObject.NULL)
+                                    .put("retrieval_ms", recorder?.retrievalMs ?: JSONObject.NULL)
+                                    .put("first_word_ms", firstWordMs ?: totalMs).put("total_ms", totalMs),
                             )
                         }
                     } finally {
@@ -109,6 +130,18 @@ internal object GemmaRagEvalRunner {
                 }
             }
         }
+        // Median time to first word (and retrieval time) for each path that answered, with RAG off and on.
+        fun median(values: List<Long>): Long? = values.sorted().let { if (it.isEmpty()) null else it[it.size / 2] }
+        val summary = JSONArray()
+        timings.groupBy { it.ragOn to it.route }.forEach { (key, group) ->
+            summary.put(
+                JSONObject().put("rag_enabled", key.first).put("answered_by", key.second).put("turns", group.size)
+                    .put("median_first_word_ms", median(group.map { it.firstWordMs }) ?: JSONObject.NULL)
+                    .put("median_retrieval_ms", median(group.mapNotNull { it.retrievalMs }) ?: JSONObject.NULL),
+            )
+        }
+        File(outputDirectory, outputFile.nameWithoutExtension + "-timing.json").writeText(summary.toString(2))
+        Log.i(LOG_TAG, "timing summary: $summary")
         return outputFile
     }
 }
