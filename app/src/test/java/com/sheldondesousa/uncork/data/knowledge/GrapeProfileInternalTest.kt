@@ -816,9 +816,10 @@ class RefusalGateTest {
     }
 
     @Test fun whenSomethingWasFoundGemmaStillAnswers() = kotlinx.coroutines.runBlocking {
+        // A directory lookup is now written by the app from a template, so Gemma is not called.
         val found = extras().lookup("Where is Nichelini Family Winery and who makes it?")
-        assertNull(found.refusal)
-        assertTrue(found.context!!.contains("Nichelini"))
+        assertEquals("Nichelini Family Winery is in Napa Valley, California, United States.", found.refusal)
+        assertNull(found.context)
     }
 
     @Test fun aTriggeredSourceThatComesBackEmptyIsTheRefusalWhenItIsAlone() = kotlinx.coroutines.runBlocking {
@@ -940,7 +941,7 @@ class RetrievalCleanUpTest {
 
     @Test fun aWineryPlacedInTheWrongPlaceGetsACorrection() = kotlinx.coroutines.runBlocking {
         val text = extras().forQuestion("Which Pauillac château makes Pétrus?")!!
-        assertTrue(text, text.contains("Correction: Petrus is in Pomerol, Bordeaux, France, not in Pauillac."))
+        assertTrue(text, text.contains("Correction: Petrus is in Pomerol, Bordeaux, France, not Pauillac."))
     }
 
     @Test fun aWineryPlacedRightGetsNoCorrection() = kotlinx.coroutines.runBlocking {
@@ -1018,5 +1019,66 @@ class ProductionInKotlinTest {
         val found = extras().lookup("How is Merlot made in Bordeaux?")
         assertNull(found.refusal)
         assertTrue(found.context!!.contains("Wine_Production"))
+    }
+}
+
+class WineryTemplateTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private fun extras(wines: List<com.sheldondesousa.uncork.data.reviews.WineryWine> = emptyList()) = WineAskExtras(
+        base, loadWineries = { directory },
+        loadReviewWineries = { WineriesDirectory(listOf(WineryLocation("Château Petrus", "France", "Bordeaux"))) },
+        loadWineryWines = { winery, _, _, _ -> if (wines.isEmpty()) null else com.sheldondesousa.uncork.data.reviews.WineryWinesSample(winery, wines, wines.size) },
+        loadGrapeWineries = { _, _, _, _ -> null },
+    ) { _, _ -> null }
+    private val wine = com.sheldondesousa.uncork.data.reviews.WineryWine("Petrus 2010", "Merlot", "Bordeaux", "France", 98, "Full-Bodied", "Moderate", "Crisp", "Opulent and long.")
+
+    @Test fun aNamedWineryIsRenderedAsLocationOnly() = kotlinx.coroutines.runBlocking {
+        assertEquals("Château Ausone is in Saint-Emilion, Bordeaux, France.", extras().lookup("Tell me about Château Ausone.").refusal)
+    }
+
+    @Test fun aWineryWithNoSubRegionOmitsIt() = kotlinx.coroutines.runBlocking {
+        assertEquals("Bodega LA INDOMITA is in Catamarca, Argentina.", extras().lookup("Where is Bodega LA INDOMITA?").refusal)
+    }
+
+    @Test fun aPlaceSampleUsesTheUnrankedTemplateAndNeverSaysKnownFor() = kotlinx.coroutines.runBlocking {
+        listOf("Name a few famous wineries in Bordeaux.", "What wineries should I know in Sonoma County?").forEach { q ->
+            val reply = extras().lookup(q).refusal!!
+            assertTrue(q, reply.contains("This is an unranked sample of the") && reply.contains("not the best ones and not a complete list"))
+            assertFalse(q, reply.contains("known for") || reply.contains("famous for"))
+        }
+    }
+
+    @Test fun aGrapeAskedWithAPlaceDoesNotClaimTheWineriesMakeIt() = kotlinx.coroutines.runBlocking {
+        listOf(
+            "Which wineries in Pomerol or Saint-Émilion are known for Merlot?",
+            "Which Burgundy wineries are known for Chardonnay?",
+            "Which wineries make Chardonnay in Chablis?",
+            "Which wineries in Oregon's Willamette Valley are known for Pinot Noir?",
+        ).forEach { q ->
+            val reply = extras().lookup(q).refusal!!
+            assertTrue(q, reply.startsWith("The directory lists these wineries in"))
+            assertTrue(q, reply.contains("It does not say which grapes they make."))
+        }
+    }
+
+    @Test fun aWineryQuestionThatAlsoAsksForTheGrapeExplainedStillGoesToGemma() = kotlinx.coroutines.runBlocking {
+        val found = extras().lookup("Tell me about Merlot and what Château Margaux is like.")
+        assertNull(found.refusal)
+        assertTrue(found.context!!.contains("Grape_Profile_Internal"))
+    }
+
+    @Test fun aWineryPutInTheWrongPlaceIsCorrectedAndReviewsAreOnlyOffered() = kotlinx.coroutines.runBlocking {
+        val withReviews = extras(listOf(wine))
+        val asked = "Which Pauillac château makes Pétrus?"
+        // The wineries-and-wines path answers first, so the reviews are never listed.
+        assertEquals("Petrus is in Pomerol, Bordeaux, France, not Pauillac. Would you like to see some reviews for it?", withReviews.wineryList(asked))
+        assertEquals("Petrus is in Pomerol, Bordeaux, France, not Pauillac. Would you like to see some reviews for it?", withReviews.lookup(asked).refusal)
+        // Without reviews there is no offer.
+        assertEquals("Petrus is in Pomerol, Bordeaux, France, not Pauillac.", extras().lookup(asked).refusal)
+    }
+
+    @Test fun anUnknownWineryStillGetsTheFixedRefusal() = kotlinx.coroutines.runBlocking {
+        assertEquals(ChatFlowText.NO_INFORMATION, extras().lookup("I heard Opus One is a Bordeaux château, right?").refusal)
     }
 }

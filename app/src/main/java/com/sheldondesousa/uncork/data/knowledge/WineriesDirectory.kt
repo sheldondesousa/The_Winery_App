@@ -50,15 +50,6 @@ class WineriesDirectory(entries: List<WineryLocation>) {
         keyed.forEach { k -> k.places.forEach { getOrPut(it) { mutableSetOf() } += k.country } }
     }
 
-    // "Château Ausone" is also found as "Ausone": the name without its leading Château/Domaine/Bodega-style word.
-    // Cores that are everyday words, or are themselves a region name (Margaux), are left out so they never match a place.
-    private val byCore: Map<String, List<WineryLocation>> = keyed.mapNotNull { k ->
-        val words = k.name.split(' ')
-        if (words.size < 2 || words.first() !in NAME_PREFIXES) return@mapNotNull null
-        val core = words.drop(1).joinToString(" ")
-        if (core.length < MIN_SINGLE_WORD || core in EVERYDAY_WORDS || core in regionNames) null else core to k.entry
-    }.groupBy({ it.first }, { it.second })
-
     // Single words inside region names ("sonoma" in "Sonoma Valley"), for a place named more broadly than the directory labels it.
     private val regionWords: Map<String, Set<String>> = buildMap<String, MutableSet<String>> {
         keyed.forEach { k ->
@@ -66,6 +57,15 @@ class WineriesDirectory(entries: List<WineryLocation>) {
                 .forEach { w -> getOrPut(w) { mutableSetOf() } += k.country }
         }
     }
+
+    // "Château Ausone" is also found as "Ausone": the name without its leading Château/Domaine/Bodega-style word.
+    // Cores that are everyday words, a region name (Margaux) or a word inside one (Willamette, from Willamette Valley) are left out so they never match a place.
+    private val byCore: Map<String, List<WineryLocation>> = keyed.mapNotNull { k ->
+        val words = k.name.split(' ')
+        if (words.size < 2 || words.first() !in NAME_PREFIXES) return@mapNotNull null
+        val core = words.drop(1).joinToString(" ")
+        if (core.length < MIN_SINGLE_WORD || core in EVERYDAY_WORDS || core in regionNames || core in regionWords) null else core to k.entry
+    }.groupBy({ it.first }, { it.second })
 
     private val collator: Collator = Collator.getInstance(Locale.ENGLISH).apply { strength = Collator.PRIMARY }
 

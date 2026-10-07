@@ -237,8 +237,17 @@ object WineFactsNote {
     }.trimEnd()
 
     /** The finished answer to "list N wineries in a place", from the Wineries_Directory. */
-    fun directoryWineriesList(wineries: List<WineryLocation>, where: String, total: Int, more: Boolean = false): String = buildString {
-        appendLine("Here are ${wineries.size}${if (more) " more" else ""} wineries in $where. This is an unranked sample of the $total listed, not the best ones and not a complete list.")
+    fun directoryWineriesList(
+        wineries: List<WineryLocation>, where: String, total: Int, more: Boolean = false,
+        /** A grape was asked about: the directory holds places only, so the list must not claim they make it. */
+        grapeAsked: Boolean = false,
+        /** The directory's own regions when a broad place was named ("Sonoma"). */
+        covering: List<String> = emptyList(),
+    ): String = buildString {
+        val intro = if (grapeAsked) "The directory lists these wineries in $where. It does not say which grapes they make."
+        else "Here are ${wineries.size}${if (more) " more" else ""} wineries in $where."
+        appendLine("$intro This is an unranked sample of the $total listed, not the best ones and not a complete list." +
+            if (covering.size > 1) " The place covers the listed regions ${covering.joinToString(", ")}." else "")
         appendLine()
         wineries.forEach { appendLine("• ${it.winery} (${listOf(it.place, it.country).filter { part -> part.isNotBlank() }.joinToString(", ")})") }
     }.trimEnd()

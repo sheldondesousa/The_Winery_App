@@ -6,6 +6,7 @@ import com.sheldondesousa.uncork.data.knowledge.ProductionGrape
 import com.sheldondesousa.uncork.data.knowledge.ResolvedProduction
 import com.sheldondesousa.uncork.data.knowledge.WineProduction
 import com.sheldondesousa.uncork.data.knowledge.WineriesDirectory
+import com.sheldondesousa.uncork.data.knowledge.WineryLocation
 import com.sheldondesousa.uncork.data.reviews.CountryReviewCount
 import com.sheldondesousa.uncork.data.reviews.GrapeVarietyLookup
 import com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample
@@ -306,6 +307,8 @@ class WineAskExtras(
     private var fresh = false
     // A finished reply the app wrote for the whole turn (Gemma is then not called); set while the turn is looked up.
     private var kotlinReply: String? = null
+    // For a note that Gemma would only dress up, the app's finished sentence for it (note text -> sentence).
+    private val rendered = mutableMapOf<String, String>()
     /** The words of a question that are neither the grape, a country nor everyday question wording: a wine name, if any. */
     private fun wineNameIn(query: String, grapes: List<com.sheldondesousa.uncork.data.reviews.GrapeVariety>, countries: List<String>): String? {
         val skip = buildSet {
@@ -348,6 +351,30 @@ class WineAskExtras(
             .filter { it.isNotBlank() }.toSet()
 
     /** A follow-up turned into a standalone question; the question itself when it already stands on its own. */
+    private fun isSideInfo(block: String) =
+        block.startsWith("Grape_Profile_Internal") || block.startsWith("Grape_Profile_Kaggle_Extracted") || block.startsWith("OTHER COUNTRIES")
+
+    /**
+     * "Chateau Petrus is in Pomerol, Bordeaux, France, not Pauillac." when the question puts one of [named] in a place
+     * the directory does not list it in; null when the question names no place or names the right one.
+     */
+    private fun correctionFor(directory: WineriesDirectory, named: List<WineryLocation>, query: String, countryHint: String?): String? {
+        val said = directory.regionMentioned(query, countryHint)?.second?.takeIf { it.isNotBlank() } ?: CountryMentions.find(query).firstOrNull() ?: return null
+        val norm = GrapeProfileInternal::normalize
+        val wrong = named.firstOrNull { w ->
+            directory.find(w.winery, null).none { e -> norm(said) in setOf(norm(e.subRegion), norm(e.region), norm(e.country)) }
+        } ?: return null
+        return "${wrong.winery} is in ${directory.placeLabel(wrong.country, wrong.subRegion.ifBlank { wrong.region })}, not $said."
+    }
+
+    /** After a correction, offers the winery's reviews when the reviews hold some; never lists them unasked. */
+    private suspend fun reviewsOffer(query: String): String {
+        val index = loadReviewWineries?.let { runCatching { it() }.getOrNull() } ?: return ""
+        val winery = index.findMentioned(query, null, limit = 1).firstOrNull()?.winery ?: return ""
+        val has = runCatching { loadWineryWines(winery, null, 1, emptySet()) }.getOrNull()?.wines?.isNotEmpty() == true
+        return if (has) " Would you like to see some reviews for it?" else ""
+    }
+
     private suspend fun standalone(query: String): String {
         val directory = loadWineries?.let { runCatching { it() }.getOrNull() }
         val namesPlace = CountryMentions.find(query).isNotEmpty() || directory?.regionMentioned(query, null) != null
@@ -388,6 +415,14 @@ class WineAskExtras(
         // Everything that was looked up came back empty: the answer is the fixed refusal, and Gemma is not called.
         if (blocks.isNotEmpty() && blocks.all { it.startsWith(WineFactsNote.NO_NOTES_MARK) }) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
         // Notes the conversation already holds count as found, so a follow-up about the same grape is not refused.
+        // Winery lookups are written by the app from a template, so Gemma cannot add claims such as "known for ...". Notes
+        // about a grape beside them are only side information, unless the user also asked for the grape to be explained.
+        if (blocks.any { it in rendered } && blocks.all { it in rendered || isSideInfo(it) } &&
+            !(blocks.any { isSideInfo(it) } && EXPLAINS.containsMatchIn(query))
+        ) {
+            val reply = blocks.mapNotNull { rendered[it] }.filter { it.isNotBlank() }.joinToString("\n\n")
+            if (reply.isNotBlank()) return AskLookup(null, reply, rewritten)
+        }
         // A rewritten follow-up that finds no real notes is refused outright; the rewrite itself is not a note.
         if (blocks.isEmpty() && rewritten != null) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
         if (blocks.isEmpty() && !alreadySentHit && RefusalGate.shouldRefuse(query, ownWords)) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
@@ -397,6 +432,7 @@ class WineAskExtras(
     override suspend fun forQuestion(query: String): String? {
         val blocks = mutableListOf<String>()
         kotlinReply = null
+        rendered.clear()
         if (fresh) {
             sentGrapes.clear(); sentKaggleExtracted.clear(); sentWineries.clear(); sentReviews.clear(); sentProduction.clear()
         }
@@ -406,6 +442,7 @@ class WineAskExtras(
         } else query
         val mentioned = GrapeVarietyLookup.findMentioned(grapeText)
         val countriesNamed = CountryMentions.find(query)
+        val grapeNamedInQuestion = mentioned.isNotEmpty()
 
         // What people say: a grape plus a wine name (the open wine, or one in quotes) finds that wine's reviews; a grape
         // plus a country gives the broader sample. With neither a wine name nor a country, Gemma asks.
@@ -505,7 +542,10 @@ class WineAskExtras(
         }
         var grapeWineriesAdded = false
         // 4a. "Wineries for Merlot": wineries that have reviews of the grape named in the question.
-        if (WineryIntent.asksAboutWineries(query)) {
+        // A region or sub-region named with the grape ("Chardonnay in Chablis") goes to the directory below instead: the
+        // reviews can only narrow a grape's wineries to a country, so they would list wineries from elsewhere.
+        val regionNamedEarly = loadWineries?.let { runCatching { it() }.getOrNull() }?.regionMentioned(query, countriesNamed.firstOrNull() ?: ownCountry.takeIf { it.isNotBlank() })
+        if (WineryIntent.asksAboutWineries(query) && regionNamedEarly == null) {
             // "5 wineries" with no grape named means the open wine's grape.
             val focus = mentioned.firstOrNull()?.let { it.name to it.databaseNames }
                 ?: ownVariety.firstOrNull()?.let { it to ownVariety }
@@ -518,7 +558,9 @@ class WineAskExtras(
                 }.getOrNull()
                 if (sample != null && sample.wineries.isNotEmpty()) {
                     remember(topic, sample.wineries.map { it.winery })
-                    blocks += WineFactsNote.grapeWineriesBlock(focus.first, wineryCountry, sample)
+                    val block = WineFactsNote.grapeWineriesBlock(focus.first, wineryCountry, sample)
+                    blocks += block
+                    rendered[block] = WineFactsNote.grapeWineriesList(focus.first, wineryCountry, sample)
                     grapeWineriesAdded = true
                 }
             }
@@ -543,14 +585,15 @@ class WineAskExtras(
                 if (mentioned.isNotEmpty() && named.isEmpty()) return blocks.takeIf { it.isNotEmpty() }?.joinToString("\n\n")
                 if (named.isNotEmpty()) {
                     sentWineries += named.map { "${it.winery}|${it.country}|${it.region}".lowercase() }
-                    blocks += WineFactsNote.wineriesBlock(named, "entries for wineries named in the question")
-                    // The user placed the winery somewhere the directory does not: give the directory's place as a correction.
-                    val said = directory.regionMentioned(query, countryNamed ?: own)?.second?.takeIf { it.isNotBlank() }
-                        ?: countriesNamed.firstOrNull()
-                    if (said != null) {
-                        val norm = GrapeProfileInternal::normalize
-                        named.firstOrNull { w -> directory.find(w.winery, null).none { e -> norm(said) in setOf(norm(e.subRegion), norm(e.region), norm(e.country)) } }
-                            ?.let { w -> blocks += "Correction: ${w.winery} is in ${directory.placeLabel(w.country, w.subRegion.ifBlank { w.region })}, not in $said." }
+                    val wineryBlock = WineFactsNote.wineriesBlock(named, "entries for wineries named in the question")
+                    blocks += wineryBlock
+                    rendered[wineryBlock] = named.joinToString(" ") { "${it.winery} is in ${it.place}, ${it.country}." }
+                    // The user placed the winery somewhere the directory does not: the app corrects the premise.
+                    correctionFor(directory, named, query, countryNamed ?: own)?.let { sentence ->
+                        val correction = "Correction: $sentence"
+                        blocks += correction
+                        rendered[wineryBlock] = ""
+                        rendered[correction] = sentence + reviewsOffer(query)
                     }
                 } else if (asksWineries) {
                     val region = directory.regionMentioned(query, countryNamed ?: ownCountry.takeIf { it.isNotBlank() })
@@ -571,10 +614,13 @@ class WineAskExtras(
                             // A broad place ("Sonoma") covers several listed regions: say so, so each can be offered as an option.
                             val variants = directory.regionVariants(place.first, place.second)
                             val covers = if (variants.size > 1) " (covering the listed regions ${variants.joinToString(", ")}; offer them as options)" else ""
-                            blocks += WineFactsNote.wineriesBlock(
+                            val total = directory.countOf(place.first, place.second.takeIf { it.isNotBlank() })
+                            val sampleBlock = WineFactsNote.wineriesBlock(
                                 sample,
-                                "a small, unranked sample of the ${directory.countOf(place.first, place.second.takeIf { it.isNotBlank() })} wineries listed in $where$covers; not a complete list and not the best wineries",
+                                "a small, unranked sample of the $total wineries listed in $where$covers; not a complete list and not the best wineries",
                             )
+                            blocks += sampleBlock
+                            rendered[sampleBlock] = WineFactsNote.directoryWineriesList(sample, where, total, grapeAsked = grapeNamedInQuestion, covering = variants)
                         }
                     }
                 }
@@ -702,6 +748,10 @@ class WineAskExtras(
         val more = lastWinery != null && WineryWinesIntent.asksForMore(query) && asks
         if (!asks && !more) return null
         val winery = resolveWinery(query, CountryMentions.find(query).firstOrNull()) ?: return null
+        // A wine or winery put in the wrong place is corrected first, and its reviews are only offered, not listed.
+        loadWineries?.let { runCatching { it() }.getOrNull() }?.let { directory ->
+            correctionFor(directory, directory.findMentioned(query, null), query, null)?.let { return it + reviewsOffer(query) }
+        }
         val key = winery.lowercase()
         val sameAsLast = lastWinery?.equals(winery, ignoreCase = true) == true
         val skip = if (more && sameAsLast) sentWines[key].orEmpty().toSet() else emptySet<String>().also { sentWines.remove(key) }
@@ -791,6 +841,12 @@ class WineAskExtras(
 
     private companion object {
         const val MAX_GRAPES = 2
+
+        /** Wording that asks for a grape to be explained, so a winery answer cannot be templated alone. */
+        val EXPLAINS = Regex(
+            "\\b(describe|explain|tell\\s+me\\s+(more\\s+)?about|what\\s+(is|are|does|do)|what's|tastes?|flavou?rs?|difference|different|compare|why|how|body|tannins?|acidity|sweet\\w*)\\b",
+            RegexOption.IGNORE_CASE,
+        )
 
         /** Everyday question and review wording, never part of a wine's name. */
         val REVIEW_WORDS = setOf(
