@@ -99,7 +99,7 @@ object WineFactsNote {
 
         if (otherCountries.isNotEmpty()) {
             appendLine()
-            appendLine(otherCountriesLine(otherCountries))
+            appendLine(otherCountriesLine(otherCountries, wine.variety))
         }
 
         if (reviews != null && !reviews.isEmpty) {
@@ -179,8 +179,8 @@ object WineFactsNote {
     }.trimEnd()
 
     /** The countries with the most reviews of a grape, for Gemma to offer after it answers. */
-    fun otherCountriesLine(countries: List<CountryReviewCount>): String =
-        "OTHER COUNTRIES with the most reviews of this grape (after you answer, offer to tell the user about the grape from one of these): " +
+    fun otherCountriesLine(countries: List<CountryReviewCount>, grape: String): String =
+        "OTHER COUNTRIES with the most reviews of $grape (after you answer, offer to tell the user about $grape from one of these): " +
             countries.joinToString(", ") { "${it.country} (${it.reviewCount} reviews)" }
 
     /** Wineries that have reviews of a grape: a small unranked sample, never "the best". */

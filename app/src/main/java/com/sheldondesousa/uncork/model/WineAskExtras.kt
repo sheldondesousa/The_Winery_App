@@ -465,10 +465,11 @@ class WineAskExtras(
         }
 
         // Offer other countries once for each grape the user names.
+        // Each line names its grape, and a grape never gets two.
         mentioned.take(MAX_GRAPES).forEach { grape ->
             if (!offeredCountries.add(grape.name.lowercase())) return@forEach
             val others = runCatching { loadOtherCountries(grape.databaseNames, country) }.getOrNull().orEmpty()
-            if (others.isNotEmpty()) blocks += WineFactsNote.otherCountriesLine(others)
+            if (others.isNotEmpty()) WineFactsNote.otherCountriesLine(others, grape.name).let { if (it !in blocks) blocks += it }
         }
 
         // 3b. "How is Merlot made in Bordeaux?": the French production notes for that grape and place.
@@ -519,6 +520,14 @@ class WineAskExtras(
                 if (named.isNotEmpty()) {
                     sentWineries += named.map { "${it.winery}|${it.country}|${it.region}".lowercase() }
                     blocks += WineFactsNote.wineriesBlock(named, "entries for wineries named in the question")
+                    // The user placed the winery somewhere the directory does not: give the directory's place as a correction.
+                    val said = directory.regionMentioned(query, countryNamed ?: own)?.second?.takeIf { it.isNotBlank() }
+                        ?: countriesNamed.firstOrNull()
+                    if (said != null) {
+                        val norm = GrapeProfileInternal::normalize
+                        named.firstOrNull { w -> directory.find(w.winery, null).none { e -> norm(said) in setOf(norm(e.subRegion), norm(e.region), norm(e.country)) } }
+                            ?.let { w -> blocks += "Correction: ${w.winery} is in ${directory.placeLabel(w.country, w.subRegion.ifBlank { w.region })}, not in $said." }
+                    }
                 } else if (asksWineries) {
                     val region = directory.regionMentioned(query, countryNamed ?: ownCountry.takeIf { it.isNotBlank() })
                     val place = region ?: (countryNamed ?: countriesNamed.firstOrNull() ?: lastCountry ?: own)?.let { it to "" }

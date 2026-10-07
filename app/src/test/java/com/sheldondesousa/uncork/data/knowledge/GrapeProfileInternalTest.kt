@@ -91,7 +91,7 @@ class GrapeProfileInternalTest {
             com.sheldondesousa.uncork.data.reviews.CountryReviewCount("Italy", 400),
         )
         val note = WineFactsNote.build(wine, base.find("Merlot"), otherCountries = others)
-        assertTrue(note.contains("OTHER COUNTRIES with the most reviews of this grape"))
+        assertTrue(note.contains("OTHER COUNTRIES with the most reviews of Merlot"))
         assertTrue(note.contains("United States (900 reviews), Italy (400 reviews)"))
         assertFalse(WineFactsNote.build(wine, base.find("Merlot")).contains("OTHER COUNTRIES"))
     }
@@ -453,7 +453,7 @@ class ChatExtrasTest {
         val block = extras.forQuestion("Tell me about Malbec in Argentina")!!
         assertTrue(block.contains("Grape_Profile_Internal"))
         assertTrue(block.contains("- Malbec (red)"))
-        assertTrue(block.contains("OTHER COUNTRIES with the most reviews of this grape"))
+        assertTrue(block.contains("OTHER COUNTRIES with the most reviews of Malbec"))
         assertTrue(block.contains("United States (900 reviews), Italy (400 reviews)"))
         assertNull(extras.forQuestion("And Malbec again?"))
     }
@@ -901,5 +901,43 @@ class FollowUpRewriteTest {
         e.lookup("Tell me about Merlot.")
         assertNull(e.lookup("Which wineries are in Bordeaux?").rewritten)
         assertNull(e.lookup("What is Malbec like in Argentina?").rewritten)
+    }
+}
+
+class RetrievalCleanUpTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private val others = listOf(com.sheldondesousa.uncork.data.reviews.CountryReviewCount("Italy", 400))
+    private fun extras() = WineAskExtras(base, loadWineries = { directory }, loadOtherCountries = { _, _ -> others }) { _, _ -> null }
+
+    @Test fun twoGrapesGetTwoLabelledOtherCountriesLinesNotTheSameOneTwice() = kotlinx.coroutines.runBlocking {
+        val text = extras().forQuestion("Is Merlot sweeter than Cabernet Sauvignon?")!!
+        val lines = text.lines().filter { it.startsWith("OTHER COUNTRIES") }
+        assertEquals(2, lines.size)
+        assertEquals(2, lines.distinct().size)
+        assertTrue(lines.any { it.contains("of Merlot") } && lines.any { it.contains("of Cabernet Sauvignon") })
+    }
+
+    @Test fun aWineryPlacedInTheWrongPlaceGetsACorrection() = kotlinx.coroutines.runBlocking {
+        val text = extras().forQuestion("Which Pauillac château makes Pétrus?")!!
+        assertTrue(text, text.contains("Correction: Petrus is in Pomerol, Bordeaux, France, not in Pauillac."))
+    }
+
+    @Test fun aWineryPlacedRightGetsNoCorrection() = kotlinx.coroutines.runBlocking {
+        val text = extras().forQuestion("Is Pétrus in Pomerol?")!!
+        assertFalse(text, text.contains("Correction:"))
+    }
+
+    @Test fun grapeNotesStayAttachedWhenAPlaceOrAWineryAlsoMatches() = kotlinx.coroutines.runBlocking {
+        listOf(
+            "Which wineries in Pomerol or Saint-Émilion are known for Merlot?",
+            "Tell me about Merlot from Château Margaux.",
+            "Which Bordeaux wineries make Merlot?",
+            "Where is Nichelini Family Winery and what Zinfandel do they make?",
+        ).forEach { q ->
+            val text = extras().forQuestion(q)!!
+            assertTrue(q, text.contains("Grape_Profile_Internal"))
+            assertTrue(q, text.contains("Wineries_Directory"))
+        }
     }
 }
