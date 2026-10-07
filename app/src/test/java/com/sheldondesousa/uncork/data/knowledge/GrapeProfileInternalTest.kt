@@ -887,13 +887,33 @@ class FollowUpRewriteTest {
         assertEquals("Name a winery from Burgundy.", e.lookup("Name a winery from there.").rewritten)
     }
 
-    @Test fun whichOneNamesBothGrapesAndPlaces() = kotlinx.coroutines.runBlocking {
+    @Test fun whichOneAfterTwoGrapesIsAskedBackNotGuessed() = kotlinx.coroutines.runBlocking {
         val e = extras()
         e.lookup("How is Merlot made in Bordeaux?")
         e.lookup("And how is Chardonnay made in Burgundy?")
         val third = e.lookup("Which one spends longer in oak?")
-        assertEquals("Of Merlot in Bordeaux and Chardonnay in Burgundy, which spends longer in oak?", third.rewritten)
-        assertNull(third.refusal)
+        assertEquals("Which wine do you mean, Merlot or Chardonnay?", third.refusal)
+        assertNull(third.context)
+        // No broken rewrite such as "Of Merlot in Bordeaux an..." is produced.
+        assertNull(third.rewritten)
+        assertEquals("Which wine do you mean, Merlot or Chardonnay?", e.wineryList("Which one spends longer in oak?"))
+    }
+
+    @Test fun aRewrittenFollowUpThatFindsNothingIsRefusedAndTheRewriteIsNotCountedAsANote() = kotlinx.coroutines.runBlocking {
+        // No winery directory is loaded, so "wineries in Chile" finds nothing to retrieve.
+        val e = WineAskExtras(base) { _, _ -> null }
+        e.lookup("Which wineries are in Chile?")
+        val second = e.lookup("Name a winery from there.")
+        assertEquals("Name a winery from Chile.", second.rewritten)
+        assertEquals(ChatFlowText.NO_INFORMATION, second.refusal)
+        assertNull(second.context)
+    }
+
+    @Test fun aFollowUpAboutAGrapeAlreadyDiscussedGetsItsNotesAgain() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.lookup("Tell me about Chardonnay.")
+        val second = e.lookup("Where in Burgundy is it grown?")
+        assertTrue(second.context!!.contains("Chardonnay"))
     }
 
     @Test fun aQuestionThatStandsOnItsOwnIsNotChanged() = kotlinx.coroutines.runBlocking {

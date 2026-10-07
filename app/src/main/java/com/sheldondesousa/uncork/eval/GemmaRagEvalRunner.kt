@@ -23,14 +23,15 @@ internal object GemmaRagEvalRunner {
     /** Remembers what the wrapped extras added to the prompt, so it can be saved next to the reply. */
     private class RecordingExtras(private val inner: AskExtras) : AskExtras {
         val chunks = mutableListOf<String>()
+        var rewritten: String? = null
         override suspend fun forQuestion(query: String): String? = inner.forQuestion(query)?.also { chunks += it.split("\n\n").filter { c -> c.isNotBlank() } }
         override suspend fun lookup(query: String): com.sheldondesousa.uncork.model.AskLookup =
             inner.lookup(query).also { found ->
                 found.context?.let { chunks += it.split("\n\n").filter { c -> c.isNotBlank() } }
                 // A refusal is recorded too, so the eval can see that retrieval was empty.
                 found.refusal?.let { chunks += "[refusal] $it" }
-                // The rewritten follow-up is saved too, so the eval shows what retrieval actually ran on.
-                found.rewritten?.let { chunks += "[rewritten question] $it" }
+                // Kept apart from the chunks: the rewrite is a log field, never counted as something retrieved.
+                rewritten = found.rewritten
             }
         override suspend fun wineryList(query: String): String? = inner.wineryList(query)?.also { chunks += it }
         override fun reset() = inner.reset()
@@ -88,10 +89,11 @@ internal object GemmaRagEvalRunner {
                         for (t in 0 until userTurns.length()) {
                             val user = userTurns.getString(t)
                             recorder?.chunks?.clear()
+                            recorder?.rewritten = null
                             val reply = (discussion?.replyTo(user) ?: responder.replyTo(user)).text
                             turns.put(
                                 JSONObject().put("user", user).put("reply", reply).put("route", responder.lastRoute)
-                                    .put("retrieved_chunks", JSONArray(recorder?.chunks.orEmpty())),
+                                    .put("retrieved_chunks", JSONArray(recorder?.chunks.orEmpty())).put("rewritten_question", recorder?.rewritten ?: JSONObject.NULL),
                             )
                         }
                     } finally {

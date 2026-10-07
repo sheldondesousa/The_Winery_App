@@ -46,6 +46,16 @@ object FollowUp {
     private val IT = Regex("\\b(it|its)\\b", RegexOption.IGNORE_CASE)
     private val THERE = Regex("\\b(there|that\\s+(region|place|area|country))\\b", RegexOption.IGNORE_CASE)
 
+    /**
+     * "Which one ...?" after two different grapes were discussed cannot be resolved to a single grape. Returns the
+     * clarifying question to ask the user (written by the app), or null when the question is not ambiguous.
+     */
+    fun clarification(query: String, recent: List<Topic>, namesGrape: Boolean): String? {
+        if (namesGrape || !WHICH_ONE.containsMatchIn(query)) return null
+        val two = recent.mapNotNull { it.grape }.distinct().takeLast(2)
+        return if (two.size == 2) "Which wine do you mean, ${two[0]} or ${two[1]}?" else null
+    }
+
     /** Replaces the first country named in [previous] with [country] (as an adjective when there is one). */
     private fun swapCountry(previous: String, country: String): String {
         val words = previous.split(' ')
@@ -71,12 +81,6 @@ object FollowUp {
         val words = query.trim().split(Regex("\\s+")).size
         // "And in France?": the same question again, for another country.
         if (previous != null && words <= 7 && ELLIPSIS.containsMatchIn(query) && countries.isNotEmpty()) return swapCountry(previous, countries.first())
-        // "Which one ...?" after two grapes were discussed.
-        val two = recent.filter { it.grape != null }.takeLast(2)
-        if (WHICH_ONE.containsMatchIn(query) && two.size == 2 && two[0].grape != two[1].grape) {
-            fun label(t: Topic) = listOfNotNull(t.grape, t.place?.let { "in $it" }).joinToString(" ")
-            return WHICH_ONE.replaceFirst(query, "Of ${label(two[0])} and ${label(two[1])}, which")
-        }
         var out = query
         val grape = recent.lastOrNull { it.grape != null }?.grape
         if (!namesGrape && grape != null && IT.containsMatchIn(out)) {
@@ -297,6 +301,7 @@ class WineAskExtras(
     private var previousQuestion: String? = null
     // Set when something was found for a question but not sent again because the conversation already holds it.
     private var alreadySentHit = false
+    private var fresh = false
     /** The words of a question that are neither the grape, a country nor everyday question wording: a wine name, if any. */
     private fun wineNameIn(query: String, grapes: List<com.sheldondesousa.uncork.data.reviews.GrapeVariety>, countries: List<String>): String? {
         val skip = buildSet {
@@ -360,22 +365,35 @@ class WineAskExtras(
         previousQuestion = question
     }
 
+    /** The app's own question back to the user when a follow-up is ambiguous ("which one" with two grapes in play). */
+    private fun clarificationFor(query: String): String? =
+        FollowUp.clarification(query, recentTopics.toList(), namesGrape = GrapeVarietyLookup.findMentioned(query).isNotEmpty())
+
     override suspend fun lookup(rawQuery: String): AskLookup {
+        clarificationFor(rawQuery)?.let { return AskLookup(null, it) }
         val query = standalone(rawQuery)
         val rewritten = query.takeIf { it != rawQuery }
         alreadySentHit = false
-        val text = forQuestion(query)
+        // A follow-up is looked up afresh: what was sent earlier is sent again, so the answer is in front of Gemma
+        // rather than relying on its memory of the conversation.
+        fresh = rewritten != null
+        val text = try { forQuestion(query) } finally { fresh = false }
         noteTurn(query)
         val blocks = text?.split("\n\n")?.filter { it.isNotBlank() }.orEmpty()
         // Everything that was looked up came back empty: the answer is the fixed refusal, and Gemma is not called.
         if (blocks.isNotEmpty() && blocks.all { it.startsWith(WineFactsNote.NO_NOTES_MARK) }) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
         // Notes the conversation already holds count as found, so a follow-up about the same grape is not refused.
+        // A rewritten follow-up that finds no real notes is refused outright; the rewrite itself is not a note.
+        if (blocks.isEmpty() && rewritten != null) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
         if (blocks.isEmpty() && !alreadySentHit && RefusalGate.shouldRefuse(query, ownWords)) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
         return AskLookup(text, null, rewritten)
     }
 
     override suspend fun forQuestion(query: String): String? {
         val blocks = mutableListOf<String>()
+        if (fresh) {
+            sentGrapes.clear(); sentKaggleExtracted.clear(); sentWineries.clear(); sentReviews.clear(); sentProduction.clear()
+        }
         // "Tell me more" or "describe it", with no grape named, is about the grape last discussed (else the open wine's).
         val grapeText = if (GrapeIntent.asksToDescribe(query) && GrapeVarietyLookup.findMentioned(query).isEmpty() && knowledge.findMentioned(query).isEmpty()) {
             (lastGrape ?: ownVariety.firstOrNull())?.let { "$query $it" } ?: query
@@ -639,6 +657,7 @@ class WineAskExtras(
     }
 
     override suspend fun wineryList(query: String): String? {
+        clarificationFor(query)?.let { return it }
         val question = standalone(query)
         return wineryListFor(question)?.also { noteTurn(question) }
     }
