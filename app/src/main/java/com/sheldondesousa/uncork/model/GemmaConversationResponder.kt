@@ -57,7 +57,7 @@ class GemmaConversationResponder(
 
     private var chatMode = ChatMode.Undecided
 
-    /** Which path handled the most recent turn: GEMMA_WAKE, KOTLIN_HANDLED or HANDBACK. Logging only. */
+    /** Which path handled the most recent turn: GEMMA_WAKE, KOTLIN_HANDLED, KOTLIN_REFUSAL or HANDBACK. Logging only. */
     @Volatile
     internal var lastRoute: String? = null
         private set
@@ -147,9 +147,16 @@ class GemmaConversationResponder(
             return plainMessage(it)
         }
 
+        // Nothing found for a question that names something the app should know: the app answers, Gemma is not called.
+        var firstLookup = runCatching { curiousExtras?.lookup(query) }.getOrNull()
+        firstLookup?.refusal?.let {
+            markRoute("KOTLIN_REFUSAL")
+            return plainMessage(it)
+        }
         markRoute("GEMMA_WAKE")
         suspend fun messageFor(): String {
-            val extra = runCatching { curiousExtras?.forQuestion(query) }.getOrNull()
+            // The first call reuses the lookup above, so what it adds is not marked as sent twice.
+            val extra = (firstLookup?.also { firstLookup = null } ?: runCatching { curiousExtras?.lookup(query) }.getOrNull())?.context
             return if (extra.isNullOrBlank()) query else "<more_context>\n$extra\n</more_context>\nThe user says: $query"
         }
         suspend fun streamFrom(conversation: Conversation, message: String): String {
@@ -905,8 +912,13 @@ class GemmaConversationResponder(
                 onUpdate(ConversationStreamUpdate(text = list, isGemmaConversationOutput = false))
                 return list
             }
-            val extra = runCatching { extras?.forQuestion(query) }.getOrNull()
-                ?.let { "<more_context>\n$it\n</more_context>\n" }.orEmpty()
+            val found = runCatching { extras?.lookup(query) }.getOrNull()
+            found?.refusal?.let { refusal ->
+                markRoute("KOTLIN_REFUSAL")
+                onUpdate(ConversationStreamUpdate(text = refusal, isGemmaConversationOutput = false))
+                return refusal
+            }
+            val extra = found?.context?.let { "<more_context>\n$it\n</more_context>\n" }.orEmpty()
             val message = when {
                 !factsSent -> "${facts()}\n\n${extra}The user says: $query"
                 reminder.isNotBlank() -> "$reminder\n${extra}The user says: $query"

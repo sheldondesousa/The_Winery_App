@@ -86,7 +86,7 @@ object WineFactsNote {
         } else if (regionStyles.none { it.hasAnyValue() }) {
             appendLine()
             appendLine("Grape_Profile_Internal")
-            appendLine("No information is available for this variety. Tell the user in a friendly way that no information is available, and do not make anything up.")
+            appendLine("No notes were found for this variety. Do not invent details about it.")
         }
 
         // Order of trust for body, tannin and acidity: the grape notes first. Region style (what enthusiasts say) is
@@ -204,9 +204,9 @@ object WineFactsNote {
         }
     }.trimEnd()
 
-    /** Tells Gemma a lookup found nothing, so it says so kindly instead of guessing. */
-    fun noInformation(about: String): String =
-        "NO INFORMATION\nNo information is available for $about. Tell the user in a friendly way that no information is available, and do not make anything up."
+    /** Marks a lookup that found nothing. Alone, it becomes the fixed refusal; beside other notes, Gemma just sees the line. */
+    const val NO_NOTES_MARK = "NO NOTES FOUND"
+    fun noNotes(about: String): String = "$NO_NOTES_MARK\nNo notes were found for $about."
 
     /** Reviews the database holds for one named wine, sent in front of a question about what people say of it. */
     fun wineReviewsBlock(wines: List<WineryWine>): String = buildString {

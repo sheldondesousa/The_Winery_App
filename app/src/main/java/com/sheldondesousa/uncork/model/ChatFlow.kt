@@ -35,6 +35,12 @@ internal object ChatFlowText {
         "Sure, Let's find you a wine. But first, I'm going to need some details to assist you better."
     const val CONTINUE_CONVERSATION_LABEL = "Continue Conversation"
 
+    /**
+     * The one refusal. Written by the app, never by Gemma: when the app finds nothing it can answer from, this is the
+     * whole reply and Gemma is not called.
+     */
+    const val NO_INFORMATION = "I'm sorry, I do not have that information."
+
     fun questionFor(step: FindWineStep): String = when (step) {
         FindWineStep.Type -> Q1_TYPE
         FindWineStep.Country -> Q2_COUNTRY

@@ -22,8 +22,53 @@ interface AskExtras {
      */
     suspend fun wineryList(query: String): String? = null
 
+    /**
+     * What to add to [query], or, when the question names something the app should know and nothing was found, the
+     * finished refusal. The default adds [forQuestion]'s text and never refuses.
+     */
+    suspend fun lookup(query: String): AskLookup = AskLookup(forQuestion(query))
+
     /** Forget what has been sent. Called when the conversation is rebuilt and so has lost earlier blocks. */
     fun reset()
+}
+
+/** The outcome of looking a question up: context for Gemma, or the app's own refusal (Gemma is then not called). */
+class AskLookup(val context: String?, val refusal: String? = null)
+
+/**
+ * Decides when a question that retrieved nothing gets the app's fixed refusal instead of going to Gemma: it names
+ * something specific the app should know (a winery, wine, place) or uses winery or production wording, and it is not a
+ * greeting, thanks, out-of-scope or a safety matter, which Gemma handles.
+ */
+object RefusalGate {
+    private val EXEMPT = Regex(
+        // greetings and thanks
+        "^\\W*(hi|hello|hey|howdy|good\\s+(morning|afternoon|evening)|thanks?|thank\\s+you|cheers|bye|goodbye|ok|okay|great|cool)\\b|" +
+            // out of scope: food, other drinks, recipes, health
+            "\\b(pair|pairs|pairing|pairings|goes\\s+with|go\\s+with|dish|recipe|cook|cooking|cheese|food|dinner|lunch|steak|beer|whisk(e)?y|vodka|gin|rum|tequila|cocktail|spirits?|liquor|medical|health|doctor|pregnan\\w*|medicine|diet|calories)\\b|" +
+            // safety: abuse, minors, the model and its instructions
+            "\\b(system\\s+prompt|instructions?|ignore\\s+(all|previous|your)|reveal|jailbreak|what\\s+model|which\\s+model|who\\s+(made|built|created)\\s+you|underage|minors?|kids?|children|teen\\w*|stupid|idiot|shut\\s+up)\\b",
+        RegexOption.IGNORE_CASE,
+    )
+    private val QUESTION_STARTERS = setOf(
+        "what", "whats", "which", "who", "whose", "where", "when", "why", "how", "is", "are", "was", "does", "do", "did", "can", "could",
+        "would", "should", "tell", "name", "list", "give", "show", "describe", "explain", "i", "my", "the", "a", "an", "any", "and", "or",
+        "but", "so", "yes", "no", "please", "uncork", "hi", "hello", "hey", "thanks", "thank",
+    )
+
+    /** True for a question that names something specific: a capitalised word that is not a question word, grape or country. */
+    private fun namesSomethingSpecific(query: String, known: Set<String>): Boolean =
+        query.split(Regex("\\s+")).map { it.trim(',', '.', '?', '!', ';', ':', '"', '\'', '(', ')') }
+            .any { w ->
+                w.length >= 3 && w[0].isUpperCase() && w.lowercase().let { it !in QUESTION_STARTERS && it !in known } &&
+                    GrapeProfileInternal.normalize(w).let { n -> n !in known && CountryMentions.find(n).isEmpty() && GrapeVarietyLookup.findMentioned(n).isEmpty() }
+            }
+
+    /** [known] holds words that are already about the open bottle (its name, winery, grape, place), which are not new names. */
+    fun shouldRefuse(query: String, known: Set<String> = emptySet()): Boolean {
+        if (EXEMPT.containsMatchIn(query)) return false
+        return WineryIntent.asksAboutWineries(query) || ProductionIntent.asksHowMade(query) || namesSomethingSpecific(query, known)
+    }
 }
 
 /** Spots questions that ask what other people think, as opposed to questions about the open wine. */
@@ -227,6 +272,20 @@ class WineAskExtras(
     // The open wine's own grape already has its other-countries line in the first message.
     private val offeredCountries = ownGroupNames.toMutableSet()
 
+    // Words about the open bottle (its name, winery, grape, place): not new names when the user mentions them.
+    private val ownWords: Set<String> =
+        (listOf(ownWineName, ownWinery, ownCountry, ownRegion) + ownVariety).flatMap { GrapeProfileInternal.normalize(it).split(' ') }
+            .filter { it.isNotBlank() }.toSet()
+
+    override suspend fun lookup(query: String): AskLookup {
+        val text = forQuestion(query)
+        val blocks = text?.split("\n\n")?.filter { it.isNotBlank() }.orEmpty()
+        // Everything that was looked up came back empty: the answer is the fixed refusal, and Gemma is not called.
+        if (blocks.isNotEmpty() && blocks.all { it.startsWith(WineFactsNote.NO_NOTES_MARK) }) return AskLookup(null, ChatFlowText.NO_INFORMATION)
+        if (blocks.isEmpty() && RefusalGate.shouldRefuse(query, ownWords)) return AskLookup(null, ChatFlowText.NO_INFORMATION)
+        return AskLookup(text)
+    }
+
     override suspend fun forQuestion(query: String): String? {
         val blocks = mutableListOf<String>()
         // "Tell me more" or "describe it", with no grape named, is about the grape last discussed (else the open wine's).
@@ -255,13 +314,13 @@ class WineAskExtras(
                     return if (found.isNotEmpty()) WineFactsNote.wineReviewsBlock(found) else null
                 }
                 suspend fun sampleBlock(): String = runCatching { loadReviews(spellings, country) }.getOrNull()
-                    ?.takeIf { !it.isEmpty }?.let { WineFactsNote.reviewsBlock(it) } ?: WineFactsNote.noInformation("reviews of $grapeName from $country")
+                    ?.takeIf { !it.isEmpty }?.let { WineFactsNote.reviewsBlock(it) } ?: WineFactsNote.noNotes("reviews of $grapeName from $country")
                 if (sentReviews.add(key)) {
                     val block = when {
                         typed != null -> wineBlock(typed) ?: if (country.isNotBlank() && countriesNamed.isNotEmpty()) sampleBlock()
-                            else ownWineName.takeIf { it.isNotBlank() && !it.equals(typed, true) }?.let { wineBlock(it) } ?: WineFactsNote.noInformation("reviews of $typed")
+                            else ownWineName.takeIf { it.isNotBlank() && !it.equals(typed, true) }?.let { wineBlock(it) } ?: WineFactsNote.noNotes("reviews of $typed")
                         countriesNamed.isNotEmpty() -> sampleBlock()
-                        ownWineName.isNotBlank() -> wineBlock(ownWineName) ?: WineFactsNote.noInformation("reviews of $ownWineName")
+                        ownWineName.isNotBlank() -> wineBlock(ownWineName) ?: WineFactsNote.noNotes("reviews of $ownWineName")
                         country.isNotBlank() -> sampleBlock()
                         else -> {
                             sentReviews.remove(key)
@@ -311,7 +370,7 @@ class WineAskExtras(
                 sentKaggleExtracted += key
                 val styles = runCatching { loadKaggleExtracted(spellings, country) }.getOrNull().orEmpty()
                 blocks += if (styles.isNotEmpty()) WineFactsNote.kaggleExtractedBlock(styles, grape)
-                else WineFactsNote.noInformation("$grape in $country")
+                else WineFactsNote.noNotes("$grape in $country")
             }
         }
 
@@ -381,7 +440,7 @@ class WineAskExtras(
                     if (place != null) {
                         val topic = WineryTopic(null, null, place)
                         val sample = directory.sampleIn(place.first, place.second.takeIf { it.isNotBlank() }, WineryIntent.requestedCount(query), skipFor(topic, false))
-                        if (sample.isEmpty()) blocks += WineFactsNote.noInformation("wineries in ${directory.placeLabel(place.first, place.second.takeIf { it.isNotBlank() })}")
+                        if (sample.isEmpty()) blocks += WineFactsNote.noNotes("wineries in ${directory.placeLabel(place.first, place.second.takeIf { it.isNotBlank() })}")
                         if (sample.isNotEmpty()) {
                             remember(topic, sample.map { it.winery })
                             val where = directory.placeLabel(place.first, place.second.takeIf { it.isNotBlank() })
@@ -418,7 +477,7 @@ class WineAskExtras(
         val production = loaded ?: return null
         val about = GrapeVarietyLookup.findMentioned(query).firstOrNull()?.name ?: knowledge.findMentioned(query).firstOrNull()?.grape
             ?: ownVariety.firstOrNull() ?: lastGrape ?: "this grape"
-        val noInfo = WineFactsNote.noInformation("how $about is made there")
+        val noInfo = WineFactsNote.noNotes("how $about is made there")
         // The notes are about France only: a question naming another country, or an open wine from one, is not theirs.
         val frenchNamed = countriesNamed.any { it.equals(production.country, ignoreCase = true) }
         if (countriesNamed.isNotEmpty() && !frenchNamed) return noInfo
@@ -473,7 +532,7 @@ class WineAskExtras(
         lastWinery = winery
         if (sample == null || sample.wines.isEmpty()) {
             return if (skip.isNotEmpty()) "That is every wine I have listed for $winery. Ask about another winery and I can list its wines."
-            else "I'm sorry, no information is available about wines from $winery. Ask about another winery and I can look it up."
+            else ChatFlowText.NO_INFORMATION
         }
         sentWines.getOrPut(key) { mutableSetOf() } += sample.wines.map { it.name.lowercase() }
         return WineFactsNote.wineryWinesList(sample, more && sameAsLast)
