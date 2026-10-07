@@ -23,6 +23,41 @@ object ReplyCheck {
     fun hasFormattingProblem(text: String): Boolean =
         text.contains('\n') || MARKDOWN.containsMatchIn(text) || text.length > MAX_CHARS
 
+    private val OPINION_WORDS = listOf("famous", "finest", "renowned", "best", "world-class", "world class", "legendary", "iconic")
+
+    /** Opinion words in [reply] that appear nowhere in [context] (the notes Gemma was given): praise the notes never made. */
+    fun unsupportedOpinionWords(reply: String, context: String): List<String> {
+        val have = context.lowercase()
+        return OPINION_WORDS.filter { word ->
+            Regex("\\b${Regex.escape(word)}\\b", RegexOption.IGNORE_CASE).containsMatchIn(reply) &&
+                !Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(have)
+        }
+    }
+
+    /**
+     * An answer built from the notes themselves, word for word: the first one or two sentences of the production notes'
+     * first fact, else of the grape notes' summary. Null when [context] holds neither.
+     */
+    fun factsFallback(context: String): String? {
+        val lines = context.lines()
+        fun sentences(text: String) = text.trim().split(Regex("(?<=[.!?])\\s+")).take(2).joinToString(" ")
+        val production = lines.indexOfFirst { it.startsWith("Wine_Production") }
+        if (production >= 0) {
+            lines.drop(production + 1).firstOrNull { it.startsWith("- ") }?.let { line ->
+                val value = line.substringAfter("]: ", "").substringBefore(" (general to ")
+                if (value.isNotBlank()) return sentences(value)
+            }
+        }
+        val grape = lines.indexOfFirst { it.startsWith("Grape_Profile_Internal") }
+        if (grape >= 0) {
+            lines.drop(grape + 1).firstOrNull { it.startsWith("- ") }?.let { line ->
+                val value = line.substringAfter("): ", "")
+                if (value.isNotBlank()) return sentences(value)
+            }
+        }
+        return null
+    }
+
     /** True when the reply should be asked for again. */
     fun needsRetry(text: String): Boolean = hasForeignScript(text) || hasFormattingProblem(text)
 

@@ -1281,3 +1281,43 @@ class UnanswerableQuestionTest {
             .forEach { assertNull(it, UnanswerableIntent.missingData(it)) }
     }
 }
+
+class OpinionWordCheckTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private val production = com.sheldondesousa.uncork.data.knowledge.WineProduction.fromJson(File("src/main/assets/knowledge/french_wine_production.json").readText())
+    private fun extras() = WineAskExtras(base, loadWineries = { directory }, loadProduction = { production }) { _, _ -> null }
+
+    @Test fun praiseThatTheNotesNeverMadeIsCaught() {
+        val context = "Chardonnay (white): Green apple and citrus. Origin: Burgundy, France"
+        assertEquals(listOf("famous", "finest"), ReplyCheck.unsupportedOpinionWords("This area is famous for producing some of the world's finest Chardonnay wines.", context))
+        assertTrue(ReplyCheck.unsupportedOpinionWords("It is a world-class, iconic grape and the best.", context).containsAll(listOf("world-class", "iconic", "best")))
+        // Fine when the notes themselves use the word.
+        assertTrue(ReplyCheck.unsupportedOpinionWords("It is famous.", "A famous grape").isEmpty())
+        assertTrue(ReplyCheck.unsupportedOpinionWords("Bright and fresh with citrus.", context).isEmpty())
+    }
+
+    @Test fun mt01TurnTwoFallsBackToTheNotesOwnWordsWithNoPraise() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.lookup("Tell me about Chardonnay.")
+        val context = e.lookup("Where in Burgundy is it grown?").context!!
+        val fallback = ReplyCheck.factsFallback(context)!!
+        assertTrue(ReplyCheck.unsupportedOpinionWords(fallback, "").none { it == "famous" || it == "finest" })
+        assertTrue(context.contains(fallback.substringBefore('.')))
+    }
+
+    @Test fun pr07FallsBackToExactlyWhatTheNotesSay() = kotlinx.coroutines.runBlocking {
+        val context = extras().lookup("What does lees stirring mean in Chardonnay making?").context!!
+        val fallback = ReplyCheck.factsFallback(context)!!
+        assertEquals("Lees ageing and lees stirring may be used to modify texture and flavour.", fallback)
+        assertFalse(fallback.contains("tank") || fallback.contains("Burgundy"))
+    }
+
+    @Test fun bothInstructionFilesCarryTheNewRule() {
+        listOf("curious_chat_instruction.txt", "wine_discussion_instruction.txt").forEach { name ->
+            val text = File("src/main/assets/prompts/$name").readText()
+            assertTrue(name, text.contains("You may rephrase them in simple words, but do not add where something is used, how it is done, how famous or good it is, or any comparison"))
+            assertTrue(name, text.contains("If the context gives one short fact, give one short sentence."))
+        }
+    }
+}

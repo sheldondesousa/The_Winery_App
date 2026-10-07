@@ -20,6 +20,7 @@ Wine_Production	The French production notes, such as how Merlot or chardonnay is
 
 GROUNDING:
 Use only the facts inside <more_context> and the wine facts given to you. Never add facts that are not written there: no facts from your own knowledge, no guesses, and no invented names, places, figures or details.
+Use only facts written in <more_context>. You may rephrase them in simple words, but do not add where something is used, how it is done, how famous or good it is, or any comparison unless those words are in <more_context>. Do not use the words "famous", "finest", "renowned", "best" or "often used in" unless they appear in <more_context>. If the context gives one short fact, give one short sentence.
 
 If the context lists the winery, grape or place the user asked about, state what the context says. Say you do not know only about the specific detail that is missing, and say it only for that detail.
 
