@@ -198,8 +198,8 @@ object WineFactsNote {
     }.trimEnd()
 
     /** The finished answer to "list N wineries for a grape": names, places and review counts, labelled as an unranked sample. */
-    fun grapeWineriesList(grape: String, country: String?, sample: GrapeWineriesSample, more: Boolean = false): String = buildString {
-        val where = country?.takeIf { it.isNotBlank() }?.let { " in $it" }.orEmpty()
+    fun grapeWineriesList(grape: String, country: String?, sample: GrapeWineriesSample, more: Boolean = false, place: String? = null): String = buildString {
+        val where = (place ?: country)?.takeIf { it.isNotBlank() }?.let { " in $it" }.orEmpty()
         appendLine("Here are ${sample.wineries.size}${if (more) " more" else ""} wineries$where with reviews of $grape. This is an unranked sample of ${sample.totalWineries} such wineries, not the best ones and not a complete list.")
         appendLine()
         sample.wineries.forEach {

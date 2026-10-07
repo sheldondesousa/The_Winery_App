@@ -197,6 +197,13 @@ class WineriesDirectory(entries: List<WineryLocation>) {
         return (parts + hit.country).filter { it.isNotBlank() }.joinToString(", ")
     }
 
+    /** True when [name] is a region of [country] in the directory (as opposed to a sub-region beneath one). */
+    fun isRegion(country: String, name: String): Boolean {
+        val c = GrapeProfileInternal.normalize(country)
+        val n = GrapeProfileInternal.normalize(name)
+        return keyed.any { it.country == c && it.region == n }
+    }
+
     /** Whether [winery] really is in [country] and, when given, in [place] (its region or sub-region). */
     fun belongsTo(winery: WineryLocation, country: String, place: String? = null): Boolean {
         if (GrapeProfileInternal.normalize(winery.country) != GrapeProfileInternal.normalize(country)) return false

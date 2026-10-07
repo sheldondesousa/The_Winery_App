@@ -1058,7 +1058,7 @@ class WineryTemplateTest {
             "Which wineries in Oregon's Willamette Valley are known for Pinot Noir?",
         ).forEach { q ->
             val reply = extras().lookup(q).refusal!!
-            assertTrue(q, reply.startsWith("The directory lists these wineries in"))
+            assertTrue(q, reply.contains("The directory lists these wineries in"))
             assertTrue(q, reply.contains("It does not say which grapes they make."))
         }
     }
@@ -1197,5 +1197,55 @@ class PlaceAliasTest {
         val found = extras(null, asked).lookup("Tell us about Merlot")
         assertTrue(asked.isEmpty())
         assertTrue(found.context!!.contains("Merlot"))
+    }
+}
+
+class GrapeAndPlaceListTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private fun w(name: String, country: String, province: String) = com.sheldondesousa.uncork.data.reviews.GrapeWinery(name, country, province, 4)
+
+    /** Reviews hold wineries only for the provinces in [known], as the real database does at region level. */
+    private fun extras(known: Map<String, String> = mapOf("Burgundy" to "France", "Oregon" to "United States"), asked: MutableList<String> = mutableListOf()) = WineAskExtras(
+        base, loadWineries = { directory },
+        loadGrapeWineriesIn = { _, country, province, _, _ ->
+            asked += province
+            if (known[province] == country) com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(listOf(w("Domaine Test", country!!, province)), 77) else null
+        },
+    ) { _, _ -> null }
+
+    @Test fun aRegionTheReviewsKnowUsesTheReviewsListWithTheMt03Wording() = kotlinx.coroutines.runBlocking {
+        val asked = mutableListOf<String>()
+        val reply = extras(asked = asked).lookup("Which Burgundy wineries are known for Chardonnay?").refusal!!
+        assertEquals(listOf("Burgundy"), asked)
+        assertTrue(reply, reply.startsWith("Here are 1 wineries in Burgundy, France with reviews of Chardonnay. This is an unranked sample of 77 such wineries, not the best ones and not a complete list."))
+        assertTrue(reply.contains("• Domaine Test (Burgundy, France; 4 reviews)"))
+        assertFalse(reply.contains("known for") || reply.contains("famous") || reply.contains("best wineries"))
+    }
+
+    @Test fun aSubRegionFallsBackToTheDirectoryAndSaysSo() = kotlinx.coroutines.runBlocking {
+        listOf(
+            "Which wineries make Chardonnay in Chablis?" to "Chablis",
+            "Which wineries in Oregon's Willamette Valley are known for Pinot Noir?" to "Willamette Valley",
+            "Which wineries in Pomerol or Saint-Émilion are known for Merlot?" to null,
+        ).forEach { (q, sub) ->
+            val reply = extras().lookup(q).refusal!!
+            if (sub != null) assertTrue(q + " -> " + reply, reply.startsWith("I do not have grape-specific winery data for $sub."))
+            else assertTrue(q + " -> " + reply, reply.startsWith("I do not have grape-specific winery data for "))
+            assertTrue(q, reply.contains("The directory lists these wineries in") && reply.contains("It does not say which grapes they make."))
+        }
+    }
+
+    @Test fun aRegionWithNoReviewsForTheGrapeFallsBackWithoutTheSubRegionSentence() = kotlinx.coroutines.runBlocking {
+        val reply = extras(known = emptyMap()).lookup("Which Burgundy wineries are known for Chardonnay?").refusal!!
+        assertTrue(reply, reply.startsWith("The directory lists these wineries in Burgundy, France. It does not say which grapes they make."))
+        assertFalse(reply.contains("grape-specific"))
+    }
+
+    @Test fun aListRequestWithAGrapeAndARegionFollowsTheSameRule() = kotlinx.coroutines.runBlocking {
+        val region = extras().wineryList("List 3 wineries for Chardonnay in Burgundy")!!
+        assertTrue(region, region.contains("with reviews of Chardonnay") && region.contains("in Burgundy, France"))
+        val sub = extras().wineryList("List 3 wineries for Chardonnay in Chablis")!!
+        assertTrue(sub, sub.startsWith("I do not have grape-specific winery data for Chablis."))
     }
 }

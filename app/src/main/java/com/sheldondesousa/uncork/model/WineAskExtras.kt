@@ -285,6 +285,8 @@ class WineAskExtras(
     private val loadOtherCountries: suspend (spellings: List<String>, country: String) -> List<CountryReviewCount> = { _, _ -> emptyList() },
     /** A small unranked sample of wineries with reviews of a grape, optionally in one country. */
     private val loadGrapeWineries: suspend (spellings: List<String>, country: String?, limit: Int, exclude: Set<String>) -> GrapeWineriesSample? = { _, _, _, _ -> null },
+    /** The same, narrowed to one province (the reviews' region-level name, such as Burgundy or Oregon). */
+    private val loadGrapeWineriesIn: suspend (spellings: List<String>, country: String?, province: String, limit: Int, exclude: Set<String>) -> GrapeWineriesSample? = { _, _, _, _, _ -> null },
     /** The open wine's name, so "what do people say about it?" has a wine to look up; blank when unknown. */
     private val ownWineName: String = "",
     /** Reviews of the wines whose name contains the given text, for a grape's spellings. */
@@ -316,6 +318,8 @@ class WineAskExtras(
     private var fresh = false
     // A finished reply the app wrote for the whole turn (Gemma is then not called); set while the turn is looked up.
     private var kotlinReply: String? = null
+    // Said before the directory list when a grape was asked about for a sub-region the reviews cannot narrow to.
+    private var subRegionNote: String? = null
     // For a note that Gemma would only dress up, the app's finished sentence for it (note text -> sentence).
     private val rendered = mutableMapOf<String, String>()
     /** The words of a question that are neither the grape, a country nor everyday question wording: a wine name, if any. */
@@ -335,7 +339,7 @@ class WineAskExtras(
 
     /** What a list of wineries is about: a grape (with reviews of it) in a country, or a place in the directory. */
     private class WineryTopic(val grape: Pair<String, List<String>>?, val country: String?, val place: Pair<String, String>?) {
-        val key = if (grape != null) "g|${grape.first}|${country.orEmpty()}".lowercase() else "d|${place?.first}|${place?.second}".lowercase()
+        val key = if (grape != null) "g|${grape.first}|${country.orEmpty()}|${place?.second.orEmpty()}".lowercase() else "d|${place?.first}|${place?.second}".lowercase()
     }
     // Winery names already sent for each topic, so "more" gives different ones, and the topic "more" refers to.
     private val sentWineryNames = mutableMapOf<String, MutableSet<String>>()
@@ -561,26 +565,45 @@ class WineAskExtras(
         }
         var grapeWineriesAdded = false
         // 4a. "Wineries for Merlot": wineries that have reviews of the grape named in the question.
-        // A region or sub-region named with the grape ("Chardonnay in Chablis") goes to the directory below instead: the
-        // reviews can only narrow a grape's wineries to a country, so they would list wineries from elsewhere.
-        val regionNamedEarly = loadWineries?.let { runCatching { it() }.getOrNull() }?.regionMentioned(query, countriesNamed.firstOrNull() ?: ownCountry.takeIf { it.isNotBlank() })
-        if (WineryIntent.asksAboutWineries(query) && regionNamedEarly == null) {
+        // A grape and a place together: a region the reviews know (Burgundy, Oregon) gets the reviews' wineries for that grape
+        // there; a sub-region, or a region with no reviews of it, falls back to the directory below, which says it does not
+        // know the grapes. (The reviews only narrow a grape's wineries to a country or a region, never a sub-region.)
+        subRegionNote = null
+        val directoryEarly = loadWineries?.let { runCatching { it() }.getOrNull() }
+        val regionNamedEarly = directoryEarly?.regionMentioned(query, countriesNamed.firstOrNull() ?: ownCountry.takeIf { it.isNotBlank() })
+        if (WineryIntent.asksAboutWineries(query)) {
             // "5 wineries" with no grape named means the open wine's grape.
             val focus = mentioned.firstOrNull()?.let { it.name to it.databaseNames }
                 ?: ownVariety.firstOrNull()?.let { it to ownVariety }
             if (focus != null) {
                 val wineryCountry = countriesNamed.firstOrNull() ?: ownCountry.takeIf { it.isNotBlank() }
-                // Sent every time the user asks (the same unranked sample), so a repeated or reworded ask still has the list.
-                val topic = WineryTopic(focus, wineryCountry, null)
-                val sample = runCatching {
-                    loadGrapeWineries(focus.second, wineryCountry, WineryIntent.requestedCount(query), skipFor(topic, false))
-                }.getOrNull()?.onlyIn(wineryCountry)
-                if (sample != null && sample.wineries.isNotEmpty()) {
-                    remember(topic, sample.wineries.map { it.winery })
-                    val block = WineFactsNote.grapeWineriesBlock(focus.first, wineryCountry, sample)
-                    blocks += block
-                    rendered[block] = WineFactsNote.grapeWineriesList(focus.first, wineryCountry, sample)
-                    grapeWineriesAdded = true
+                val count = WineryIntent.requestedCount(query)
+                if (regionNamedEarly == null) {
+                    // Sent every time the user asks (the same unranked sample), so a repeated or reworded ask still has the list.
+                    val topic = WineryTopic(focus, wineryCountry, null)
+                    val sample = runCatching { loadGrapeWineries(focus.second, wineryCountry, count, skipFor(topic, false)) }.getOrNull()?.onlyIn(wineryCountry)
+                    if (sample != null && sample.wineries.isNotEmpty()) {
+                        remember(topic, sample.wineries.map { it.winery })
+                        val block = WineFactsNote.grapeWineriesBlock(focus.first, wineryCountry, sample)
+                        blocks += block
+                        rendered[block] = WineFactsNote.grapeWineriesList(focus.first, wineryCountry, sample)
+                        grapeWineriesAdded = true
+                    }
+                } else if (directoryEarly != null) {
+                    val (placeCountry, placeName) = regionNamedEarly
+                    if (directoryEarly.isRegion(placeCountry, placeName)) {
+                        val topic = WineryTopic(focus, placeCountry, regionNamedEarly)
+                        val sample = runCatching { loadGrapeWineriesIn(focus.second, placeCountry, placeName, count, skipFor(topic, false)) }.getOrNull()?.onlyIn(placeCountry)
+                        if (sample != null && sample.wineries.isNotEmpty()) {
+                            remember(topic, sample.wineries.map { it.winery })
+                            val block = WineFactsNote.grapeWineriesBlock(focus.first, placeCountry, sample)
+                            blocks += block
+                            rendered[block] = WineFactsNote.grapeWineriesList(focus.first, placeCountry, sample, place = directoryEarly.placeLabel(placeCountry, placeName))
+                            grapeWineriesAdded = true
+                        }
+                    } else {
+                        subRegionNote = "I do not have grape-specific winery data for $placeName."
+                    }
                 }
             }
         }
@@ -623,7 +646,7 @@ class WineAskExtras(
                         blocks += "WHERE\nThe user asks about wineries but has not said where. Before naming any winery, ask which country, region or sub-region they mean."
                     }
                     // Sent every time the user asks, so a repeated or reworded ask still has the list.
-                    if (place != null) {
+                    if (place != null && !grapeWineriesAdded) {
                         val topic = WineryTopic(null, null, place)
                         val sample = directory.sampleIn(place.first, place.second.takeIf { it.isNotBlank() }, WineryIntent.requestedCount(query), skipFor(topic, false))
                             .filter { directory.belongsTo(it, place.first, place.second.takeIf { p -> p.isNotBlank() }) }
@@ -640,7 +663,8 @@ class WineAskExtras(
                                 "a small, unranked sample of the $total wineries listed in $where$covers; not a complete list and not the best wineries",
                             )
                             blocks += sampleBlock
-                            rendered[sampleBlock] = WineFactsNote.directoryWineriesList(sample, where, total, grapeAsked = grapeNamedInQuestion, covering = variants)
+                            rendered[sampleBlock] = (subRegionNote?.takeIf { grapeNamedInQuestion }?.let { "$it\n\n" }.orEmpty()) +
+                                WineFactsNote.directoryWineriesList(sample, where, total, grapeAsked = grapeNamedInQuestion, covering = variants)
                         }
                     }
                 }
@@ -814,6 +838,21 @@ class WineAskExtras(
             }
         }
         val skip = skipFor(topic, more)
+        // A grape with a region or sub-region named: the reviews' wineries for a region they know, otherwise the directory.
+        if (topic.grape != null && region != null && directory != null && grapeNamed != null && !more) {
+            val (placeCountry, placeName) = region
+            val placeTopic = WineryTopic(topic.grape, placeCountry, region)
+            if (directory.isRegion(placeCountry, placeName)) {
+                val sample = runCatching { loadGrapeWineriesIn(topic.grape.second, placeCountry, placeName, count, skipFor(placeTopic, false)) }.getOrNull()?.onlyIn(placeCountry)
+                if (sample != null && sample.wineries.isNotEmpty()) {
+                    remember(placeTopic, sample.wineries.map { it.winery })
+                    return WineFactsNote.grapeWineriesList(topic.grape.first, placeCountry, sample, place = directory.placeLabel(placeCountry, placeName))
+                }
+            }
+            val directoryTopic = WineryTopic(null, null, region)
+            val list = directoryList(directory, directoryTopic, count, false, grapeAsked = true) ?: return null
+            return if (directory.isRegion(placeCountry, placeName)) list else "I do not have grape-specific winery data for $placeName.\n\n$list"
+        }
         if (topic.grape != null) {
             val sample = runCatching { loadGrapeWineries(topic.grape.second, topic.country, count, skip) }.getOrNull()?.onlyIn(topic.country)
             if (sample != null && sample.wineries.isNotEmpty()) {
@@ -828,7 +867,7 @@ class WineAskExtras(
         return directoryList(directory ?: return null, topic, count, more)
     }
 
-    private fun directoryList(directory: WineriesDirectory, topic: WineryTopic, count: Int, more: Boolean): String? {
+    private fun directoryList(directory: WineriesDirectory, topic: WineryTopic, count: Int, more: Boolean, grapeAsked: Boolean = false): String? {
         val place = topic.place ?: return null
         val sample = directory.sampleIn(place.first, place.second.takeIf { it.isNotBlank() }, count, skipFor(topic, more))
             .filter { directory.belongsTo(it, place.first, place.second.takeIf { p -> p.isNotBlank() }) }
@@ -836,7 +875,7 @@ class WineAskExtras(
         remember(topic, sample.map { it.winery })
         return WineFactsNote.directoryWineriesList(
             sample, directory.placeLabel(place.first, place.second.takeIf { it.isNotBlank() }),
-            directory.countOf(place.first, place.second.takeIf { it.isNotBlank() }), more,
+            directory.countOf(place.first, place.second.takeIf { it.isNotBlank() }), more, grapeAsked = grapeAsked,
         )
     }
 

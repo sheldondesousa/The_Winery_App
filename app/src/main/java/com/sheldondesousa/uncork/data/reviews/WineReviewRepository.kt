@@ -33,6 +33,8 @@ interface WineReviewDataSource {
         limit: Int = 8,
         seed: Long = 0L,
         exclude: Set<String> = emptySet(),
+        /** Only wineries whose reviews are for this province (the reviews' own region-level name), when given. */
+        province: String? = null,
     ): GrapeWineriesSample? = null
 
     /**
@@ -251,11 +253,16 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
         limit: Int,
         seed: Long,
         exclude: Set<String>,
+        province: String?,
     ): GrapeWineriesSample? {
         val names = varietyNames.filter { it.isNotBlank() }.distinct()
         if (names.isEmpty()) return null
-        val countryClause = if (country.isNullOrBlank()) "" else " AND country=? COLLATE NOCASE"
-        val args = arrayOf(*names.toTypedArray(), *(if (country.isNullOrBlank()) emptyArray() else arrayOf(country)))
+        val countryClause = (if (country.isNullOrBlank()) "" else " AND country=? COLLATE NOCASE") +
+            (if (province.isNullOrBlank()) "" else " AND province=? COLLATE NOCASE")
+        val args = arrayOf(
+            *names.toTypedArray(), *(if (country.isNullOrBlank()) emptyArray() else arrayOf(country)),
+            *(if (province.isNullOrBlank()) emptyArray() else arrayOf(province)),
+        )
         val all = withContext(Dispatchers.IO) {
             installer.ensureInstalled().openReadOnly().use { database ->
                 database.rawQuery(

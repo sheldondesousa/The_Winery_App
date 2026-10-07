@@ -59,6 +59,7 @@ class WineAskContext(
             loadWineries = wineries?.let { provider -> { provider.get() } },
             loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
             loadGrapeWineries = { grapeSpellings, country, limit, exclude -> grapeWineries(grapeSpellings, country, limit, exclude) },
+            loadGrapeWineriesIn = { grapeSpellings, country, province, limit, exclude -> grapeWineries(grapeSpellings, country, limit, exclude, province) },
             ownWineName = wine.name.takeUnless { it.isUnknown() }.orEmpty(),
             ownWinery = wine.winery.takeUnless { it.isUnknown() || it == wine.name }.orEmpty(),
             loadReviewWineries = { reviewWineries() },
@@ -78,6 +79,7 @@ class WineAskContext(
         loadWineries = wineries?.let { provider -> { provider.get() } },
         loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
         loadGrapeWineries = { grapeSpellings, country, limit, exclude -> grapeWineries(grapeSpellings, country, limit, exclude) },
+        loadGrapeWineriesIn = { grapeSpellings, country, province, limit, exclude -> grapeWineries(grapeSpellings, country, limit, exclude, province) },
         loadReviewWineries = { reviewWineries() },
         loadWineryWines = { winery, country, limit, exclude -> reviews.winesFor(winery, country, limit, exclude) },
         loadWineReviews = { grapeSpellings, wineName -> reviews.winesNamed(grapeSpellings, wineName) },
@@ -94,8 +96,8 @@ class WineAskContext(
     private suspend fun reviewSample(spellings: List<String>, country: String) =
         reviews.digestFor(spellings, country, seed = sampleSeed(spellings.first(), country))
 
-    private suspend fun grapeWineries(spellings: List<String>, country: String?, limit: Int, exclude: Set<String>) =
-        reviews.wineriesFor(spellings, country, limit = limit, seed = sampleSeed(spellings.first(), country.orEmpty()), exclude = exclude)
+    private suspend fun grapeWineries(spellings: List<String>, country: String?, limit: Int, exclude: Set<String>, province: String? = null) =
+        reviews.wineriesFor(spellings, country, limit = limit, seed = sampleSeed(spellings.first(), country.orEmpty() + province.orEmpty()), exclude = exclude, province = province)
 
     private suspend fun otherCountriesFor(spellings: List<String>, country: String) =
         reviews.topCountriesFor(spellings, excludeCountry = country)
