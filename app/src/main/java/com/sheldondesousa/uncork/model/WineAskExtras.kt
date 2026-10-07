@@ -2,6 +2,8 @@ package com.sheldondesousa.uncork.model
 
 import com.sheldondesousa.uncork.data.knowledge.GrapeProfileInternal
 import com.sheldondesousa.uncork.data.knowledge.InternalGrapeProfile
+import com.sheldondesousa.uncork.data.knowledge.ProductionGrape
+import com.sheldondesousa.uncork.data.knowledge.ResolvedProduction
 import com.sheldondesousa.uncork.data.knowledge.WineProduction
 import com.sheldondesousa.uncork.data.knowledge.WineriesDirectory
 import com.sheldondesousa.uncork.data.reviews.CountryReviewCount
@@ -156,7 +158,7 @@ object ProductionIntent {
         "\\bhow\\b.*\\b(made|make|produced?|processed?|manufactured?|vinified|harvested|fermented|aged|matured|blended|grown|pressed)\\b|" +
             "\\b(stages?|steps|process(es)?|manufactur(e|ed|ing|er))\\b|" +
             "\\b(vinification|vinified|winemaking|fermentation|ferment|fermented|malolactic|maturation|matured|barrels?|oak|lees|" +
-            "harvest|harvested|pressing|pressed|maceration|destemming|production|blending|blended)\\b|\\bwine\\s+making\\b",
+            "harvest|harvested|pressing|pressed|maceration|destemming|crushing|clarification|filtration|bottling|stirring|production|blending|blended)\\b|\\bwine\\s+making\\b",
         RegexOption.IGNORE_CASE,
     )
 
@@ -302,6 +304,8 @@ class WineAskExtras(
     // Set when something was found for a question but not sent again because the conversation already holds it.
     private var alreadySentHit = false
     private var fresh = false
+    // A finished reply the app wrote for the whole turn (Gemma is then not called); set while the turn is looked up.
+    private var kotlinReply: String? = null
     /** The words of a question that are neither the grape, a country nor everyday question wording: a wine name, if any. */
     private fun wineNameIn(query: String, grapes: List<com.sheldondesousa.uncork.data.reviews.GrapeVariety>, countries: List<String>): String? {
         val skip = buildSet {
@@ -379,6 +383,7 @@ class WineAskExtras(
         fresh = rewritten != null
         val text = try { forQuestion(query) } finally { fresh = false }
         noteTurn(query)
+        kotlinReply?.let { return AskLookup(null, it, rewritten) }
         val blocks = text?.split("\n\n")?.filter { it.isNotBlank() }.orEmpty()
         // Everything that was looked up came back empty: the answer is the fixed refusal, and Gemma is not called.
         if (blocks.isNotEmpty() && blocks.all { it.startsWith(WineFactsNote.NO_NOTES_MARK) }) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
@@ -391,6 +396,7 @@ class WineAskExtras(
 
     override suspend fun forQuestion(query: String): String? {
         val blocks = mutableListOf<String>()
+        kotlinReply = null
         if (fresh) {
             sentGrapes.clear(); sentKaggleExtracted.clear(); sentWineries.clear(); sentReviews.clear(); sentProduction.clear()
         }
@@ -580,46 +586,101 @@ class WineAskExtras(
     private fun productionAsk(missing: String) =
         "WINE PRODUCTION\nThe user asks how a wine is made, but I do not know $missing. Ask for it before explaining."
 
+    /** The app's own reply when it has no production notes: "I'm sorry, I do not have information on how Pinot Noir is made in Burgundy." */
+    private fun noProductionNotes(grape: String?, place: String?) =
+        "I'm sorry, I do not have information on how ${grape ?: "wine"} is made${place?.let { " in $it" }.orEmpty()}."
+
+    /** The production steps a question names ("lees stirring", "oak"), as the keys the production notes use. */
+    private fun stepsNamed(query: String): Set<String> =
+        GrapeProfileInternal.normalize(query).split(' ').mapNotNull { STEP_WORDS[it] }.toSet()
+
+    /**
+     * Production questions. Returns a note for Gemma only when the production notes hold what was asked. When they do
+     * not, the app writes the reply itself ([kotlinReply]) and Gemma is not called: no notes for the grape, notes only for
+     * another place, or a step the notes never mention. Missing a grape or a place, Gemma is told to ask for it.
+     */
     private suspend fun productionBlock(query: String, countriesNamed: List<String>): String? {
         if (!ProductionIntent.asksHowMade(query)) return null
-        // A grape and a place (country, region or sub-region) are both needed. Whichever is missing, Gemma asks for.
-        val grapeKnown = GrapeVarietyLookup.findMentioned(query).isNotEmpty() || knowledge.findMentioned(query).isNotEmpty() ||
-            ownVariety.isNotEmpty() || lastGrape != null
-        val placeKnown = countriesNamed.isNotEmpty() || lastCountry != null || ownCountry.isNotBlank() || ownRegion.isNotBlank()
-        val loaded = loadProduction?.let { runCatching { it() }.getOrNull() }
+        val production = loadProduction?.let { runCatching { it() }.getOrNull() }
+        val directory = loadWineries?.let { runCatching { it() }.getOrNull() }
         val padded = " ${GrapeProfileInternal.normalize(query)} "
-        val placeInQuestion = loaded?.let { p -> p.grapes.any { p.placeMentioned(it, query) != null } } == true
-        if (!grapeKnown && !(placeKnown || placeInQuestion)) return productionAsk("which grape, or which country, region or sub-region")
-        if (!grapeKnown) return productionAsk("which grape")
-        if (!placeKnown && !placeInQuestion) return productionAsk("which country, region or sub-region")
-        val production = loaded ?: return null
-        val about = GrapeVarietyLookup.findMentioned(query).firstOrNull()?.name ?: knowledge.findMentioned(query).firstOrNull()?.grape
-            ?: ownVariety.firstOrNull() ?: lastGrape ?: "this grape"
-        val noInfo = WineFactsNote.noNotes("how $about is made there")
-        // The notes are about France only: a question naming another country, or an open wine from one, is not theirs.
-        val frenchNamed = countriesNamed.any { it.equals(production.country, ignoreCase = true) }
-        if (countriesNamed.isNotEmpty() && !frenchNamed) return noInfo
-        // The grape named in the question, else the open wine's.
+
+        // The grape: named in the question, else the open wine's, else the last one discussed.
         val named = knowledge.findMentioned(query).map { it.grape }
+        // "Syrah / Shiraz" is written the way the user said it.
+        val grapeLabel = (GrapeVarietyLookup.findMentioned(query).firstOrNull()?.name ?: named.firstOrNull() ?: ownVariety.firstOrNull() ?: lastGrape)
+            ?.let { label -> label.split(" / ").let { parts -> parts.firstOrNull { " ${GrapeProfileInternal.normalize(it)} " in padded } ?: parts.first() } }
         val candidates = when {
             named.isNotEmpty() -> named
             ownVariety.isNotEmpty() -> ownVariety.take(1).flatMap { knowledge.find(it).grapes.map { g -> g.grape } }
             else -> listOfNotNull(lastGrape)
         }
-        val grape = production.grapes.firstOrNull { pg ->
+        val grape = production?.grapes?.firstOrNull { pg ->
             " ${GrapeProfileInternal.normalize(pg.name)} " in padded ||
                 knowledge.find(pg.name).grapes.firstOrNull()?.grape?.let { it in candidates } == true
-        } ?: return noInfo
-        // Only the seeded pairs: Merlot in Bordeaux and Chardonnay in Burgundy (or a place inside them).
-        val region = PRODUCTION_SCOPE[grape.name] ?: return noInfo
-        if (ownCountry.isNotBlank() && !frenchNamed && !ownCountry.equals(production.country, ignoreCase = true)) return noInfo
-        val at = production.placeMentioned(grape, query)
-            ?: ownRegion.takeIf { it.isNotBlank() && production.pathTo(grape, it) != null }
-            // The notes cover this grape, but the place is only a country: Gemma asks for a region or sub-region of it.
-            ?: return "WINE PRODUCTION\nThe user asks how ${grape.name} is made, but only the country is known. Ask which region or sub-region of $region they mean before explaining."
-        if (production.pathTo(grape, at)?.contains(region) != true) return noInfo
-        if (!sentProduction.add("${grape.name}|$at".lowercase())) { alreadySentHit = true; return null }
-        return WineFactsNote.productionBlock(grape.name, at, production.country, production.resolve(grape, at))
+        }?.takeIf { it.hasFacts }
+
+        // The place: named in the question (a place in any grape's notes, a directory region or a country), else the open wine's.
+        val namedPlace = production?.grapes?.firstNotNullOfOrNull { production.placeMentioned(it, query) }
+            ?: directory?.regionMentioned(query, null)?.second?.takeIf { it.isNotBlank() }
+            ?: countriesNamed.firstOrNull() ?: lastCountry
+        val place = namedPlace ?: ownRegion.takeIf { it.isNotBlank() } ?: ownCountry.takeIf { it.isNotBlank() }
+        val steps = stepsNamed(query)
+
+        fun reply(text: String): String? { kotlinReply = text; return null }
+        // The places a grape has its own notes for, beneath the country (Bordeaux for Merlot).
+        fun regionsOf(pg: ProductionGrape) = pg.records.map { it.place }.filter { it != production?.country }.distinct()
+        // A place the notes speak for: in the grape's tree and under one of the regions that have their own notes.
+        fun covered(pg: ProductionGrape, at: String): Boolean {
+            val path = production?.pathTo(pg, at) ?: return false
+            val regions = regionsOf(pg)
+            return regions.isEmpty() || path.any { it in regions }
+        }
+        fun otherPlaceReply(pg: ProductionGrape, said: String): String? {
+            val regions = regionsOf(pg)
+            if (regions.isEmpty()) return reply(noProductionNotes(pg.name, said))
+            return reply("I only have production notes for ${pg.name} in ${regions.joinToString(" and ")}, not $said. Would you like to hear about ${pg.name} in ${regions.first()}?")
+        }
+
+        // A step named in the question (lees stirring, malolactic, oak): answered from the notes that mention it, or not at all.
+        if (steps.isNotEmpty()) {
+            if (production == null) return null
+            if (grapeLabel != null && grape == null) return reply(noProductionNotes(grapeLabel, namedPlace))
+            val pg = grape ?: production.grapes.firstOrNull { g ->
+                g.hasFacts && production.resolve(g, production.country).facts.any { it.key in steps }
+            } ?: return reply(ChatFlowText.NO_INFORMATION)
+            val at = when {
+                place == null || place == production.country -> production.country
+                covered(pg, place) -> place
+                else -> return otherPlaceReply(pg, place)
+            }
+            val matching = production.resolve(pg, at).facts.filter { it.key in steps }
+            if (matching.isEmpty()) return reply(ChatFlowText.NO_INFORMATION)
+            if (!sentProduction.add("${pg.name}|$at|${steps.sorted()}".lowercase())) { alreadySentHit = true; return null }
+            return WineFactsNote.productionBlock(pg.name, at, production.country, ResolvedProduction(matching, production.resolve(pg, at).sources, production.resolve(pg, at).confidence))
+        }
+
+        // How something is made needs a grape and a place. Whichever is missing, Gemma asks for.
+        if (grapeLabel != null && grape == null) return reply(noProductionNotes(grapeLabel, namedPlace))
+        if (production == null) return if (grapeLabel == null && place == null) productionAsk("which grape, or which country, region or sub-region") else null
+        if (grapeLabel == null) {
+            val frenchPlace = place != null && production.grapes.any { it.hasFacts && production.pathTo(it, place) != null }
+            return when {
+                place == null -> productionAsk("which grape, or which country, region or sub-region")
+                frenchPlace -> productionAsk("which grape")
+                else -> reply(noProductionNotes(null, place))
+            }
+        }
+        val pg = grape ?: return null
+        if (place == null) return productionAsk("which region or sub-region (the notes are for ${regionsOf(pg).joinToString(" and ").ifBlank { production.country }})")
+        if (place == production.country) {
+            return "WINE PRODUCTION\nThe user asks how ${pg.name} is made, but only the country is known. Ask which region or sub-region of ${regionsOf(pg).joinToString(" or ")} they mean before explaining."
+        }
+        if (!covered(pg, place)) return otherPlaceReply(pg, place)
+        val resolved = production.resolve(pg, place)
+        if (resolved.facts.isEmpty()) return reply(noProductionNotes(pg.name, place))
+        if (!sentProduction.add("${pg.name}|$place".lowercase())) { alreadySentHit = true; return null }
+        return WineFactsNote.productionBlock(pg.name, place, production.country, resolved)
     }
 
     /**
@@ -741,7 +802,16 @@ class WineAskExtras(
             "other", "another", "others", "ones", "most", "many", "all", "every", "anyone", "anybody", "else", "been", "being", "ever", "into", "each", "when", "where", "why", "lovers", "drinkers", "also", "there", "than", "then", "yes", "not", "but", "just", "bottle", "winery", "taste", "tastes",
         )
 
-        /** The only grape and region the French production notes may be used for. */
-        val PRODUCTION_SCOPE = mapOf("Merlot" to "Bordeaux", "Chardonnay" to "Burgundy")
+        /** Words for a production step, mapped to the key the production notes use for it. */
+        val STEP_WORDS = mapOf(
+            "lees" to "lees", "stirring" to "lees", "malolactic" to "malolactic", "mlf" to "malolactic",
+            "oak" to "maturation", "barrel" to "maturation", "barrels" to "maturation", "barrique" to "maturation", "barriques" to "maturation",
+            "maturation" to "maturation", "matured" to "maturation", "ageing" to "maturation", "aging" to "maturation",
+            "fermentation" to "fermentation", "fermented" to "fermentation", "ferment" to "fermentation", "yeast" to "fermentation", "yeasts" to "fermentation",
+            "pressing" to "pressing", "pressed" to "pressing", "harvest" to "harvest", "harvested" to "harvest",
+            "clarification" to "clarification", "settling" to "clarification", "maceration" to "maceration",
+            "destemming" to "destemming_crushing", "crushing" to "destemming_crushing", "blending" to "blending", "blended" to "blending",
+            "filtration" to "filtration", "bottling" to "bottling", "sorting" to "sorting",
+        )
     }
 }

@@ -975,3 +975,48 @@ class WineryOverclaimNoteTest {
         assertTrue(WineFactsNote.build(wine, winery = directory.find(wine.winery, wine.country)).contains(note))
     }
 }
+
+class ProductionInKotlinTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private val production = com.sheldondesousa.uncork.data.knowledge.WineProduction.fromJson(File("src/main/assets/knowledge/french_wine_production.json").readText())
+    private fun extras() = WineAskExtras(base, loadWineries = { directory }, loadProduction = { production }) { _, _ -> null }
+
+    @Test fun aGrapeWithNoProductionNotesGetsTheAppsOwnSorry() = kotlinx.coroutines.runBlocking {
+        val found = extras().lookup("How is Pinot Noir made in Burgundy?")
+        assertEquals("I'm sorry, I do not have information on how Pinot Noir is made in Burgundy.", found.refusal)
+        assertNull(found.context)
+        assertEquals("I'm sorry, I do not have information on how Syrah is made.", extras().lookup("How is Syrah made?").refusal)
+    }
+
+    @Test fun notesForAnotherPlaceAreOfferedFromTheData() = kotlinx.coroutines.runBlocking {
+        val merlot = extras().lookup("How is Merlot made in Burgundy?")
+        assertEquals("I only have production notes for Merlot in Bordeaux, not Burgundy. Would you like to hear about Merlot in Bordeaux?", merlot.refusal)
+        val chardonnay = extras().lookup("How is Chardonnay made in Bordeaux?")
+        assertEquals("I only have production notes for Chardonnay in Burgundy, not Bordeaux. Would you like to hear about Chardonnay in Burgundy?", chardonnay.refusal)
+        assertTrue(extras().lookup("How is Chardonnay made in Champagne?").refusal!!.contains("not Champagne"))
+    }
+
+    @Test fun noPlaceNamedStillAsksWhichRegion() = kotlinx.coroutines.runBlocking {
+        val found = extras().lookup("How is Merlot made?")
+        assertNull(found.refusal)
+        assertTrue(found.context!!.contains("which region or sub-region"))
+    }
+
+    @Test fun aStepTheNotesMentionIsAnsweredFromThem() = kotlinx.coroutines.runBlocking {
+        val found = extras().lookup("What does lees stirring mean in Chardonnay making?")
+        assertNull(found.refusal)
+        assertTrue(found.context!!.contains("Lees ageing and lees stirring"))
+    }
+
+    @Test fun aStepNoNotesMentionGetsTheFixedRefusal() = kotlinx.coroutines.runBlocking {
+        assertEquals(ChatFlowText.NO_INFORMATION, extras().lookup("What does bottling involve?").refusal)
+        assertEquals(ChatFlowText.NO_INFORMATION, extras().lookup("What does filtration involve for Merlot?").refusal)
+    }
+
+    @Test fun merlotInBordeauxStillGoesToGemmaWithTheNotes() = kotlinx.coroutines.runBlocking {
+        val found = extras().lookup("How is Merlot made in Bordeaux?")
+        assertNull(found.refusal)
+        assertTrue(found.context!!.contains("Wine_Production"))
+    }
+}
