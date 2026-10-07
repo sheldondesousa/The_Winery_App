@@ -833,3 +833,19 @@ class RefusalGateTest {
         assertTrue(found.context!!.contains("Grape_Profile_Internal") && found.context!!.contains("No notes were found for"))
     }
 }
+
+class PromptGroundingTest {
+    private fun prompt(name: String) = File("src/main/assets/prompts/$name").readText()
+
+    @Test fun bothPromptsTellGemmaToStateWhatTheContextSaysAndNotToWriteRefusals() {
+        listOf("curious_chat_instruction.txt", "wine_discussion_instruction.txt").forEach { name ->
+            val text = prompt(name)
+            assertTrue(name, text.contains("state what the context says") || text.contains("state what the block says"))
+            assertTrue(name, text.contains("only for that detail"))
+            assertFalse(name, text.contains("My database does not seem to have this information"))
+            assertFalse(name, text.contains("I don't have any information about"))
+            assertFalse(name, text.contains("reply with one sentence saying you don't have that information"))
+            assertFalse(name, text.contains("say so in your first sentence"))
+        }
+    }
+}
