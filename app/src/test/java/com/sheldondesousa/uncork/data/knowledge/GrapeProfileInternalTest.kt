@@ -863,3 +863,43 @@ class NoFixtureLeakTest {
         assertTrue(main.contains("reminder = \"\""))
     }
 }
+
+class FollowUpRewriteTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private val production = com.sheldondesousa.uncork.data.knowledge.WineProduction.fromJson(File("src/main/assets/knowledge/french_wine_production.json").readText())
+    private fun extras() = WineAskExtras(base, loadWineries = { directory }, loadProduction = { production }) { _, _ -> null }
+
+    @Test fun andInFranceBecomesTheSameQuestionForFrance() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.lookup("Which US wineries make Chardonnay?")
+        val second = e.lookup("And in France?")
+        assertEquals("Which French wineries make Chardonnay?", second.rewritten)
+    }
+
+    @Test fun itAndThereAreFilledInFromTheLastTurns() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.lookup("Tell me about Chardonnay.")
+        val second = e.lookup("Where in Burgundy is it grown?")
+        assertEquals("Where in Burgundy is Chardonnay grown?", second.rewritten)
+        // The grape notes were sent in turn one, so a follow-up is not refused for retrieving nothing new.
+        assertNull(second.refusal)
+        assertEquals("Name a winery from Burgundy.", e.lookup("Name a winery from there.").rewritten)
+    }
+
+    @Test fun whichOneNamesBothGrapesAndPlaces() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.lookup("How is Merlot made in Bordeaux?")
+        e.lookup("And how is Chardonnay made in Burgundy?")
+        val third = e.lookup("Which one spends longer in oak?")
+        assertEquals("Of Merlot in Bordeaux and Chardonnay in Burgundy, which spends longer in oak?", third.rewritten)
+        assertNull(third.refusal)
+    }
+
+    @Test fun aQuestionThatStandsOnItsOwnIsNotChanged() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.lookup("Tell me about Merlot.")
+        assertNull(e.lookup("Which wineries are in Bordeaux?").rewritten)
+        assertNull(e.lookup("What is Malbec like in Argentina?").rewritten)
+    }
+}

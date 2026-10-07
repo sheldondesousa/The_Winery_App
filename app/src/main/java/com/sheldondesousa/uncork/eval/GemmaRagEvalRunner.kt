@@ -29,6 +29,8 @@ internal object GemmaRagEvalRunner {
                 found.context?.let { chunks += it.split("\n\n").filter { c -> c.isNotBlank() } }
                 // A refusal is recorded too, so the eval can see that retrieval was empty.
                 found.refusal?.let { chunks += "[refusal] $it" }
+                // The rewritten follow-up is saved too, so the eval shows what retrieval actually ran on.
+                found.rewritten?.let { chunks += "[rewritten question] $it" }
             }
         override suspend fun wineryList(query: String): String? = inner.wineryList(query)?.also { chunks += it }
         override fun reset() = inner.reset()

@@ -149,6 +149,7 @@ class GemmaConversationResponder(
 
         // Nothing found for a question that names something the app should know: the app answers, Gemma is not called.
         var firstLookup = runCatching { curiousExtras?.lookup(query) }.getOrNull()
+        firstLookup?.rewritten?.let { logFlow("Follow-up rewritten: \"$query\" -> \"$it\"") }
         firstLookup?.refusal?.let {
             markRoute("KOTLIN_REFUSAL")
             return plainMessage(it)
@@ -916,6 +917,7 @@ class GemmaConversationResponder(
                 return list
             }
             val found = runCatching { extras?.lookup(query) }.getOrNull()
+            found?.rewritten?.let { logFlow("Follow-up rewritten: \"$query\" -> \"$it\"") }
             found?.refusal?.let { refusal ->
                 markRoute("KOTLIN_REFUSAL")
                 onUpdate(ConversationStreamUpdate(text = refusal, isGemmaConversationOutput = false))

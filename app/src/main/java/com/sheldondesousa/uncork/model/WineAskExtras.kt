@@ -32,8 +32,64 @@ interface AskExtras {
     fun reset()
 }
 
+/**
+ * Turns a follow-up into a standalone question using what the last turns were about, so retrieval has a grape and a
+ * place to work with ("And in France?" after "Which US wineries make Chardonnay?" becomes "Which French wineries make
+ * Chardonnay?"). Plain rules; no second Gemma call. A question that already stands on its own is left as it is.
+ */
+object FollowUp {
+    /** What a past question was about: its grape and place (either may be missing). */
+    class Topic(val grape: String?, val place: String?)
+
+    private val ELLIPSIS = Regex("^\\W*(and|what\\s+about|how\\s+about|then|also)\\b", RegexOption.IGNORE_CASE)
+    private val WHICH_ONE = Regex("\\bwhich\\s+(one|of\\s+(them|those|the\\s+two))\\b", RegexOption.IGNORE_CASE)
+    private val IT = Regex("\\b(it|its)\\b", RegexOption.IGNORE_CASE)
+    private val THERE = Regex("\\b(there|that\\s+(region|place|area|country))\\b", RegexOption.IGNORE_CASE)
+
+    /** Replaces the first country named in [previous] with [country] (as an adjective when there is one). */
+    private fun swapCountry(previous: String, country: String): String {
+        val words = previous.split(' ')
+        for (len in 2 downTo 1) for (i in 0..words.size - len) {
+            val phrase = words.subList(i, i + len).joinToString(" ").trim(',', '.', '?', '!')
+            // A capitalised "US" is the country; the lower-case word "us" is not, so only the capitalised form counts here.
+            if (CountryMentions.find(phrase).isNotEmpty() || phrase in setOf("US", "U.S.", "U.S.A.")) {
+                val tail = words.subList(i, i + len).joinToString(" ").takeLastWhile { it in ",.?!" }
+                val replacement = (CountryMentions.adjectiveFor(country) ?: country) + tail
+                return (words.take(i) + replacement + words.drop(i + len)).joinToString(" ")
+            }
+        }
+        // The earlier question named no country: add this one on the end.
+        return previous.trimEnd('?', '.', '!', ' ') + " in $country?"
+    }
+
+    /**
+     * @param previous the last question (already standalone)
+     * @param recent what the last turns were about, oldest first
+     * @param namesGrape whether [query] already names a grape; @param namesPlace whether it already names a place
+     */
+    fun rewrite(query: String, previous: String?, recent: List<Topic>, namesGrape: Boolean, namesPlace: Boolean, countries: List<String>): String {
+        val words = query.trim().split(Regex("\\s+")).size
+        // "And in France?": the same question again, for another country.
+        if (previous != null && words <= 7 && ELLIPSIS.containsMatchIn(query) && countries.isNotEmpty()) return swapCountry(previous, countries.first())
+        // "Which one ...?" after two grapes were discussed.
+        val two = recent.filter { it.grape != null }.takeLast(2)
+        if (WHICH_ONE.containsMatchIn(query) && two.size == 2 && two[0].grape != two[1].grape) {
+            fun label(t: Topic) = listOfNotNull(t.grape, t.place?.let { "in $it" }).joinToString(" ")
+            return WHICH_ONE.replaceFirst(query, "Of ${label(two[0])} and ${label(two[1])}, which")
+        }
+        var out = query
+        val grape = recent.lastOrNull { it.grape != null }?.grape
+        if (!namesGrape && grape != null && IT.containsMatchIn(out)) {
+            out = IT.replace(out) { m -> if (m.value.equals("its", true)) "$grape's" else grape }
+        }
+        val place = recent.lastOrNull { it.place != null }?.place
+        if (!namesPlace && place != null && THERE.containsMatchIn(out)) out = THERE.replaceFirst(out, place)
+        return out
+    }
+}
+
 /** The outcome of looking a question up: context for Gemma, or the app's own refusal (Gemma is then not called). */
-class AskLookup(val context: String?, val refusal: String? = null)
+class AskLookup(val context: String?, val refusal: String? = null, val rewritten: String? = null)
 
 /**
  * Decides when a question that retrieved nothing gets the app's fixed refusal instead of going to Gemma: it names
@@ -236,6 +292,11 @@ class WineAskExtras(
     private var lastCountry: String? = null
     // The winery the conversation is about (named, or the open wine's), and the wines already sent for it.
     private var lastWinery: String? = null
+    // What the last turns were about, and the last standalone question, for rewriting a follow-up (kept across a rebuild).
+    private val recentTopics = ArrayDeque<FollowUp.Topic>()
+    private var previousQuestion: String? = null
+    // Set when something was found for a question but not sent again because the conversation already holds it.
+    private var alreadySentHit = false
     /** The words of a question that are neither the grape, a country nor everyday question wording: a wine name, if any. */
     private fun wineNameIn(query: String, grapes: List<com.sheldondesousa.uncork.data.reviews.GrapeVariety>, countries: List<String>): String? {
         val skip = buildSet {
@@ -277,13 +338,40 @@ class WineAskExtras(
         (listOf(ownWineName, ownWinery, ownCountry, ownRegion) + ownVariety).flatMap { GrapeProfileInternal.normalize(it).split(' ') }
             .filter { it.isNotBlank() }.toSet()
 
-    override suspend fun lookup(query: String): AskLookup {
+    /** A follow-up turned into a standalone question; the question itself when it already stands on its own. */
+    private suspend fun standalone(query: String): String {
+        val directory = loadWineries?.let { runCatching { it() }.getOrNull() }
+        val namesPlace = CountryMentions.find(query).isNotEmpty() || directory?.regionMentioned(query, null) != null
+        return FollowUp.rewrite(
+            query, previousQuestion, recentTopics.toList(),
+            namesGrape = GrapeVarietyLookup.findMentioned(query).isNotEmpty(), namesPlace = namesPlace, countries = CountryMentions.find(query),
+        )
+    }
+
+    /** Remembers what a (standalone) question was about, for the next follow-up. */
+    private suspend fun noteTurn(question: String) {
+        val directory = loadWineries?.let { runCatching { it() }.getOrNull() }
+        val grape = GrapeVarietyLookup.findMentioned(question).firstOrNull()?.name
+        val place = directory?.regionMentioned(question, null)?.second?.takeIf { it.isNotBlank() } ?: CountryMentions.find(question).firstOrNull()
+        if (grape != null || place != null) {
+            recentTopics += FollowUp.Topic(grape ?: recentTopics.lastOrNull()?.grape, place ?: recentTopics.lastOrNull()?.place)
+            while (recentTopics.size > 2) recentTopics.removeFirst()
+        }
+        previousQuestion = question
+    }
+
+    override suspend fun lookup(rawQuery: String): AskLookup {
+        val query = standalone(rawQuery)
+        val rewritten = query.takeIf { it != rawQuery }
+        alreadySentHit = false
         val text = forQuestion(query)
+        noteTurn(query)
         val blocks = text?.split("\n\n")?.filter { it.isNotBlank() }.orEmpty()
         // Everything that was looked up came back empty: the answer is the fixed refusal, and Gemma is not called.
-        if (blocks.isNotEmpty() && blocks.all { it.startsWith(WineFactsNote.NO_NOTES_MARK) }) return AskLookup(null, ChatFlowText.NO_INFORMATION)
-        if (blocks.isEmpty() && RefusalGate.shouldRefuse(query, ownWords)) return AskLookup(null, ChatFlowText.NO_INFORMATION)
-        return AskLookup(text)
+        if (blocks.isNotEmpty() && blocks.all { it.startsWith(WineFactsNote.NO_NOTES_MARK) }) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
+        // Notes the conversation already holds count as found, so a follow-up about the same grape is not refused.
+        if (blocks.isEmpty() && !alreadySentHit && RefusalGate.shouldRefuse(query, ownWords)) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
+        return AskLookup(text, null, rewritten)
     }
 
     override suspend fun forQuestion(query: String): String? {
@@ -315,7 +403,8 @@ class WineAskExtras(
                 }
                 suspend fun sampleBlock(): String = runCatching { loadReviews(spellings, country) }.getOrNull()
                     ?.takeIf { !it.isEmpty }?.let { WineFactsNote.reviewsBlock(it) } ?: WineFactsNote.noNotes("reviews of $grapeName from $country")
-                if (sentReviews.add(key)) {
+                if (!sentReviews.add(key)) alreadySentHit = true
+                else {
                     val block = when {
                         typed != null -> wineBlock(typed) ?: if (country.isNotBlank() && countriesNamed.isNotEmpty()) sampleBlock()
                             else ownWineName.takeIf { it.isNotBlank() && !it.equals(typed, true) }?.let { wineBlock(it) } ?: WineFactsNote.noNotes("reviews of $typed")
@@ -342,6 +431,7 @@ class WineAskExtras(
         val inNotes = knowledge.findMentioned(grapeText)
         inNotes.firstOrNull()?.let { lastGrape = it.grape }
         val newNotes = inNotes.filter { it.grape !in sentGrapes }.take(MAX_GRAPES)
+        if (inNotes.isNotEmpty() && newNotes.isEmpty()) alreadySentHit = true
         if (newNotes.isNotEmpty()) {
             blocks += WineFactsNote.grapeBlock(newNotes)
             sentGrapes += newNotes.map { it.grape }
@@ -366,7 +456,7 @@ class WineAskExtras(
         } else if (country.isNotBlank()) {
             regionTargets.take(MAX_GRAPES).forEach { (spellings, grape) ->
                 val key = "${grape.lowercase()}|${country.lowercase()}"
-                if (key in sentKaggleExtracted) return@forEach
+                if (key in sentKaggleExtracted) { alreadySentHit = true; return@forEach }
                 sentKaggleExtracted += key
                 val styles = runCatching { loadKaggleExtracted(spellings, country) }.getOrNull().orEmpty()
                 blocks += if (styles.isNotEmpty()) WineFactsNote.kaggleExtractedBlock(styles, grape)
@@ -424,6 +514,7 @@ class WineAskExtras(
                     ?: directory.findMentioned(query, own).ifEmpty { directory.findMentioned(query, null) }
                 val named = mentioned.filter { "${it.winery}|${it.country}|${it.region}".lowercase() !in sentWineries }
                 // A winery already sent is not re-sent, and must not turn into a sample of the open wine's country.
+                if (mentioned.isNotEmpty() && named.isEmpty()) alreadySentHit = true
                 if (mentioned.isNotEmpty() && named.isEmpty()) return blocks.takeIf { it.isNotEmpty() }?.joinToString("\n\n")
                 if (named.isNotEmpty()) {
                     sentWineries += named.map { "${it.winery}|${it.country}|${it.region}".lowercase() }
@@ -500,7 +591,7 @@ class WineAskExtras(
             // The notes cover this grape, but the place is only a country: Gemma asks for a region or sub-region of it.
             ?: return "WINE PRODUCTION\nThe user asks how ${grape.name} is made, but only the country is known. Ask which region or sub-region of $region they mean before explaining."
         if (production.pathTo(grape, at)?.contains(region) != true) return noInfo
-        if (!sentProduction.add("${grape.name}|$at".lowercase())) return null
+        if (!sentProduction.add("${grape.name}|$at".lowercase())) { alreadySentHit = true; return null }
         return WineFactsNote.productionBlock(grape.name, at, production.country, production.resolve(grape, at))
     }
 
@@ -539,6 +630,11 @@ class WineAskExtras(
     }
 
     override suspend fun wineryList(query: String): String? {
+        val question = standalone(query)
+        return wineryListFor(question)?.also { noteTurn(question) }
+    }
+
+    private suspend fun wineryListFor(query: String): String? {
         wineryWinesAnswer(query)?.let { return it }
         val more = lastWineryTopic != null && WineryIntent.asksForMore(query)
         if (!more && !WineryIntent.asksForList(query)) return null

@@ -13,6 +13,11 @@ object CountryMentions {
         "uk" to "United Kingdom", "england" to "United Kingdom", "kiwi" to "New Zealand",
     )
 
+    /** The adjective for a country ("French" for France), for writing a question back out; null when there is none. */
+    fun adjectiveFor(country: String): String? =
+        ADJECTIVES.entries.firstOrNull { it.value == country && it.key !in setOf("usa", "uk", "england") }?.key
+            ?.split(' ')?.joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+
     private val byName: Map<String, String> by lazy {
         buildMap {
             WineRegions.catalog.keys.forEach { put(normalize(it), it) }
