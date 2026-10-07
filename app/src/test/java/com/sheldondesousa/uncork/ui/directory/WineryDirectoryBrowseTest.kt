@@ -44,9 +44,30 @@ class WineryDirectoryBrowseTest {
         assertTrue(directory.wineriesIn("Argentina", "Not a region").isEmpty())
     }
 
+    @Test fun aRegionListsItsSubRegionsAndTheWineriesWithNoSubRegion() {
+        val subs = directory.subRegions("France", "Bordeaux")
+        assertTrue(subs.any { it.name == "Saint-Emilion" })
+        assertAlphabetical(subs.map { it.name })
+        val direct = directory.wineriesIn("France", "Bordeaux")
+        val inSub = directory.wineriesIn("France", "Bordeaux", "Saint-Emilion")
+        assertTrue(direct.isNotEmpty() && inSub.isNotEmpty())
+        assertTrue(directory.subRegions("Argentina", "Jujuy").isEmpty())
+    }
+
+    @Test fun everyWineryIsReachableThroughTheBrowser() {
+        val reachable = directory.countries().sumOf { c ->
+            directory.regions(c.name).sumOf { r ->
+                directory.wineriesIn(c.name, r.name).size + directory.subRegions(c.name, r.name).sumOf { directory.wineriesIn(c.name, r.name, it.name).size }
+            }
+        }
+        assertTrue(reachable > 29_000)
+    }
+
     @Test fun headerTitleIsDirectoryAndSubtextSaysWhereTheUserIs() {
         assertEquals(DirectoryHeader("Directory", "Select Country"), directoryHeader(null, null))
         assertEquals(DirectoryHeader("Directory", "France > Select Region"), directoryHeader("France", null))
         assertEquals(DirectoryHeader("Directory", "France > Bordeaux > Winery"), directoryHeader("France", "Bordeaux"))
+        assertEquals(DirectoryHeader("Directory", "France > Bordeaux > Select Sub-region"), directoryHeader("France", "Bordeaux", null, true))
+        assertEquals(DirectoryHeader("Directory", "France > Bordeaux > Blaye > Winery"), directoryHeader("France", "Bordeaux", "Blaye", true))
     }
 }

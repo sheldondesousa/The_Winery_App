@@ -56,6 +56,17 @@ class WineProduction(val country: String, val grapes: List<ProductionGrape>) {
         return walk(grape.root, emptyList())
     }
 
+    /**
+     * The most specific place in [grape]'s tree that [text] names (Saint-Émilion before Bordeaux), or null. The country
+     * itself does not count, since it is where every answer starts.
+     */
+    fun placeMentioned(grape: ProductionGrape, text: String): String? {
+        val padded = " ${GrapeProfileInternal.normalize(text)} "
+        return grape.root.flattened().filter { it.second > 0 }.map { it.first.name }
+            .sortedByDescending { it.length }
+            .firstOrNull { " ${GrapeProfileInternal.normalize(it)} " in padded }
+    }
+
     /** The production steps for [grape] at [place]: the closest place's wording for each step, most-specific first overrides. */
     fun resolve(grape: ProductionGrape, place: String): ResolvedProduction {
         val path = pathTo(grape, place) ?: return ResolvedProduction(emptyList(), emptyList(), null)

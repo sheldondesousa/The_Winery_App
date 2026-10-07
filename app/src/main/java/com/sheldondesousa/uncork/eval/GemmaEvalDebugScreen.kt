@@ -44,7 +44,9 @@ private sealed interface EvalRunState {
  * [com.sheldondesousa.uncork.ui.landing.LandingRoute]'s debug entry point.
  */
 @Composable
-internal fun GemmaEvalDebugScreen(onBack: () -> Unit) {
+internal fun GemmaEvalDebugScreen(onBack: () -> Unit, ragExtras: (() -> com.sheldondesousa.uncork.model.AskExtras)? = null,
+    bottle: GemmaRagEvalRunner.BottleFactory? = null,
+) {
     check(BuildConfig.DEBUG) { "GemmaEvalDebugScreen must never be reachable in a release build." }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -146,6 +148,28 @@ internal fun GemmaEvalDebugScreen(onBack: () -> Unit) {
                             .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
                     }
                 }) { Text("Run Handover eval (40 cases x 3)") }
+                if (ragExtras != null) Button(onClick = {
+                    state = EvalRunState.Running(0, 0, "")
+                    scope.launch {
+                        runCatching {
+                            GemmaRagEvalRunner.run(context, ragExtras, onProgress = { progress ->
+                                state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
+                            })
+                        }.onSuccess { file -> state = EvalRunState.Done(file) }
+                            .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
+                    }
+                }) { Text("Run RAG eval (40 convos, RAG off + on)") }
+                if (ragExtras != null && bottle != null) Button(onClick = {
+                    state = EvalRunState.Running(0, 0, "")
+                    scope.launch {
+                        runCatching {
+                            GemmaRagEvalRunner.run(context, ragExtras, { progress ->
+                                state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
+                            }, bottle)
+                        }.onSuccess { file -> state = EvalRunState.Done(file) }
+                            .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
+                    }
+                }) { Text("Run RAG eval - BOTTLE prompt (RAG off + on)") }
             }
 
             is EvalRunState.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

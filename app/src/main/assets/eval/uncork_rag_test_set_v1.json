@@ -1,0 +1,1240 @@
+{
+  "meta": {
+    "name": "Uncork RAG wine-facts test set v1",
+    "scope": "Open (curious) conversation only. Wine facts covered by the new RAG: (1) grape variety facts, (2) wineries in France and the United States, (3) production of Merlot in Bordeaux and Chardonnay in Burgundy.",
+    "status": "DRAFT answer keys. Written from general wine knowledge, NOT from your RAG documents. Your RAG documents are the source of truth: check every key against them before trusting a score. Numeric ranges (aging months etc.) are approximate.",
+    "how_to_run": "Run every conversation twice on the physical device: once with RAG off (baseline) and once with RAG on. Save the retrieved chunks with every RAG-on reply.",
+    "expected_behavior_values": {
+      "answer": "Should give a correct, useful answer using the facts in key_facts.",
+      "correct_false_premise": "The question contains a wrong assumption. Reply must politely correct it, not go along with it.",
+      "admit_unknown": "The thing asked about is invented. Reply must say it does not recognise it and not describe it.",
+      "hedge_or_decline": "Outside what the RAG covers (other countries, other grapes' production, prices). Reply should be honest about limited coverage. See DECISION D1 in the hand-over notes."
+    },
+    "fields": {
+      "retrieval_keywords": "Words that should appear in the retrieved chunks if retrieval worked. Used for the code check on retrieval.",
+      "must_include_any": "Reply should contain at least one of these (code check, case-insensitive). If none, mark REVIEW.",
+      "red_flags": "If any appear, mark REVIEW for a human look. They are not automatic fails because a good reply may mention them while correcting the user.",
+      "judge": "Which judge dimensions to run for this conversation.",
+      "retrieval_expected": "'none' means the RAG should hold nothing relevant, so any specific detail in the reply came from Gemma's own knowledge. If chunks are retrieved anyway, mark REVIEW (irrelevant_retrieval) and record the similarity score if the app logs it.",
+      "verify_claims": "true means the judge also lists every checkable claim in the reply (see claim_extraction in the judge prompt) so each one can be confirmed by web search or a bigger model, or by hand."
+    }
+  },
+  "conversations": [
+    {
+      "id": "VF01",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "Tell me about Merlot."
+      ],
+      "key_facts": [
+        "Red grape",
+        "Medium to full body, soft/plush tannins, medium acidity",
+        "Aromas: red plum, black cherry, chocolate, sometimes herbal/bay leaf",
+        "Home region is Bordeaux, especially the Right Bank (Saint-Émilion, Pomerol)",
+        "Also grown in the US (e.g. California, Washington)"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "plum",
+        "Bordeaux"
+      ],
+      "must_include_any": [
+        "plum",
+        "cherry"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF02",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "What does Chardonnay taste like?"
+      ],
+      "key_facts": [
+        "White grape; style depends heavily on climate and winemaking",
+        "Cool climate: green apple, lemon, mineral/chalky",
+        "Warmer climate: peach, pineapple, tropical",
+        "Oak adds vanilla, toast; malolactic fermentation adds buttery/creamy notes",
+        "Medium to full body, medium-high acidity"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "apple",
+        "oak"
+      ],
+      "must_include_any": [
+        "apple",
+        "oak",
+        "butter"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF03",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "What aromas should I expect from Cabernet Sauvignon?"
+      ],
+      "key_facts": [
+        "Blackcurrant (cassis), black cherry",
+        "Cedar, graphite/pencil shavings",
+        "Green pepper when under-ripe",
+        "Vanilla, tobacco from oak ageing",
+        "Full body, high tannin"
+      ],
+      "retrieval_keywords": [
+        "Cabernet Sauvignon",
+        "blackcurrant",
+        "cedar"
+      ],
+      "must_include_any": [
+        "blackcurrant",
+        "cassis",
+        "cedar"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF04",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "Where in France is Pinot Noir grown?"
+      ],
+      "key_facts": [
+        "Burgundy is its home and main region (Côte d'Or)",
+        "Also Alsace",
+        "Also Champagne (used in sparkling blends)"
+      ],
+      "retrieval_keywords": [
+        "Pinot Noir",
+        "Burgundy"
+      ],
+      "must_include_any": [
+        "Burgundy"
+      ],
+      "red_flags": [
+        "Bordeaux is the main"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF05",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which US regions are best known for Chardonnay?"
+      ],
+      "key_facts": [
+        "California is the main US source: Sonoma County (Russian River Valley, Sonoma Coast), Napa Valley (Carneros), Central Coast (Santa Barbara, Monterey)",
+        "Also Oregon (Willamette Valley) and Washington"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "California",
+        "Sonoma"
+      ],
+      "must_include_any": [
+        "California",
+        "Sonoma",
+        "Napa"
+      ],
+      "red_flags": [
+        "Texas is the main"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF06",
+      "category": "variety_facts",
+      "expected_behavior": "correct_false_premise",
+      "turns": [
+        "Is Merlot sweeter than Cabernet Sauvignon?"
+      ],
+      "key_facts": [
+        "Both are normally made dry",
+        "Merlot tastes softer and fruitier because of lower tannin, not because of sugar"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "tannin"
+      ],
+      "must_include_any": [
+        "dry",
+        "tannin"
+      ],
+      "red_flags": [
+        "Merlot is sweeter"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF07",
+      "category": "variety_facts",
+      "expected_behavior": "correct_false_premise",
+      "turns": [
+        "Is Chardonnay always oaky and buttery?"
+      ],
+      "key_facts": [
+        "No. Style depends on winemaking",
+        "Chablis is typically crisp and unoaked or lightly oaked",
+        "Butter comes from malolactic fermentation; vanilla/toast comes from oak"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "oak",
+        "malolactic"
+      ],
+      "must_include_any": [
+        "Chablis",
+        "unoaked",
+        "not always"
+      ],
+      "red_flags": [
+        "always oaky"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF08",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "What's the difference between Merlot and Cabernet Sauvignon?"
+      ],
+      "key_facts": [
+        "Cabernet: firmer, higher tannin, blackcurrant and cedar",
+        "Merlot: softer, plusher, red plum and cherry",
+        "Both are key Bordeaux grapes and are often blended",
+        "Merlot ripens earlier"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "Cabernet Sauvignon",
+        "Bordeaux"
+      ],
+      "must_include_any": [
+        "tannin",
+        "softer"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "VF09",
+      "category": "variety_facts",
+      "expected_behavior": "answer",
+      "turns": [
+        "What is Sauvignon Blanc like, and where is it grown in France?"
+      ],
+      "key_facts": [
+        "White, dry, high acidity",
+        "Aromas: cut grass, citrus (lime, grapefruit), gooseberry, passion fruit",
+        "France: Loire Valley (Sancerre, Pouilly-Fumé) and Bordeaux (often blended with Sémillon)"
+      ],
+      "retrieval_keywords": [
+        "Sauvignon Blanc",
+        "Loire",
+        "Sancerre"
+      ],
+      "must_include_any": [
+        "Loire",
+        "Sancerre",
+        "Bordeaux"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF01",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Name a few famous wineries in Bordeaux."
+      ],
+      "key_facts": [
+        "Any real Bordeaux châteaux pass, e.g. Château Margaux, Lafite Rothschild, Latour, Mouton Rothschild, Haut-Brion, Pétrus, Cheval Blanc, Ausone, d'Yquem",
+        "Every name must be real AND in Bordeaux"
+      ],
+      "retrieval_keywords": [
+        "Château",
+        "Bordeaux"
+      ],
+      "must_include_any": [
+        "Margaux",
+        "Lafite",
+        "Latour",
+        "Mouton",
+        "Haut-Brion",
+        "Pétrus",
+        "Cheval Blanc",
+        "Ausone"
+      ],
+      "red_flags": [
+        "Napa",
+        "Burgundy"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF02",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which wineries in Pomerol or Saint-Émilion are known for Merlot?"
+      ],
+      "key_facts": [
+        "Pétrus (Pomerol, Merlot-dominant)",
+        "Le Pin (Pomerol)",
+        "Château Angélus (Saint-Émilion, Merlot-dominant)",
+        "Any named winery must be real and in Pomerol or Saint-Émilion"
+      ],
+      "retrieval_keywords": [
+        "Pomerol",
+        "Saint-Émilion",
+        "Merlot"
+      ],
+      "must_include_any": [
+        "Pétrus",
+        "Le Pin",
+        "Angélus"
+      ],
+      "red_flags": [
+        "Pauillac",
+        "Médoc"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF03",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which Burgundy wineries are known for Chardonnay?"
+      ],
+      "key_facts": [
+        "Domaine Leflaive (Puligny-Montrachet)",
+        "Domaine des Comtes Lafon (Meursault)",
+        "Domaine Ramonet (Chassagne-Montrachet)",
+        "Chablis: William Fèvre, Domaine Laroche",
+        "Négociants such as Louis Jadot, Bouchard Père & Fils"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "Burgundy",
+        "Domaine"
+      ],
+      "must_include_any": [
+        "Leflaive",
+        "Lafon",
+        "Ramonet",
+        "Fèvre",
+        "Laroche",
+        "Jadot",
+        "Bouchard"
+      ],
+      "red_flags": [
+        "Bordeaux château"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF04",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Name some top Napa Valley wineries."
+      ],
+      "key_facts": [
+        "Opus One, Robert Mondavi, Stag's Leap Wine Cellars, Caymus, Screaming Eagle, Chateau Montelena, Beringer, Duckhorn",
+        "Every name must be real AND in Napa Valley (not Sonoma, Oregon or France)"
+      ],
+      "retrieval_keywords": [
+        "Napa",
+        "Valley"
+      ],
+      "must_include_any": [
+        "Opus One",
+        "Mondavi",
+        "Stag",
+        "Caymus",
+        "Screaming Eagle",
+        "Montelena",
+        "Beringer",
+        "Duckhorn"
+      ],
+      "red_flags": [
+        "Bordeaux"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF05",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which wineries in Oregon's Willamette Valley are known for Pinot Noir?"
+      ],
+      "key_facts": [
+        "Domaine Drouhin Oregon, Domaine Serene, Argyle, Eyrie Vineyards",
+        "Every name must be real and in Willamette Valley"
+      ],
+      "retrieval_keywords": [
+        "Willamette",
+        "Pinot Noir",
+        "Oregon"
+      ],
+      "must_include_any": [
+        "Drouhin",
+        "Serene",
+        "Argyle",
+        "Eyrie"
+      ],
+      "red_flags": [
+        "Napa"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF06",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "What wineries should I know in Sonoma County?"
+      ],
+      "key_facts": [
+        "Kistler Vineyards, Rochioli, Williams Selyem, Ferrari-Carano, Kendall-Jackson",
+        "Every name must be real and in Sonoma County (not Napa)"
+      ],
+      "retrieval_keywords": [
+        "Sonoma",
+        "Russian River"
+      ],
+      "must_include_any": [
+        "Kistler",
+        "Rochioli",
+        "Williams Selyem",
+        "Ferrari-Carano",
+        "Kendall"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF07",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which famous Champagne houses are there?"
+      ],
+      "key_facts": [
+        "Moët & Chandon, Veuve Clicquot, Krug, Bollinger, Taittinger, Louis Roederer; Dom Pérignon is a Moët & Chandon brand",
+        "Every name must be real and in Champagne"
+      ],
+      "retrieval_keywords": [
+        "Champagne"
+      ],
+      "must_include_any": [
+        "Moët",
+        "Clicquot",
+        "Krug",
+        "Bollinger",
+        "Taittinger",
+        "Roederer"
+      ],
+      "red_flags": [
+        "Napa"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "WF08",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Tell me about Château Ausone."
+      ],
+      "key_facts": [
+        "From the DB: Château Ausone is listed in Saint-Emilion, France",
+        "Beyond the DB (Gemma's own knowledge, check by hand): a top Bordeaux Right Bank estate, a Premier Grand Cru Classé A of Saint-Émilion, blending mainly Cabernet Franc and Merlot",
+        "The DB holds only the winery name and region, so the reply must not invent a founding date, rating, price or vintage detail the DB does not supply"
+      ],
+      "retrieval_keywords": [
+        "Ausone",
+        "Saint-Emilion"
+      ],
+      "must_include_any": [
+        "Saint-Émilion",
+        "Saint-Emilion"
+      ],
+      "red_flags": [
+        "Napa",
+        "Burgundy",
+        "Pomerol",
+        "Médoc",
+        "Pauillac"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ],
+      "db_confirmed": "Appeared in the Saint-Emilion directory sample retrieved for WF02 in Rag_Results1"
+    },
+    {
+      "id": "WF09",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Where is Nichelini Family Winery and who makes it?"
+      ],
+      "key_facts": [
+        "From the DB: Nichelini Family Winery is listed in Napa Valley, United States",
+        "The DB holds only the winery name and region, so who makes it, its owner and its history are not recorded. Best reply gives the location and says it has no further details",
+        "Gemma is unlikely to know this smaller winery, so any specific owner, founding year, grape or style claim should be treated as invented and verified by hand"
+      ],
+      "retrieval_keywords": [
+        "Nichelini",
+        "Napa Valley"
+      ],
+      "must_include_any": [
+        "Napa"
+      ],
+      "red_flags": [
+        "Bordeaux",
+        "Château",
+        "Sonoma",
+        "Oregon",
+        "founded in",
+        "established in"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ],
+      "db_confirmed": "Appeared in the Napa Valley directory sample listed for WF04 in Rag_Results1"
+    },
+    {
+      "id": "WF10",
+      "category": "wineries",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which wineries make Chardonnay in Chablis?"
+      ],
+      "key_facts": [
+        "William Fèvre, Domaine Laroche, Domaine Raveneau, Domaine Dauvissat, La Chablisienne (cooperative)",
+        "Every name must be real and in Chablis"
+      ],
+      "retrieval_keywords": [
+        "Chablis",
+        "Chardonnay"
+      ],
+      "must_include_any": [
+        "Fèvre",
+        "Laroche",
+        "Raveneau",
+        "Dauvissat",
+        "Chablisienne"
+      ],
+      "red_flags": [
+        "Napa"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR01",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "How is Merlot made in Bordeaux?"
+      ],
+      "key_facts": [
+        "Harvest around September to October",
+        "Sorting, destemming and crushing",
+        "Fermentation in temperature-controlled tanks or vats (stainless steel, concrete or wood) with maceration on the skins",
+        "Pressing, then malolactic fermentation",
+        "Ageing in French oak barrels",
+        "Often blended with Cabernet Franc / Cabernet Sauvignon, then fined/filtered and bottled"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "Bordeaux",
+        "fermentation",
+        "barrel"
+      ],
+      "must_include_any": [
+        "fermentation",
+        "oak",
+        "barrel"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR02",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "How long is Bordeaux Merlot usually aged in oak?"
+      ],
+      "key_facts": [
+        "Roughly 12 to 24 months for quality wines; varies by château and appellation",
+        "Share of new oak varies",
+        "Check the exact figure against your RAG document; if the reply gives a number the retrieved text does not support, score faithfulness low"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "months",
+        "oak"
+      ],
+      "must_include_any": [
+        "month",
+        "year"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR03",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "How is white Burgundy Chardonnay made?"
+      ],
+      "key_facts": [
+        "Gentle pressing of whole bunches, then settling",
+        "Fermentation often in French oak barrels, partly new; native yeasts are common",
+        "Malolactic fermentation is usual",
+        "Ageing on the lees with stirring (bâtonnage), roughly 10 to 18 months",
+        "Chablis uses more stainless steel / neutral oak"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "Burgundy",
+        "lees",
+        "barrel"
+      ],
+      "must_include_any": [
+        "barrel",
+        "oak",
+        "lees"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR04",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "Why does Chablis taste different from Meursault?"
+      ],
+      "key_facts": [
+        "Chablis: cool northern climate, limestone/marl (Kimmeridgian) soils, mostly stainless steel or neutral oak, so crisp, steely, citrus, mineral",
+        "Meursault: Côte de Beaune, richer style with more oak and lees contact, hazelnut and creamy notes"
+      ],
+      "retrieval_keywords": [
+        "Chablis",
+        "Meursault"
+      ],
+      "must_include_any": [
+        "steel",
+        "oak",
+        "limestone"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR05",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "What is malolactic fermentation, and does it happen in Burgundy Chardonnay?"
+      ],
+      "key_facts": [
+        "Bacteria convert sharp malic acid into softer lactic acid",
+        "Gives a rounder, creamier, sometimes buttery feel",
+        "Yes, it is standard for most white Burgundy"
+      ],
+      "retrieval_keywords": [
+        "malolactic",
+        "Chardonnay"
+      ],
+      "must_include_any": [
+        "malic",
+        "lactic"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR06",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "What grapes are blended with Merlot in Bordeaux, and why?"
+      ],
+      "key_facts": [
+        "Cabernet Sauvignon, Cabernet Franc, sometimes Petit Verdot and Malbec",
+        "Blending adds structure, tannin, freshness and complexity",
+        "Right Bank blends lean Merlot; Left Bank blends lean Cabernet Sauvignon"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "Cabernet Franc",
+        "blend"
+      ],
+      "must_include_any": [
+        "Cabernet Franc",
+        "Cabernet Sauvignon"
+      ],
+      "red_flags": [
+        "Pinot Noir"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR07",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "What does lees stirring mean in Chardonnay making?"
+      ],
+      "key_facts": [
+        "Wine rests on the dead yeast cells (lees) after fermentation",
+        "Stirring them (bâtonnage) adds texture, creaminess and bread/brioche notes",
+        "Common in white Burgundy"
+      ],
+      "retrieval_keywords": [
+        "lees",
+        "bâtonnage"
+      ],
+      "must_include_any": [
+        "lees",
+        "yeast"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "PR08",
+      "category": "production",
+      "expected_behavior": "answer",
+      "turns": [
+        "Do they use oak for Bordeaux Merlot, and what kind?"
+      ],
+      "key_facts": [
+        "Yes, typically French oak barriques (about 225 litres)",
+        "Share of new oak varies by producer",
+        "Oak adds vanilla and spice and softens tannins"
+      ],
+      "retrieval_keywords": [
+        "French oak",
+        "barrique",
+        "Merlot"
+      ],
+      "must_include_any": [
+        "French oak",
+        "barrique",
+        "barrel"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "OC01",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "correct_false_premise",
+      "turns": [
+        "I heard Opus One is a Bordeaux château, right?"
+      ],
+      "key_facts": [
+        "No. Opus One is in Oakville, Napa Valley, California",
+        "Linked to Bordeaux only through its founder Baron Philippe de Rothschild of Mouton Rothschild, and its Bordeaux-style blend"
+      ],
+      "retrieval_keywords": [
+        "Opus One",
+        "Napa"
+      ],
+      "must_include_any": [
+        "Napa",
+        "California"
+      ],
+      "red_flags": [
+        "yes, it's a Bordeaux",
+        "yes, Opus One is a Bordeaux"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "honest_limits",
+        "faithfulness"
+      ]
+    },
+    {
+      "id": "OC02",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "correct_false_premise",
+      "turns": [
+        "Which Pauillac château makes Pétrus?"
+      ],
+      "key_facts": [
+        "Pétrus is in Pomerol (Right Bank, Merlot-dominant), not Pauillac",
+        "Pauillac is on the Left Bank (e.g. Lafite, Latour, Mouton Rothschild)"
+      ],
+      "retrieval_keywords": [
+        "Pétrus",
+        "Pomerol"
+      ],
+      "must_include_any": [
+        "Pomerol"
+      ],
+      "red_flags": [
+        "Pétrus in Pauillac",
+        "Pétrus is a Pauillac"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "honest_limits",
+        "faithfulness"
+      ]
+    },
+    {
+      "id": "OC03",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "admit_unknown",
+      "turns": [
+        "Tell me about Domaine des Quatre Lunes in Burgundy."
+      ],
+      "key_facts": [
+        "Assumed invented: reply must say it does not recognise this winery and not describe wines, history or ratings",
+        "Check by hand that this name does not happen to be real before trusting the score"
+      ],
+      "retrieval_keywords": [],
+      "must_include_any": [
+        "don't recognise",
+        "don't recognize",
+        "not familiar",
+        "no information",
+        "can't find",
+        "not sure"
+      ],
+      "red_flags": [
+        "founded in",
+        "Grand Cru",
+        "rated"
+      ],
+      "judge": [
+        "honest_limits",
+        "factual_accuracy"
+      ]
+    },
+    {
+      "id": "OC04",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "admit_unknown",
+      "turns": [
+        "What's the best wine from Starfall Ridge Cellars in Napa?"
+      ],
+      "key_facts": [
+        "Assumed invented: reply must say it does not recognise this winery and not recommend a wine",
+        "Check by hand that this name does not happen to be real before trusting the score"
+      ],
+      "retrieval_keywords": [],
+      "must_include_any": [
+        "don't recognise",
+        "don't recognize",
+        "not familiar",
+        "no information",
+        "can't find",
+        "not sure"
+      ],
+      "red_flags": [
+        "Cabernet Sauvignon from Starfall",
+        "I recommend the"
+      ],
+      "judge": [
+        "honest_limits",
+        "factual_accuracy"
+      ]
+    },
+    {
+      "id": "OC05",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "correct_false_premise",
+      "turns": [
+        "How is Merlot made in Burgundy?"
+      ],
+      "key_facts": [
+        "Merlot is not a Burgundy grape; red Burgundy is Pinot Noir and white is mainly Chardonnay (also Aligoté)",
+        "Reply may offer to explain Bordeaux Merlot or Burgundy Chardonnay instead"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "Burgundy"
+      ],
+      "must_include_any": [
+        "Pinot Noir",
+        "Bordeaux"
+      ],
+      "red_flags": [
+        "Merlot in Burgundy is made"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "honest_limits",
+        "faithfulness"
+      ]
+    },
+    {
+      "id": "OC06",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "hedge_or_decline",
+      "turns": [
+        "How is Pinot Noir made in Burgundy?"
+      ],
+      "key_facts": [
+        "Outside the production topics your RAG covers (Merlot-Bordeaux and Chardonnay-Burgundy only)",
+        "Best reply is honest that it has less detail here and keeps to widely known basics; worst is confident specifics (exact months, percentages) with nothing retrieved to support them",
+        "See DECISION D1"
+      ],
+      "retrieval_keywords": [],
+      "must_include_any": [],
+      "red_flags": [
+        "exactly",
+        "precisely"
+      ],
+      "judge": [
+        "honest_limits",
+        "factual_accuracy",
+        "claim_extraction"
+      ],
+      "retrieval_expected": "none",
+      "verify_claims": true
+    },
+    {
+      "id": "OC07",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "hedge_or_decline",
+      "turns": [
+        "Name some wineries in Tuscany."
+      ],
+      "key_facts": [
+        "Italy is outside the winery coverage (France and US only)",
+        "Best reply is honest about limited coverage; if it names wineries they must be real Tuscan ones (e.g. Antinori, Biondi-Santi, Ornellaia); worst is invented names",
+        "See DECISION D1"
+      ],
+      "retrieval_keywords": [],
+      "must_include_any": [],
+      "red_flags": [],
+      "judge": [
+        "honest_limits",
+        "factual_accuracy",
+        "claim_extraction"
+      ],
+      "retrieval_expected": "none",
+      "verify_claims": true
+    },
+    {
+      "id": "OC08",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "hedge_or_decline",
+      "turns": [
+        "How much does a bottle of Château Margaux cost?"
+      ],
+      "key_facts": [
+        "Price lookup is out of scope for the MVP",
+        "Reply must not state a specific price; saying it is a high-end, expensive wine is fine",
+        "Should invite the user back to wine facts",
+        "Truth check not needed: any specific price figure in the reply is a fail (code check)"
+      ],
+      "retrieval_keywords": [],
+      "must_include_any": [],
+      "red_flags": [
+        "$",
+        "£",
+        "€",
+        "USD",
+        "dollars"
+      ],
+      "judge": [
+        "honest_limits",
+        "factual_accuracy"
+      ],
+      "retrieval_expected": "none",
+      "verify_claims": false
+    },
+    {
+      "id": "OC09",
+      "category": "false_premise_or_out_of_corpus",
+      "expected_behavior": "correct_false_premise",
+      "turns": [
+        "Which Bordeaux wineries make the best Chardonnay?"
+      ],
+      "key_facts": [
+        "Chardonnay is not a main Bordeaux grape; Bordeaux whites are mainly Sauvignon Blanc and Sémillon",
+        "Chardonnay's French home is Burgundy (including Chablis)",
+        "Reply should redirect rather than invent Bordeaux Chardonnay producers"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "Burgundy",
+        "Bordeaux"
+      ],
+      "must_include_any": [
+        "Burgundy",
+        "Sauvignon Blanc",
+        "Sémillon"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "honest_limits",
+        "faithfulness"
+      ]
+    },
+    {
+      "id": "MT01",
+      "category": "multi_turn",
+      "expected_behavior": "answer",
+      "turns": [
+        "Tell me about Chardonnay.",
+        "Where in Burgundy is it grown?",
+        "Name a winery from there."
+      ],
+      "key_facts": [
+        "Turn 2: Chablis, Côte de Beaune (Meursault, Puligny-Montrachet, Chassagne-Montrachet), Mâconnais",
+        "Turn 3: a real winery from one of those areas, e.g. Leflaive, Ramonet, Lafon, Fèvre",
+        "Must remember 'it' = Chardonnay and 'there' = Burgundy"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "Burgundy",
+        "Chablis"
+      ],
+      "must_include_any": [
+        "Chablis",
+        "Meursault",
+        "Montrachet",
+        "Leflaive",
+        "Ramonet",
+        "Lafon",
+        "Fèvre"
+      ],
+      "red_flags": [
+        "Napa"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "MT02",
+      "category": "multi_turn",
+      "expected_behavior": "answer",
+      "turns": [
+        "I like Merlot.",
+        "How is it made in Bordeaux?",
+        "Which winery should I look up?"
+      ],
+      "key_facts": [
+        "Turn 2: the Bordeaux Merlot production steps (see PR01)",
+        "Turn 3: a real Merlot-focused Bordeaux winery, e.g. Pétrus, Le Pin, Angélus",
+        "Must remember 'it' = Merlot"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "Bordeaux",
+        "Pomerol"
+      ],
+      "must_include_any": [
+        "Pétrus",
+        "Le Pin",
+        "Angélus",
+        "Pomerol",
+        "Saint-Émilion"
+      ],
+      "red_flags": [
+        "Napa"
+      ],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "MT03",
+      "category": "multi_turn",
+      "expected_behavior": "answer",
+      "turns": [
+        "Which US wineries make Chardonnay?",
+        "And in France?"
+      ],
+      "key_facts": [
+        "Turn 1: real US names, e.g. Kistler, Chateau Montelena, Rombauer",
+        "Turn 2: real French Chardonnay producers, e.g. Leflaive, Ramonet, Fèvre; must keep the topic as Chardonnay"
+      ],
+      "retrieval_keywords": [
+        "Chardonnay",
+        "California",
+        "Burgundy"
+      ],
+      "must_include_any": [
+        "Kistler",
+        "Montelena",
+        "Rombauer",
+        "Leflaive",
+        "Ramonet",
+        "Fèvre",
+        "Laroche"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    },
+    {
+      "id": "MT04",
+      "category": "multi_turn",
+      "expected_behavior": "answer",
+      "turns": [
+        "How is Merlot made in Bordeaux?",
+        "And how is Chardonnay made in Burgundy?",
+        "Which one spends longer in oak?"
+      ],
+      "key_facts": [
+        "Turn 3 must compare the two using the earlier answers and stay consistent with them",
+        "Rough ranges: Bordeaux Merlot about 12 to 24 months; Burgundy Chardonnay about 10 to 18 months; both vary. Judge against your RAG documents",
+        "A reply that contradicts its own earlier turns should lose accuracy points"
+      ],
+      "retrieval_keywords": [
+        "Merlot",
+        "Chardonnay",
+        "oak",
+        "months"
+      ],
+      "must_include_any": [
+        "Merlot",
+        "Bordeaux"
+      ],
+      "red_flags": [],
+      "judge": [
+        "factual_accuracy",
+        "faithfulness",
+        "completeness"
+      ]
+    }
+  ]
+}

@@ -27,6 +27,7 @@ import com.sheldondesousa.uncork.data.reviews.GrapeVarieties
 import com.sheldondesousa.uncork.data.reviews.WineReviewRepository
 import com.sheldondesousa.uncork.data.reviews.WineSelectionCriteria
 import com.sheldondesousa.uncork.eval.GemmaEvalDebugScreen
+import com.sheldondesousa.uncork.eval.GemmaRagEvalRunner
 import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.BraveSearchHttpClient
 import com.sheldondesousa.uncork.model.BraveWineWebSearchDataSource
@@ -114,7 +115,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) { runCatching { wineriesDirectory.get() } }
         val askContext = WineAskContext(
             GrapeProfileInternal.load(applicationContext), wineOptionCache, wineReviewRepository,
-            wineriesDirectory,
+            wineriesDirectory, wineProduction,
         )
         // Chat's open conversation gets the same on-demand lookups as Ask.
         gemmaResponder.attachCuriousExtras(askContext.extrasForChat())
@@ -241,7 +242,18 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (modelReady && showEvalDebug) {
-                    GemmaEvalDebugScreen(onBack = { showEvalDebug = false })
+                    GemmaEvalDebugScreen(onBack = { showEvalDebug = false }, ragExtras = { askContext.extrasForChat() },
+                        bottle = GemmaRagEvalRunner.BottleFactory { responder, ragOn, record ->
+                            // A test bottle with no grape or country. Its region is Burgundy so production questions that name no place (lees stirring in Chardonnay) have one.
+                            val blank = WineSuggestion(
+                                name = "Test bottle", province = "Burgundy", winery = "Unknown", variety = "Unknown",
+                            )
+                            responder.startWineDiscussion(
+                                factsProvider = { if (ragOn) askContext.factsFor(blank) else WineFactsNote.build(blank) },
+                                reminder = WineFactsNote.reminder(blank),
+                                extras = if (ragOn) record(askContext.extrasFor(blank)) else null,
+                            )
+                        })
                 } else if (modelReady) {
                     when (selectedTab) {
                         null -> when (menuItem) {

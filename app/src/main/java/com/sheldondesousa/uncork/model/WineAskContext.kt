@@ -1,6 +1,10 @@
 package com.sheldondesousa.uncork.model
 
 import com.sheldondesousa.uncork.data.knowledge.GrapeProfileInternal
+import com.sheldondesousa.uncork.data.knowledge.GrapeLookup
+import com.sheldondesousa.uncork.data.knowledge.WineProductionProvider
+import com.sheldondesousa.uncork.data.knowledge.WineriesDirectory
+import kotlinx.coroutines.sync.withLock
 import com.sheldondesousa.uncork.data.knowledge.WineriesDirectoryProvider
 import com.sheldondesousa.uncork.data.profile.VarietyRegionProfileRepository
 import com.sheldondesousa.uncork.data.reviews.GrapeVarieties
@@ -13,6 +17,7 @@ class WineAskContext(
     private val profiles: VarietyRegionProfileRepository,
     private val reviews: WineReviewDataSource,
     private val wineries: WineriesDirectoryProvider? = null,
+    private val production: WineProductionProvider? = null,
 ) {
     suspend fun factsFor(wine: WineSuggestion): String {
         val spellings = spellingsOf(wine.variety)
@@ -20,16 +25,21 @@ class WineAskContext(
         val winery = if (wine.winery.isUnknown() || wine.winery == wine.name) emptyList() else {
             runCatching { wineries?.get()?.find(wine.winery, wine.country) }.getOrNull().orEmpty()
         }
+        // A grape in Grape_Profile_Internal needs nothing else. One that is not there needs a country (or region) for
+        // the enthusiasts' summary; without one, Gemma is told to ask.
         val grapes = knowledge.find(wine.variety)
-        // Region style is only a fallback for the grape notes, so it is only looked up when there are none.
         val regionStyles = if (grapes.grapes.isNotEmpty() || wine.country.isUnknown()) emptyList() else {
             kaggleExtractedFor(spellings, wine.country, preferredProvince = wine.province)
         }
+        val needsPlace = grapes.grapes.isEmpty() && !wine.variety.isUnknown() && wine.country.isUnknown()
         val otherCountries = if (wine.country.isUnknown() || wine.variety.isUnknown()) emptyList() else {
             runCatching { reviews.topCountriesFor(spellings, excludeCountry = wine.country) }.getOrNull().orEmpty()
         }
         // The broader review sample is not part of the first message; see [extrasFor].
-        return WineFactsNote.build(wine, grapes, regionStyles, winery = winery, otherCountries = otherCountries)
+        return WineFactsNote.build(
+            wine, grapes, regionStyles, winery = winery, otherCountries = otherCountries,
+            askForPlace = needsPlace,
+        )
     }
 
     /**
@@ -43,10 +53,17 @@ class WineAskContext(
             ownGrapes = knowledge.find(wine.variety).grapes.map { it.grape }.toSet(),
             ownVariety = if (wine.variety.isUnknown()) emptyList() else spellings,
             ownCountry = wine.country.takeUnless { it.isUnknown() }.orEmpty(),
+            ownRegion = wine.province.takeUnless { it.isUnknown() }.orEmpty(),
+            loadProduction = production?.let { provider -> { provider.get() } },
             loadKaggleExtracted = { grapeSpellings, country -> kaggleExtractedFor(grapeSpellings, country, preferredProvince = "") },
             loadWineries = wineries?.let { provider -> { provider.get() } },
             loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
-            loadGrapeWineries = { grapeSpellings, country -> grapeWineries(grapeSpellings, country) },
+            loadGrapeWineries = { grapeSpellings, country, limit, exclude -> grapeWineries(grapeSpellings, country, limit, exclude) },
+            ownWineName = wine.name.takeUnless { it.isUnknown() }.orEmpty(),
+            ownWinery = wine.winery.takeUnless { it.isUnknown() || it == wine.name }.orEmpty(),
+            loadReviewWineries = { reviewWineries() },
+            loadWineryWines = { winery, country, limit, exclude -> reviews.winesFor(winery, country, limit, exclude) },
+            loadWineReviews = { grapeSpellings, wineName -> reviews.winesNamed(grapeSpellings, wineName) },
             loadReviews = { grapeSpellings, country -> reviewSample(grapeSpellings, country) },
         )
     }
@@ -56,18 +73,29 @@ class WineAskContext(
      */
     fun extrasForChat(): AskExtras = WineAskExtras(
         knowledge = knowledge,
+        loadProduction = production?.let { provider -> { provider.get() } },
         loadKaggleExtracted = { grapeSpellings, country -> kaggleExtractedFor(grapeSpellings, country, preferredProvince = "") },
         loadWineries = wineries?.let { provider -> { provider.get() } },
         loadOtherCountries = { grapeSpellings, country -> otherCountriesFor(grapeSpellings, country) },
-        loadGrapeWineries = { grapeSpellings, country -> grapeWineries(grapeSpellings, country) },
+        loadGrapeWineries = { grapeSpellings, country, limit, exclude -> grapeWineries(grapeSpellings, country, limit, exclude) },
+        loadReviewWineries = { reviewWineries() },
+        loadWineryWines = { winery, country, limit, exclude -> reviews.winesFor(winery, country, limit, exclude) },
+        loadWineReviews = { grapeSpellings, wineName -> reviews.winesNamed(grapeSpellings, wineName) },
         loadReviews = { grapeSpellings, country -> reviewSample(grapeSpellings, country) },
     )
+
+    // Every winery as the reviews spell it, listed once and kept; matched to names in questions like the Wineries_Directory.
+    @Volatile private var reviewWineryIndex: WineriesDirectory? = null
+    private val reviewWineryLock = kotlinx.coroutines.sync.Mutex()
+    private suspend fun reviewWineries(): WineriesDirectory? = reviewWineryIndex ?: reviewWineryLock.withLock {
+        reviewWineryIndex ?: runCatching { WineriesDirectory(reviews.wineryIndex()) }.getOrNull()?.takeIf { it.size > 0 }?.also { reviewWineryIndex = it }
+    }
 
     private suspend fun reviewSample(spellings: List<String>, country: String) =
         reviews.digestFor(spellings, country, seed = sampleSeed(spellings.first(), country))
 
-    private suspend fun grapeWineries(spellings: List<String>, country: String?) =
-        reviews.wineriesFor(spellings, country, seed = sampleSeed(spellings.first(), country.orEmpty()))
+    private suspend fun grapeWineries(spellings: List<String>, country: String?, limit: Int, exclude: Set<String>) =
+        reviews.wineriesFor(spellings, country, limit = limit, seed = sampleSeed(spellings.first(), country.orEmpty()), exclude = exclude)
 
     private suspend fun otherCountriesFor(spellings: List<String>, country: String) =
         reviews.topCountriesFor(spellings, excludeCountry = country)
@@ -85,6 +113,8 @@ class WineAskContext(
         .sortedByDescending { it.province.equals(preferredProvince, ignoreCase = true) }
         .take(MAX_REGION_ROWS)
         .map { KaggleExtractedProfile(it.body, it.tannin, it.acidity, it.flavorNotes, it.province, it.country) }
+
+    private fun KaggleExtractedProfile.hasAnyValue() = !body.isNullOrBlank() || !tannin.isNullOrBlank() || !acidity.isNullOrBlank()
 
     private fun String.isUnknown() = isBlank() || equals("Unknown", ignoreCase = true)
 

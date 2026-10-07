@@ -2,10 +2,14 @@ package com.sheldondesousa.uncork.model
 
 import com.sheldondesousa.uncork.data.knowledge.InternalGrapeProfile
 import com.sheldondesousa.uncork.data.knowledge.GrapeLookup
+import com.sheldondesousa.uncork.data.knowledge.ResolvedProduction
+import com.sheldondesousa.uncork.data.knowledge.WineProduction
 import com.sheldondesousa.uncork.data.knowledge.WineryLocation
 import com.sheldondesousa.uncork.data.reviews.CountryReviewCount
 import com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample
 import com.sheldondesousa.uncork.data.reviews.VarietyCountryDigest
+import com.sheldondesousa.uncork.data.reviews.WineryWine
+import com.sheldondesousa.uncork.data.reviews.WineryWinesSample
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 
@@ -31,6 +35,7 @@ data class KaggleExtractedProfile(
 object WineFactsNote {
     private const val MAX_REVIEW_CHARS = 600
     private const val MAX_GRAPES = 3
+    private const val MAX_WINE_REVIEW_CHARS = 160
 
     fun build(
         wine: WineSuggestion,
@@ -39,6 +44,8 @@ object WineFactsNote {
         reviews: VarietyCountryDigest? = null,
         winery: List<WineryLocation> = emptyList(),
         otherCountries: List<CountryReviewCount> = emptyList(),
+        /** The wine's own country or region is not known, so Gemma must ask for it before describing the grape. */
+        askForPlace: Boolean = false,
     ): String = buildString {
         appendLine("WINE FACTS (verified for this bottle)")
         appendLine("Where this came from: ${wine.source.provenance()}")
@@ -60,7 +67,7 @@ object WineFactsNote {
         if (winery.isNotEmpty()) {
             appendLine()
             appendLine("Wineries_Directory (a reference list of wineries and their regions; not complete)")
-            winery.forEach { appendLine("- ${it.winery}: ${it.region}, ${it.country}") }
+            winery.forEach { appendLine("- ${it.winery}: ${it.place}, ${it.country}") }
         }
 
         if (grapes.grapes.isNotEmpty()) {
@@ -68,14 +75,18 @@ object WineFactsNote {
             appendLine("Grape_Profile_Internal (about the grape in general, not this bottle)")
             grapes.blendNote?.let { appendLine(it) }
             grapes.grapes.take(MAX_GRAPES).forEach { appendGrape(it) }
-        } else if (grapes.blendNote != null) {
+        } else if (grapes.blendNote != null && !askForPlace) {
             appendLine()
             appendLine("Grape_Profile_Internal")
             appendLine(grapes.blendNote)
-        } else {
+        } else if (askForPlace) {
             appendLine()
             appendLine("Grape_Profile_Internal")
-            appendLine("None available for this variety. Use general knowledge only if you are confident, and say so if not.")
+            appendLine("This grape has no notes here, and the wine's country or region is not known. Before describing it, ask the user which country or region they mean.")
+        } else if (regionStyles.none { it.hasAnyValue() }) {
+            appendLine()
+            appendLine("Grape_Profile_Internal")
+            appendLine("No information is available for this variety. Tell the user in a friendly way that no information is available, and do not make anything up.")
         }
 
         // Order of trust for body, tannin and acidity: the grape notes first. Region style (what enthusiasts say) is
@@ -182,10 +193,77 @@ object WineFactsNote {
         sample.wineries.forEach { appendLine("- ${it.winery} (${it.province}, ${it.country}; ${it.reviewCount} review${if (it.reviewCount == 1) "" else "s"})") }
     }.trimEnd()
 
+    /** The finished answer to "list N wineries for a grape": names, places and review counts, labelled as an unranked sample. */
+    fun grapeWineriesList(grape: String, country: String?, sample: GrapeWineriesSample, more: Boolean = false): String = buildString {
+        val where = country?.takeIf { it.isNotBlank() }?.let { " in $it" }.orEmpty()
+        appendLine("Here are ${sample.wineries.size}${if (more) " more" else ""} wineries$where with reviews of $grape. This is an unranked sample of ${sample.totalWineries} such wineries, not the best ones and not a complete list.")
+        appendLine()
+        sample.wineries.forEach {
+            val place = listOf(it.province, it.country).filter { part -> part.isNotBlank() }.joinToString(", ")
+            appendLine("• ${it.winery} ($place; ${it.reviewCount} review${if (it.reviewCount == 1) "" else "s"})")
+        }
+    }.trimEnd()
+
+    /** Tells Gemma a lookup found nothing, so it says so kindly instead of guessing. */
+    fun noInformation(about: String): String =
+        "NO INFORMATION\nNo information is available for $about. Tell the user in a friendly way that no information is available, and do not make anything up."
+
+    /** Reviews the database holds for one named wine, sent in front of a question about what people say of it. */
+    fun wineReviewsBlock(wines: List<WineryWine>): String = buildString {
+        appendLine("WHAT WINE ENTHUSIASTS SAY about this wine (from the reviews database)")
+        wines.forEach { w ->
+            val facts = listOfNotNull(w.points?.let { "$it points" }, w.body.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }, w.tannin.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }?.let { "$it tannin" }, w.acidity.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }?.let { "$it acidity" })
+            appendLine("- ${w.name}${if (facts.isEmpty()) "" else " (${facts.joinToString("; ")})"}: ${w.review.take(MAX_REVIEW_CHARS)}")
+        }
+    }.trimEnd()
+
+    /** The finished answer to "wines from this winery", from the reviews: an unranked sample with the details held for each. */
+    fun wineryWinesList(sample: WineryWinesSample, more: Boolean = false): String = buildString {
+        val country = sample.wines.firstOrNull()?.country?.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()
+        appendLine("Here are ${sample.wines.size}${if (more) " more" else ""} wines from ${sample.winery}$country in the reviews. This is an unranked sample of the ${sample.totalWines} listed, not the best ones and not a complete list.")
+        sample.wines.forEach { w ->
+            appendLine()
+            val place = listOf(w.province, w.country).filter { it.isNotBlank() }.joinToString(", ")
+            val style = listOf(w.body to "", w.tannin to " tannin", w.acidity to " acidity")
+                .filter { (v, _) -> v.isNotBlank() && !v.equals("Unknown", true) && !v.equals("Not applicable", true) }.joinToString(", ") { (v, s) -> v + s }
+            val facts = listOfNotNull(w.variety.takeIf { it.isNotBlank() }, place.takeIf { it.isNotBlank() }, w.points?.let { "$it points" }, style.takeIf { it.isNotBlank() })
+            appendLine("• ${w.name} (${facts.joinToString("; ")})")
+            if (w.review.isNotBlank()) appendLine("  \"${w.review.take(MAX_WINE_REVIEW_CHARS).trimEnd() + if (w.review.length > MAX_WINE_REVIEW_CHARS) "…" else ""}\"")
+        }
+    }.trimEnd()
+
+    /** The finished answer to "list N wineries in a place", from the Wineries_Directory. */
+    fun directoryWineriesList(wineries: List<WineryLocation>, where: String, total: Int, more: Boolean = false): String = buildString {
+        appendLine("Here are ${wineries.size}${if (more) " more" else ""} wineries in $where. This is an unranked sample of the $total listed, not the best ones and not a complete list.")
+        appendLine()
+        wineries.forEach { appendLine("• ${it.winery} (${listOf(it.place, it.country).filter { part -> part.isNotBlank() }.joinToString(", ")})") }
+    }.trimEnd()
+
+    /**
+     * How a grape is made at a place, from the French wine production notes: each step with how common the practice is
+     * and whether it is this place's own wording or inherited from a broader place. Says plainly when nothing is recorded.
+     */
+    fun productionBlock(grape: String, place: String, country: String, resolved: ResolvedProduction): String = buildString {
+        val where = if (place == country) country else "$place, $country"
+        if (resolved.facts.isEmpty()) {
+            append("Wine_Production (how $grape is made in $where): no production notes are recorded for $grape yet. Say so, and do not guess how it is made there.")
+            return@buildString
+        }
+        appendLine(
+            "Wine_Production (how $grape is made in $where, from the app's French wine production notes; these are the only " +
+                "production facts available, so for a step not listed say it is not recorded rather than guessing; \"Varies by producer\" means producers differ)",
+        )
+        resolved.facts.forEach { fact ->
+            val origin = if (fact.inherited) " (general to ${fact.from})" else ""
+            appendLine("- ${WineProduction.stepLabel(fact.key)} [${WineProduction.statusLabel(fact.status)}]: ${fact.value}$origin")
+        }
+        if (resolved.sources.isNotEmpty()) append("Sources: ${resolved.sources.joinToString("; ")}")
+    }.trimEnd()
+
     /** Entries from the Wineries_Directory, sent in front of a question about wineries. */
     fun wineriesBlock(wineries: List<WineryLocation>, what: String): String = buildString {
         appendLine("Wineries_Directory ($what; the directory is a reference list and is not complete)")
-        wineries.forEach { appendLine("- ${it.winery}: ${it.region}, ${it.country}") }
+        wineries.forEach { appendLine("- ${it.winery}: ${it.place}, ${it.country}") }
     }.trimEnd()
 
     /** Notes for grapes the user asked about, sent in front of that question. */

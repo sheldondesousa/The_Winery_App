@@ -141,6 +141,12 @@ class GemmaConversationResponder(
             )
         }
 
+        // A request for a list of wineries is answered by the app, which prints every name; Gemma only names a few.
+        runCatching { curiousExtras?.wineryList(query) }.getOrNull()?.let {
+            markRoute("KOTLIN_HANDLED")
+            return plainMessage(it)
+        }
+
         markRoute("GEMMA_WAKE")
         suspend fun messageFor(): String {
             val extra = runCatching { curiousExtras?.forQuestion(query) }.getOrNull()
@@ -162,11 +168,11 @@ class GemmaConversationResponder(
                         append(content.text)
                         if (toString() != lastText) {
                             lastText = toString()
-                            onUpdate(ConversationStreamUpdate(text = lastText, isGemmaConversationOutput = true))
+                            onUpdate(ConversationStreamUpdate(text = ContextEcho.strip(lastText), isGemmaConversationOutput = true))
                         }
                     }
                 }
-            }.trim()
+            }.let { ContextEcho.strip(it) }.trim()
             firstWordAt?.let { firstWord ->
                 DebugLatencyLog.record("[Gemma] curious chat: time to first word", firstWord - requestStartedAt)
                 DebugLatencyLog.record("[Gemma] curious chat: first word to last word", lastWordAt - firstWord)
@@ -895,6 +901,10 @@ class GemmaConversationResponder(
             // Until the facts have been read, they go right before the question. After that, a short reminder
             // does, since the first message is by then far behind the model's close-reading window. Extra context
             // (the broader reviews, notes for another grape) sits right in front of the question that needs it.
+            runCatching { extras?.wineryList(query) }.getOrNull()?.let { list ->
+                onUpdate(ConversationStreamUpdate(text = list, isGemmaConversationOutput = false))
+                return list
+            }
             val extra = runCatching { extras?.forQuestion(query) }.getOrNull()
                 ?.let { "<more_context>\n$it\n</more_context>\n" }.orEmpty()
             val message = when {
@@ -917,11 +927,11 @@ class GemmaConversationResponder(
                         append(content.text)
                         if (toString() != lastText) {
                             lastText = toString()
-                            onUpdate(ConversationStreamUpdate(text = lastText, isGemmaConversationOutput = true))
+                            onUpdate(ConversationStreamUpdate(text = ContextEcho.strip(lastText), isGemmaConversationOutput = true))
                         }
                     }
                 }
-            }.trim()
+            }.let { ContextEcho.strip(it) }.trim()
         }
 
         private suspend fun ensureConversation(): Conversation {

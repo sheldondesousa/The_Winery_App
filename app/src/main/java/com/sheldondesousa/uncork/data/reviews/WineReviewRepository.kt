@@ -25,13 +25,30 @@ interface WineReviewDataSource {
     /**
      * A small, unranked sample of wineries that have reviews of a grape (all its spellings), optionally in one country.
      * [totalWineries] is how many such wineries exist. The sample is spread by a seeded hash, not by score or alphabet.
+     * Wineries named in [exclude] (lower-case) are skipped, so asking again with the ones already sent gives the next page.
      */
     suspend fun wineriesFor(
         varietyNames: List<String>,
         country: String?,
         limit: Int = 8,
         seed: Long = 0L,
+        exclude: Set<String> = emptySet(),
     ): GrapeWineriesSample? = null
+
+    /**
+     * Every winery in the reviews, written the way the reviews write it (with its country and a province), so a winery
+     * the user names can be matched to the reviews' own spelling. Empty when the data source cannot list them.
+     */
+    suspend fun wineryIndex(): List<com.sheldondesousa.uncork.data.knowledge.WineryLocation> = emptyList()
+
+    /**
+     * Wines the reviews list for one winery (exact name, optionally in one [country]), as a small unranked sample.
+     * Wines named in [exclude] (lower-case) are skipped, so asking again gives the next ones.
+     */
+    suspend fun winesFor(winery: String, country: String?, limit: Int = 5, exclude: Set<String> = emptySet()): WineryWinesSample? = null
+
+    /** Reviews of the wines whose name contains [wineName], for a grape (any of its spellings); a few at most. */
+    suspend fun winesNamed(varietyNames: List<String>, wineName: String, limit: Int = 3): List<WineryWine> = emptyList()
 
     /** Other countries with the most reviews of this grape, to offer the user. */
     suspend fun topCountriesFor(
@@ -66,6 +83,21 @@ data class WineSelectionCriteria(
 data class GrapeWinery(val winery: String, val country: String, val province: String, val reviewCount: Int)
 
 data class CountryReviewCount(val country: String, val reviewCount: Int)
+
+/** One wine a winery has in the reviews, with the details the reviews hold for it. */
+data class WineryWine(
+    val name: String,
+    val variety: String,
+    val province: String,
+    val country: String,
+    val points: Int?,
+    val body: String,
+    val tannin: String,
+    val acidity: String,
+    val review: String,
+)
+
+data class WineryWinesSample(val winery: String, val wines: List<WineryWine>, val totalWines: Int)
 
 data class GrapeWineriesSample(val wineries: List<GrapeWinery>, val totalWineries: Int)
 
@@ -218,6 +250,7 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
         country: String?,
         limit: Int,
         seed: Long,
+        exclude: Set<String>,
     ): GrapeWineriesSample? {
         val names = varietyNames.filter { it.isNotBlank() }.distinct()
         if (names.isEmpty()) return null
@@ -235,8 +268,76 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
         }
         if (all.isEmpty()) return null
         val multiplier = GuidedReviewQuery.hashMultiplier(seed)
-        val spread = all.sortedBy { (it.winery.lowercase().hashCode().toLong() and 0x7fffffffL) * multiplier % 2147483647L }
-        return GrapeWineriesSample(spread.take(limit.coerceIn(1, 12)), all.size)
+        val spread = all.filter { it.winery.lowercase() !in exclude }
+            .sortedBy { (it.winery.lowercase().hashCode().toLong() and 0x7fffffffL) * multiplier % 2147483647L }
+        return GrapeWineriesSample(spread.take(limit.coerceIn(1, 10)), all.size)
+    }
+
+    override suspend fun wineryIndex(): List<com.sheldondesousa.uncork.data.knowledge.WineryLocation> = withContext(Dispatchers.IO) {
+        installer.ensureInstalled().openReadOnly().use { database ->
+            database.rawQuery("SELECT winery, country, MIN(province) FROM wine_reviews WHERE winery<>'' GROUP BY winery, country", null).use { c ->
+                buildList {
+                    while (c.moveToNext()) add(com.sheldondesousa.uncork.data.knowledge.WineryLocation(c.getString(0), c.getString(1).orEmpty(), c.getString(2).orEmpty()))
+                }
+            }
+        }
+    }
+
+    override suspend fun winesFor(winery: String, country: String?, limit: Int, exclude: Set<String>): WineryWinesSample? {
+        if (winery.isBlank()) return null
+        val countryClause = if (country.isNullOrBlank()) "" else " AND country=? COLLATE NOCASE"
+        val args = arrayOf(winery, *(if (country.isNullOrBlank()) emptyArray() else arrayOf(country)))
+        val all = withContext(Dispatchers.IO) {
+            installer.ensureInstalled().openReadOnly().use { database ->
+                database.rawQuery(
+                    "SELECT name, variety, province, country, points, body, tannin, acidity, review_summary FROM wine_reviews " +
+                        "WHERE winery=? COLLATE NOCASE$countryClause ORDER BY id",
+                    args,
+                ).use { c ->
+                    buildList {
+                        while (c.moveToNext()) add(
+                            WineryWine(
+                                c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getString(2).orEmpty(), c.getString(3).orEmpty(),
+                                if (c.isNull(4)) null else c.getInt(4),
+                                c.getString(5).orEmpty(), c.getString(6).orEmpty(), c.getString(7).orEmpty(), c.getString(8).orEmpty(),
+                            ),
+                        )
+                    }
+                }
+            }
+        }.distinctBy { it.name.lowercase() }
+        if (all.isEmpty()) return null
+        // Spread by a fixed hash of the name rather than by score, so this is never "the best" wines.
+        val spread = all.filter { it.name.lowercase() !in exclude }
+            .sortedBy { (it.name.lowercase().hashCode().toLong() and 0x7fffffffL) * 2654435761L % 2147483647L }
+        return WineryWinesSample(winery, spread.take(limit.coerceIn(1, 10)), all.size)
+    }
+
+    override suspend fun winesNamed(varietyNames: List<String>, wineName: String, limit: Int): List<WineryWine> {
+        val names = varietyNames.filter { it.isNotBlank() }.distinct()
+        // Every word of the name must appear in the wine's name, in any order.
+        val words = wineName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (names.isEmpty() || words.isEmpty() || wineName.trim().length < 3) return emptyList()
+        return withContext(Dispatchers.IO) {
+            installer.ensureInstalled().openReadOnly().use { database ->
+                database.rawQuery(
+                    "SELECT name, variety, province, country, points, body, tannin, acidity, review_summary FROM wine_reviews " +
+                        "WHERE variety COLLATE NOCASE IN (${names.joinToString(",") { "?" }}) ${words.joinToString("") { " AND name LIKE ? ESCAPE '\\'" }} " +
+                        "ORDER BY points DESC, id LIMIT ${limit.coerceIn(1, 5)}",
+                    arrayOf(*names.toTypedArray(), *words.map { "%" + it.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%" }.toTypedArray()),
+                ).use { c ->
+                    buildList {
+                        while (c.moveToNext()) add(
+                            WineryWine(
+                                c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getString(2).orEmpty(), c.getString(3).orEmpty(),
+                                if (c.isNull(4)) null else c.getInt(4),
+                                c.getString(5).orEmpty(), c.getString(6).orEmpty(), c.getString(7).orEmpty(), c.getString(8).orEmpty(),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun topCountriesFor(

@@ -3,6 +3,8 @@ package com.sheldondesousa.uncork.data.knowledge
 import com.sheldondesousa.uncork.model.KaggleExtractedProfile
 import com.sheldondesousa.uncork.model.CountryMentions
 import com.sheldondesousa.uncork.model.ReviewIntent
+import com.sheldondesousa.uncork.model.ProductionIntent
+import com.sheldondesousa.uncork.model.GrapeIntent
 import com.sheldondesousa.uncork.model.WineAskExtras
 import com.sheldondesousa.uncork.model.WineryIntent
 import com.sheldondesousa.uncork.model.WineFactsNote
@@ -97,7 +99,7 @@ class GrapeProfileInternalTest {
         val gemmaWine = WineSuggestion(name = "Made Up", province = "X", source = WineSuggestionSource.GEMMA)
         val note = WineFactsNote.build(gemmaWine)
         assertTrue(note.contains("not verified"))
-        assertTrue(note.contains("None available for this variety"))
+        assertTrue(note.contains("No information is available for this variety"))
         assertFalse(note.contains("Grape_Profile_Kaggle_Extracted"))
     }
 }
@@ -202,7 +204,7 @@ class WineriesDirectoryTest {
     @Test fun matchingIgnoresCaseAccentsAndPunctuation() {
         val hit = directory.find("chateau margaux").single()
         assertEquals("France", hit.country)
-        assertEquals("Margaux", hit.region)
+        assertEquals("Margaux", hit.subRegion)
         assertEquals(hit, directory.find("CHÂTEAU  MARGAUX!").single())
     }
 
@@ -227,7 +229,7 @@ class WineriesDirectoryTest {
         val wine = WineSuggestion(name = "Wine", winery = "Château Margaux", province = "Margaux", country = "France")
         val note = WineFactsNote.build(wine, winery = directory.find(wine.winery, wine.country))
         assertTrue(note.contains("Wineries_Directory"))
-        assertTrue(note.contains("- Château Margaux: Margaux, France"))
+        assertTrue(note.contains("- Château Margaux: Margaux, Bordeaux, France"))
         assertFalse(WineFactsNote.build(wine).contains("Wineries_Directory"))
     }
 }
@@ -280,7 +282,7 @@ class AskExtrasTest {
     }
 
     @Test fun addsNotesForOtherGrapesTheUserNamesButNotTheOpenWinesOwnGrapeAndNeverTwice() = kotlinx.coroutines.runBlocking {
-        val extras = WineAskExtras(base, ownGrapes = setOf("Merlot")) { _, _ -> null }
+        val extras = WineAskExtras(base, ownGrapes = setOf("Merlot"), ownCountry = "France") { _, _ -> null }
         assertNull(extras.forQuestion("Tell me about Merlot"))
         val malbec = extras.forQuestion("What about Malbec?")!!
         assertTrue(malbec.contains("Grape_Profile_Internal"))
@@ -291,7 +293,7 @@ class AskExtrasTest {
 
     @Test fun saysThereAreNotEnoughReviewsWhenTheSampleIsMissing() = kotlinx.coroutines.runBlocking {
         val extras = WineAskExtras(base, ownGrapes = emptySet(), ownVariety = listOf("Merlot"), ownCountry = "France") { _, _ -> null }
-        assertTrue(extras.forQuestion("What do people say?")!!.contains("not enough reviews"))
+        assertTrue(extras.forQuestion("What do people say?")!!.contains("no information is available"))
     }
 }
 
@@ -323,7 +325,7 @@ class AskExtrasKaggleExtractedTest {
             ownVariety = listOf("Merlot"), ownCountry = "France",
             loadKaggleExtracted = { _, _ -> styleLoads++; listOf(style) },
         )
-        val block = extras.forQuestion("Tell me about Malbec")!!
+        val block = extras.forQuestion("Tell me about Malbec in Argentina")!!
         assertTrue(block.contains("Grape_Profile_Internal"))
         assertFalse(block.contains("Grape_Profile_Kaggle_Extracted"))
         assertEquals(0, styleLoads)
@@ -342,12 +344,12 @@ class AskExtrasKaggleExtractedTest {
         assertNull(extras.forQuestion("And in Italy again?"))
     }
 
-    @Test fun nothingIsAddedWhenTheAppHasNoStyleForThatGrapeAndCountry() = kotlinx.coroutines.runBlocking {
+    @Test fun gemmaIsToldNoInformationIsAvailableWhenTheAppHasNoStyleForThatGrapeAndCountry() = kotlinx.coroutines.runBlocking {
         val extras = WineAskExtras(
             base, ownGrapes = emptySet(), loadReviews = { _, _ -> null },
             ownVariety = listOf("Merlot"), ownCountry = "France",
         )
-        assertNull(extras.forQuestion("What about Aglianico?"))
+        assertTrue(extras.forQuestion("What about Aglianico?")!!.contains("no information is available"))
     }
 
     @Test fun countryAndGrapeNamesAreRecognisedFromFreeTextIncludingAliases() {
@@ -371,7 +373,7 @@ class WineriesDirectoryLookupTest {
 
     @Test fun findsWineriesNamedInAQuestionAndIgnoresEverydayWords() {
         val hit = directory.findMentioned("Where is Opus One Winery based?")
-        assertEquals("Oakville", hit.first().region)
+        assertEquals("Oakville", hit.first().subRegion)
         assertTrue(directory.findMentioned("which estate has the best winery wines").isEmpty())
         assertTrue(directory.findMentioned("tell me about wine").isEmpty())
     }
@@ -406,13 +408,15 @@ class WineriesDirectoryLookupTest {
         )
         val named = extras.forQuestion("Where is Opus One Winery located?")!!
         assertTrue(named.contains("Wineries_Directory (entries for wineries named in the question"))
-        assertTrue(named.contains("- Opus One Winery: Oakville, United States"))
+        assertTrue(named.contains("- Opus One Winery: Oakville, California, United States"))
+        // A winery named again is not re-sent (the conversation remembers it).
         assertNull(extras.forQuestion("Where is Opus One Winery located?"))
         val list = extras.forQuestion("Which wineries are in Mendoza?")!!
         assertTrue(list.contains("a small, unranked sample"))
         assertTrue(list.contains("not the best wineries"))
         assertTrue(list.contains(": Mendoza, Argentina"))
-        assertNull(extras.forQuestion("Which wineries are in Mendoza?"))
+        // A list is sent every time it is asked for, so a repeated or reworded ask still has it.
+        assertNotNull(extras.forQuestion("Which wineries are in Mendoza?"))
         assertNull(extras.forQuestion("What does it taste like?"))
     }
 }
@@ -445,7 +449,7 @@ class ChatExtrasTest {
 
     @Test fun aGrapeInGrapeProfileInternalGetsItsNotesAndAnOfferOfOtherCountriesOnce() = kotlinx.coroutines.runBlocking {
         val extras = chatExtras()
-        val block = extras.forQuestion("Tell me about Malbec")!!
+        val block = extras.forQuestion("Tell me about Malbec in Argentina")!!
         assertTrue(block.contains("Grape_Profile_Internal"))
         assertTrue(block.contains("- Malbec (red)"))
         assertTrue(block.contains("OTHER COUNTRIES with the most reviews of this grape"))
@@ -467,8 +471,8 @@ class ChatExtrasTest {
     @Test fun reviewQuestionsWithoutAGrapeOrACountryAskTheUserWhichInsteadOfGuessing() = kotlinx.coroutines.runBlocking {
         val calls = mutableListOf<Pair<List<String>, String>>()
         val extras = chatExtras { spellings, country -> calls += spellings to country }
-        assertTrue(extras.forQuestion("What do people think about wine?")!!.contains("I need both a grape and a country"))
-        assertTrue(extras.forQuestion("What do critics say about Merlot?")!!.contains("I need both a grape and a country"))
+        assertTrue(extras.forQuestion("What do people think about wine?")!!.contains("Ask"))
+        assertTrue(extras.forQuestion("What do critics say about Merlot?")!!.contains("Ask"))
         assertTrue(calls.isEmpty())
     }
 
@@ -504,7 +508,7 @@ class ChatExtrasTest {
         )
         val extras = WineAskExtras(
             knowledge = base,
-            loadGrapeWineries = { spellings, country -> calls += spellings to country; sample },
+            loadGrapeWineries = { spellings, country, _, _ -> calls += spellings to country; sample },
             loadReviews = { _, _ -> null },
         )
         val block = extras.forQuestion("Can you give me a list of wineries for merlot?")!!
@@ -513,13 +517,269 @@ class ChatExtrasTest {
         assertTrue(block.contains("not the best wineries and not a complete list"))
         assertTrue(block.contains("- Château Example (Bordeaux, France; 4 reviews)"))
         assertTrue(block.contains("- Solo Cellars (Loire Valley, France; 1 review)"))
-        assertNull(extras.forQuestion("Any more wineries for merlot?"))
+        // Asking again still has the list, so a reworded ask is not left without it.
+        assertNotNull(extras.forQuestion("Any more wineries for merlot?"))
         val inFrance = extras.forQuestion("wineries for merlot in France")!!
         assertEquals("France", calls.last().second)
         assertTrue(inFrance.contains("wineries in France"))
     }
 
     @Test fun ordinaryWineQuestionsAddNothing() = kotlinx.coroutines.runBlocking {
-        assertNull(chatExtras().forQuestion("How is wine made?"))
+        assertNull(chatExtras().forQuestion("What is a good wine for a picnic?"))
+    }
+
+    @Test fun howIsWineMadeWithNoIdentifierMakesGemmaAsk() = kotlinx.coroutines.runBlocking {
+        assertTrue(chatExtras().forQuestion("How is wine made?")!!.contains("which grape, or which country"))
+    }
+
+    @Test fun theNumberOfWineriesAskedForIsPassedOnAndCappedAtTen() = kotlinx.coroutines.runBlocking {
+        assertEquals(10, WineryIntent.requestedCount("give me a list of 10 wineries in Italy for Sangiovese"))
+        assertEquals(10, WineryIntent.requestedCount("list ten wineries for merlot"))
+        assertEquals(10, WineryIntent.requestedCount("50 wineries for merlot"))
+        assertEquals(5, WineryIntent.requestedCount("name 5 Italian wineries"))
+        assertEquals(3, WineryIntent.requestedCount("wineries for merlot"))
+        assertEquals(5, WineryIntent.requestedCount("5 more wineries"))
+        assertEquals(3, WineryIntent.requestedCount("more wineries please"))
+        val limits = mutableListOf<Int>()
+        val extras = WineAskExtras(
+            knowledge = base,
+            loadGrapeWineries = { _, _, limit, _ -> limits += limit; null },
+            loadReviews = { _, _ -> null },
+        )
+        extras.forQuestion("list 10 wineries for merlot")
+        assertEquals(listOf(10), limits)
+    }
+
+    @Test fun wineriesAskedForWithNoGrapeNamedUseTheOpenWinesGrapeAndCountry() = kotlinx.coroutines.runBlocking {
+        val calls = mutableListOf<Triple<List<String>, String?, Int>>()
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(
+            listOf(com.sheldondesousa.uncork.data.reviews.GrapeWinery("Château Example", "France", "Bordeaux", 4)), totalWineries = 40,
+        )
+        val extras = WineAskExtras(
+            knowledge = base,
+            ownVariety = listOf("Merlot"),
+            ownCountry = "France",
+            loadGrapeWineries = { spellings, country, limit, _ -> calls += Triple(spellings, country, limit); sample },
+            loadReviews = { _, _ -> null },
+        )
+        val block = extras.forQuestion("give me 5 wineries")!!
+        assertEquals(listOf(Triple(listOf("Merlot"), "France", 5)), calls)
+        assertTrue(block.contains("WINERIES WITH Merlot REVIEWS"))
+    }
+
+    @Test fun aListRequestIsAnsweredWithEveryWineryByTheAppItself() = kotlinx.coroutines.runBlocking {
+        val sample = com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(
+            (1..5).map { com.sheldondesousa.uncork.data.reviews.GrapeWinery("Winery $it", "Italy", "Tuscany", it) }, totalWineries = 607,
+        )
+        val extras = WineAskExtras(
+            knowledge = base,
+            loadGrapeWineries = { _, _, limit, _ -> assertEquals(5, limit); sample },
+            loadReviews = { _, _ -> null },
+        )
+        val list = extras.wineryList("give me 5 wineries for Sangiovese in Italy")!!
+        (1..5).forEach { assertTrue(list.contains("• Winery $it (Tuscany, Italy;")) }
+        assertTrue(list.contains("5 wineries in Italy with reviews of Sangiovese"))
+        assertTrue(list.contains("not the best ones"))
+        // Questions that are not list requests are left to Gemma.
+        assertNull(extras.wineryList("Where is Antinori located?"))
+        assertNull(extras.wineryList("what is sangiovese like"))
+    }
+
+    @Test fun askingForMoreWineriesGivesTheNextTenNeverRepeatsAndSaysWhenTheyRunOut() = kotlinx.coroutines.runBlocking {
+        val all = (1..25).map { com.sheldondesousa.uncork.data.reviews.GrapeWinery("Winery $it", "Italy", "Tuscany", 1) }
+        val limits = mutableListOf<Int>()
+        val extras = WineAskExtras(
+            knowledge = base,
+            loadGrapeWineries = { _, _, limit, exclude ->
+                limits += limit
+                com.sheldondesousa.uncork.data.reviews.GrapeWineriesSample(all.filter { it.winery.lowercase() !in exclude }.take(limit), all.size)
+            },
+            loadReviews = { _, _ -> null },
+        )
+        fun names(text: String) = Regex("• (Winery \\d+) ").findAll(text).map { it.groupValues[1] }.toList()
+        val first = names(extras.wineryList("list 10 wineries for Sangiovese in Italy")!!)
+        val second = names(extras.wineryList("10 more wineries")!!)
+        val third = extras.wineryList("10 more wineries")!!
+        assertEquals(listOf(10, 10, 10), limits)
+        assertEquals(10, first.size)
+        assertEquals(10, second.size)
+        assertTrue(first.intersect(second.toSet()).isEmpty())
+        assertEquals(5, names(third).size)
+        assertTrue(third.contains("Here are 5 more wineries"))
+        assertTrue((first + second + names(third)).toSet().size == 25)
+        assertTrue(extras.wineryList("more wineries")!!.contains("That is every winery I have listed"))
+        // Asking again without "more" starts the list over, and "tell me more about" a winery is not a list request.
+        assertEquals(first, names(extras.wineryList("list 10 wineries for Sangiovese in Italy")!!))
+        assertNull(extras.wineryList("Tell me more about Antinori"))
+    }
+
+    @Test fun moreWineriesFromTheDirectoryAreDifferentTenAndStayOnThePlaceBeingListed() = kotlinx.coroutines.runBlocking {
+        val extras = WineAskExtras(base, loadWineries = { directory }, loadReviews = { _, _ -> null })
+        fun names(text: String) = text.lines().filter { it.startsWith("• ") }.map { it.removePrefix("• ").substringBeforeLast(" (") }
+        val first = names(extras.wineryList("list 10 wineries in Italy")!!)
+        val more = extras.wineryList("give me 10 more wineries")!!
+        val second = names(more)
+        assertEquals(10, first.size)
+        assertEquals(10, second.size)
+        assertTrue(first.intersect(second.toSet()).isEmpty())
+        assertTrue(more.contains("wineries in Italy"))
+        // A new place named in the question starts its own list.
+        assertTrue(extras.wineryList("list wineries in Chile")!!.contains("wineries in Chile"))
+        // The prompt block for a plain question is also capped at ten.
+        val block = WineAskExtras(base, loadWineries = { directory }, loadReviews = { _, _ -> null })
+            .forQuestion("Which wineries are in Italy?")!!
+        assertTrue(block.lines().count { it.startsWith("- ") } <= 3)
+    }
+}
+
+class GrapeMinimumInfoTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val style = KaggleExtractedProfile("medium", "medium", "high", listOf("cherry"), "Campania", "Italy")
+
+    private fun extras(ownCountry: String = "", loadStyles: suspend (List<String>, String) -> List<KaggleExtractedProfile> = { _, _ -> listOf(style) }) =
+        WineAskExtras(base, ownCountry = ownCountry, loadKaggleExtracted = loadStyles) { _, _ -> null }
+
+    @Test fun aGrapeInTheInternalNotesNeedsNothingElse() = kotlinx.coroutines.runBlocking {
+        val block = extras().forQuestion("Tell me about Merlot")!!
+        assertTrue(block.contains("Grape_Profile_Internal"))
+        assertFalse(block.contains("Kaggle"))
+    }
+
+    @Test fun aGrapeWithoutNotesAndWithoutACountryMakesGemmaAsk() = kotlinx.coroutines.runBlocking {
+        var looked = false
+        val block = extras { _, _ -> looked = true; listOf(style) }.forQuestion("Tell me about Aglianico")!!
+        assertTrue(block, block.contains("which country or region"))
+        assertFalse(looked)
+    }
+
+    @Test fun aGrapeWithoutNotesUsesWhatEnthusiastsSayOnceACountryIsGiven() = kotlinx.coroutines.runBlocking {
+        val block = extras().forQuestion("Tell me about Aglianico in Italy")!!
+        assertTrue(block.contains("Grape_Profile_Kaggle_Extracted"))
+    }
+
+    @Test fun noResultsMakesGemmaSayNoInformationIsAvailable() = kotlinx.coroutines.runBlocking {
+        val block = extras { _, _ -> emptyList() }.forQuestion("Tell me about Aglianico in Italy")!!
+        assertTrue(block.contains("no information is available"))
+    }
+
+    @Test fun aCountryNamedEarlierStillAppliesToAFollowUp() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        e.forQuestion("Tell me about Merlot in France")
+        val block = e.forQuestion("And Aglianico?")!!
+        assertTrue(block.contains("Grape_Profile_Kaggle_Extracted"))
+    }
+
+    @Test fun aWineNameTypedWithoutQuotesIsPickedOut() = kotlinx.coroutines.runBlocking {
+        val asked = mutableListOf<String>()
+        val wine = com.sheldondesousa.uncork.data.reviews.WineryWine("Opus One 2015", "Merlot", "California", "US", 95, "Full-Bodied", "Moderate", "Crisp", "Plush and long.")
+        val e = WineAskExtras(base, ownVariety = listOf("Merlot"), ownWineName = "Other Wine", loadWineReviews = { _, name -> asked += name; if (name == "opus one") listOf(wine) else emptyList() }) { _, _ -> null }
+        assertTrue(e.forQuestion("What do people say about Opus One Merlot?")!!.contains("Opus One 2015"))
+        assertEquals(listOf("opus one"), asked)
+    }
+
+    @Test fun reviewsOfAWineNeedAGrapeAndAWineName() = kotlinx.coroutines.runBlocking {
+        val wine = com.sheldondesousa.uncork.data.reviews.WineryWine("Opus One 2015", "Merlot", "California", "US", 95, "Full-Bodied", "Moderate", "Crisp", "Plush and long.")
+        val named = WineAskExtras(base, ownVariety = listOf("Merlot"), ownWineName = "Opus One", loadWineReviews = { _, _ -> listOf(wine) }) { _, _ -> null }
+        assertTrue(named.forQuestion("What do reviewers say?")!!.contains("Opus One 2015"))
+        val noName = WineAskExtras(base, ownVariety = listOf("Merlot")) { _, _ -> null }
+        assertTrue(noName.forQuestion("What do reviewers say?")!!.contains("name of the wine, or a country"))
+        val none = WineAskExtras(base, ownVariety = listOf("Merlot"), ownWineName = "Zzyzx", loadWineReviews = { _, _ -> emptyList() }) { _, _ -> null }
+        assertTrue(none.forQuestion("What do reviewers say?")!!.contains("no information is available"))
+    }
+}
+
+class WineryPlaceTest {
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private fun extras(ownCountry: String = "") = WineAskExtras(base, ownCountry = ownCountry, loadWineries = { directory }) { _, _ -> null }
+
+    @Test fun aSubRegionIsNamedWithItsRegionAndCountry() {
+        assertEquals("Saint-Emilion, Bordeaux, France", directory.placeLabel("France", "Saint-Emilion"))
+        assertEquals("Bordeaux, France", directory.placeLabel("France", "Bordeaux"))
+        assertEquals("France", directory.placeLabel("France", null))
+    }
+
+    @Test fun aFirstAnswerOffersThreeWineries() {
+        assertEquals(3, WineryIntent.requestedCount("Which wineries are in Bordeaux?"))
+        assertEquals(5, WineryIntent.requestedCount("List 5 wineries in Bordeaux"))
+    }
+
+    @Test fun wineriesWithNoPlaceMakeGemmaAskForOne() = kotlinx.coroutines.runBlocking {
+        val block = extras().forQuestion("Which wineries should I visit?")!!
+        assertTrue(block.contains("ask which country, region or sub-region"))
+    }
+
+    @Test fun aSubRegionListCarriesItsParentRegionAndCountry() = kotlinx.coroutines.runBlocking {
+        val block = extras().forQuestion("Which wineries are in Saint-Emilion?")!!
+        assertTrue(block, block.contains("Saint-Emilion, Bordeaux, France"))
+    }
+}
+
+class WinesOfAWineryTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val index = WineriesDirectory(listOf(WineryLocation("Château Margaux", "France", "Bordeaux"), WineryLocation("Opus One Winery", "US", "California")))
+    private val wines = (1..8).map { com.sheldondesousa.uncork.data.reviews.WineryWine("Wine $it", "Merlot", "Bordeaux", "France", 90 + it % 5, "Full-Bodied", "Moderate", "Crisp", "Rich and long.") }
+
+    private fun extras(ownWinery: String = "", limits: MutableList<Int> = mutableListOf()) = WineAskExtras(
+        base, ownWinery = ownWinery, loadReviewWineries = { index },
+        loadWineryWines = { winery, _, limit, exclude ->
+            limits += limit
+            com.sheldondesousa.uncork.data.reviews.WineryWinesSample(winery, wines.filter { it.name.lowercase() !in exclude }.take(limit), wines.size)
+        },
+    ) { _, _ -> null }
+
+    @Test fun aNamedWineryGivesFiveOfItsWinesAndMoreGivesDifferentOnes() = kotlinx.coroutines.runBlocking {
+        val limits = mutableListOf<Int>()
+        val e = extras(limits = limits)
+        val first = e.wineryList("What wines does Chateau Margaux make?")!!
+        assertTrue(first, first.contains("Here are 5 wines from Château Margaux"))
+        assertEquals(5, first.lines().count { it.startsWith("• ") })
+        val more = e.wineryList("Show me more wines from them")!!
+        assertTrue(more, more.contains("Here are 3 more wines") || more.contains("more wines"))
+        assertTrue(more.contains("Wine 6"))
+        assertFalse(more.contains("Wine 1 "))
+        assertEquals(5, limits.first())
+    }
+
+    @Test fun theOpenWinesWineryIsUsedForItsOtherWines() = kotlinx.coroutines.runBlocking {
+        val list = extras(ownWinery = "Opus One Winery").wineryList("What other wines do they make?")!!
+        assertTrue(list, list.contains("wines from Opus One Winery"))
+    }
+
+    @Test fun noWineryInMindMakesGemmaAskWhich() = kotlinx.coroutines.runBlocking {
+        val e = extras()
+        assertNull(e.wineryList("Show me wines from a winery"))
+        assertTrue(e.forQuestion("Show me wines from a winery")!!.contains("Ask which winery"))
+    }
+
+    @Test fun aProductionGrapeWithNoPlaceMakesGemmaAskForOne() = kotlinx.coroutines.runBlocking {
+        val production = com.sheldondesousa.uncork.data.knowledge.WineProduction.fromJson(File("src/main/assets/knowledge/french_wine_production.json").readText())
+        val e = WineAskExtras(base, ownVariety = listOf("Merlot"), ownCountry = "France", loadProduction = { production }) { _, _ -> null }
+        assertTrue(e.forQuestion("How is Merlot made?")!!.contains("Ask which region or sub-region"))
+    }
+}
+
+class KeywordTriggersTest {
+    @Test fun moreReviewWording() {
+        listOf("What feedback is there on Merlot?", "Tell me what people say about Merlot", "What do people say about it?", "What opinions do reviewers have?")
+            .forEach { assertTrue(it, ReviewIntent.asksForReviews(it)) }
+        assertFalse(ReviewIntent.asksForReviews("Tell me what Merlot tastes like"))
+    }
+
+    @Test fun moreProductionWording() {
+        listOf("What are the stages of making Merlot?", "Describe the process", "How is Merlot manufactured?", "What is the production like?")
+            .forEach { assertTrue(it, ProductionIntent.asksHowMade(it)) }
+        assertFalse(ProductionIntent.asksHowMade("How does Merlot taste?"))
+    }
+
+    @Test fun describeWording() {
+        listOf("Tell me more", "Tell me about it", "Describe it").forEach { assertTrue(it, GrapeIntent.asksToDescribe(it)) }
+    }
+
+    @Test fun tellMeMoreWithNoGrapeNamedUsesTheOpenWinesGrape() = kotlinx.coroutines.runBlocking {
+        val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+        val e = WineAskExtras(base, ownVariety = listOf("Malbec"), ownCountry = "Argentina") { _, _ -> null }
+        val block = e.forQuestion("Tell me more")!!
+        assertTrue(block.contains("Malbec"))
     }
 }

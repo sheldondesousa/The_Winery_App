@@ -50,16 +50,25 @@ internal data class DirectoryHeader(val title: String, val subtitle: String?)
 
 /**
  * The title is always "Directory"; a breadcrumb on the page, above the list, says where the user is: "Country", then "{Country} > Select Region", then
- * "{Country} > {Region} > Winery".
+ * "{Country} > {Region} > Select Sub-region" (for a region that has sub-regions), then "{Country} > {Region} > {Sub-region} > Winery".
+ * A region with no sub-regions goes straight to "{Country} > {Region} > Winery".
  */
-internal fun directoryHeader(country: String?, region: String?): DirectoryHeader = when {
+internal fun directoryHeader(
+    country: String?,
+    region: String?,
+    subRegion: String? = null,
+    hasSubRegions: Boolean = false,
+): DirectoryHeader = when {
     country == null -> DirectoryHeader("Directory", "Select Country")
     region == null -> DirectoryHeader("Directory", "$country > Select Region")
+    subRegion != null -> DirectoryHeader("Directory", "$country > $region > $subRegion > Winery")
+    hasSubRegions -> DirectoryHeader("Directory", "$country > $region > Select Sub-region")
     else -> DirectoryHeader("Directory", "$country > $region > Winery")
 }
 
 /**
- * Browse the Wineries_Directory: countries, then the regions of a country, then the wineries of a region, each list
+ * Browse the Wineries_Directory: countries, then the regions of a country, then the sub-regions of a region (when it has
+ * any; wineries the directory places in the region itself are listed under them), then the wineries, each list
  * alphabetised on its own page. Back goes up one level (and leaves the directory from the country list); Home returns
  * to the main page.
  */
@@ -78,8 +87,10 @@ fun WineryDirectoryRoute(
     }
     var country by rememberSaveable { mutableStateOf<String?>(null) }
     var region by rememberSaveable { mutableStateOf<String?>(null) }
+    var subRegion by rememberSaveable { mutableStateOf<String?>(null) }
     val goBack: () -> Unit = {
         when {
+            subRegion != null -> subRegion = null
             region != null -> region = null
             country != null -> country = null
             else -> onBack()
@@ -88,7 +99,8 @@ fun WineryDirectoryRoute(
     BackHandler(onBack = goBack)
 
     Column(modifier.fillMaxSize().background(Parchment).statusBarsPadding()) {
-        val header = directoryHeader(country, region)
+        val hasSubRegions = directory?.let { d -> country != null && region != null && d.subRegions(country!!, region!!).isNotEmpty() } == true
+        val header = directoryHeader(country, region, subRegion, hasSubRegions)
         AppHeader(title = header.title, icon = Icons.Outlined.Place)
         // The breadcrumb sits on the page itself, above the list, not in the page title.
         header.subtitle?.let {
@@ -103,7 +115,7 @@ fun WineryDirectoryRoute(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val data = directory
             when {
-                data != null -> DirectoryList(data, country, region, onCountry = { country = it }, onRegion = { region = it })
+                data != null -> DirectoryList(data, country, region, subRegion, onCountry = { country = it }, onRegion = { region = it }, onSubRegion = { subRegion = it })
                 failed -> Text("The winery directory could not be loaded.", color = InkSubtle, modifier = Modifier.padding(24.dp))
                 else -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Wine, strokeWidth = 2.dp)
             }
@@ -117,15 +129,20 @@ private fun DirectoryList(
     directory: WineriesDirectory,
     country: String?,
     region: String?,
+    subRegion: String?,
     onCountry: (String) -> Unit,
     onRegion: (String) -> Unit,
+    onSubRegion: (String) -> Unit,
 ) {
     when {
         country == null -> CountList(directory.countries(), "country", onClick = onCountry)
         region == null -> CountList(directory.regions(country), "region", onClick = onRegion)
         else -> {
-            val wineries = directory.wineriesIn(country, region)
+            val subRegions = if (subRegion == null) directory.subRegions(country, region) else emptyList()
+            val wineries = directory.wineriesIn(country, region, subRegion)
             LazyColumn(Modifier.fillMaxSize().testTag("directory-wineries")) {
+                // A region's sub-regions come first; the wineries it holds directly follow them.
+                items(subRegions, key = { "sub-${it.name}" }) { row -> CountRow(row, "sub-region", onSubRegion) }
                 items(wineries) { name ->
                     Text(name, color = Ink, fontSize = 16.sp, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp))
                     HorizontalDivider(color = Hairline)
@@ -138,20 +155,23 @@ private fun DirectoryList(
 @Composable
 private fun CountList(rows: List<DirectoryCount>, kind: String, onClick: (String) -> Unit) {
     LazyColumn(Modifier.fillMaxSize().testTag("directory-$kind-list")) {
-        items(rows, key = { it.name }) { row ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .testTag("directory-$kind-${row.name}")
-                    .clickable(role = Role.Button) { onClick(row.name) }
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(row.name, color = Ink, fontSize = 17.sp, modifier = Modifier.weight(1f))
-                Text("${row.count}", color = InkSubtle, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
-                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = InkSubtle, modifier = Modifier.size(20.dp))
-            }
-            HorizontalDivider(color = Hairline)
-        }
+        items(rows, key = { it.name }) { row -> CountRow(row, kind, onClick) }
     }
+}
+
+@Composable
+private fun CountRow(row: DirectoryCount, kind: String, onClick: (String) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .testTag("directory-$kind-${row.name}")
+            .clickable(role = Role.Button) { onClick(row.name) }
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(row.name, color = Ink, fontSize = 17.sp, modifier = Modifier.weight(1f))
+        Text("${row.count}", color = InkSubtle, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = InkSubtle, modifier = Modifier.size(20.dp))
+    }
+    HorizontalDivider(color = Hairline)
 }
