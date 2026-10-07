@@ -849,3 +849,17 @@ class PromptGroundingTest {
         }
     }
 }
+
+class NoFixtureLeakTest {
+    @Test fun noMadeUpTestBottleIsBuiltAnywhereInTheApp() {
+        val hits = File("src/main/java").walkTopDown().filter { it.extension == "kt" }
+            .filter { it.readText().contains("\"Test bottle\"") }.map { it.name }.toList()
+        assertTrue("A placeholder bottle is still built in: $hits", hits.isEmpty())
+    }
+
+    @Test fun noBottleSelectedMeansNoBottleBlockInTheEvalBottleChat() {
+        val main = File("src/main/java/com/sheldondesousa/uncork/MainActivity.kt").readText()
+        assertTrue(main.contains("factsProvider = { \"\" }"))
+        assertTrue(main.contains("reminder = \"\""))
+    }
+}

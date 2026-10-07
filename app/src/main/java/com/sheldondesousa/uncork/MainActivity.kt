@@ -244,14 +244,12 @@ class MainActivity : ComponentActivity() {
                 if (modelReady && showEvalDebug) {
                     GemmaEvalDebugScreen(onBack = { showEvalDebug = false }, ragExtras = { askContext.extrasForChat() },
                         bottle = GemmaRagEvalRunner.BottleFactory { responder, ragOn, record ->
-                            // A test bottle with no grape or country. Its region is Burgundy so production questions that name no place (lees stirring in Chardonnay) have one.
-                            val blank = WineSuggestion(
-                                name = "Test bottle", province = "Burgundy", winery = "Unknown", variety = "Unknown",
-                            )
+                            // No bottle is selected in this eval, so no bottle block is sent: no facts, no reminder, and the
+                            // lookups work from the question alone (as in the open chat), never from a made-up bottle.
                             responder.startWineDiscussion(
-                                factsProvider = { if (ragOn) askContext.factsFor(blank) else WineFactsNote.build(blank) },
-                                reminder = WineFactsNote.reminder(blank),
-                                extras = if (ragOn) record(askContext.extrasFor(blank)) else null,
+                                factsProvider = { "" },
+                                reminder = "",
+                                extras = if (ragOn) record(askContext.extrasForChat()) else null,
                             )
                         })
                 } else if (modelReady) {

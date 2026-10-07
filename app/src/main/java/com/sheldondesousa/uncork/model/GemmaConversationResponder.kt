@@ -843,6 +843,9 @@ class GemmaConversationResponder(
 
         private suspend fun facts(): String = factsNote ?: factsProvider().also { factsNote = it }
 
+        // With no bottle selected there are no facts, and no bottle block is sent at all (not even an empty heading).
+        private suspend fun factsBlock(): String = facts().takeIf { it.isNotBlank() }?.let { "$it\n\n" }.orEmpty()
+
         // A rough running estimate (about 4 characters per token) of how much of the context window this chat has
         // used: the rules, every message sent and every reply. The runtime does not report real token counts.
         private var approxTokensUsed = 0
@@ -861,7 +864,7 @@ class GemmaConversationResponder(
             requestMutex.withLock {
                 if (factsSent) return
                 runCatching {
-                    val message = "${facts()}\n\n$WARM_UP_TASK"
+                    val message = "${factsBlock()}$WARM_UP_TASK"
                     val reply = send(message) {}
                     factsSent = true
                     noteUsage("warm-up", message.length, reply.length)
@@ -920,7 +923,7 @@ class GemmaConversationResponder(
             }
             val extra = found?.context?.let { "<more_context>\n$it\n</more_context>\n" }.orEmpty()
             val message = when {
-                !factsSent -> "${facts()}\n\n${extra}The user says: $query"
+                !factsSent -> "${factsBlock()}${extra}The user says: $query"
                 reminder.isNotBlank() -> "$reminder\n${extra}The user says: $query"
                 else -> "$extra$query"
             }
