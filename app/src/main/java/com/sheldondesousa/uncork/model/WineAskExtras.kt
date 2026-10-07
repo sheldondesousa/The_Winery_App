@@ -100,6 +100,32 @@ object FollowUp {
 class AskLookup(val context: String?, val refusal: String? = null, val rewritten: String? = null)
 
 /**
+ * Questions the app holds no data for: what a bottle costs, where to buy it, whether it is in stock, today's rating.
+ * Kept short and specific; words such as "points" or "reviews" are data the app does hold and are not listed.
+ */
+object UnanswerableIntent {
+    // "how much" is a price question unless it is about a wine's make-up (how much tannin, how much oak).
+    private val PRICES = Regex(
+        "\\b(price|prices|priced|pricing|cost|costs|discount|discounts|on\\s+sale)\\b|" +
+            "\\bhow\\s+much\\b(?!\\s+(tannin|acidity|body|alcohol|sugar|oak|sweetness|age|ageing|aging|of\\s+a))",
+        RegexOption.IGNORE_CASE,
+    )
+    private val AVAILABILITY = Regex(
+        "\\bwhere\\s+(can|could|do|should|to)\\b.*\\b(buy|purchase|order)\\b|\\b(in\\s+stock|availability|for\\s+sale)\\b|\\bwhere\\s+to\\s+(buy|get)\\b",
+        RegexOption.IGNORE_CASE,
+    )
+    private val RATINGS = Regex("\\b(current|today'?s|latest|live)\\s+(rating|ratings|score|scores)\\b|\\b(rating|score)\\s+(today|now)\\b", RegexOption.IGNORE_CASE)
+
+    /** What was asked for that the app has no data on ("prices", "availability", "current ratings"), or null. */
+    fun missingData(query: String): String? = when {
+        PRICES.containsMatchIn(query) -> "prices"
+        AVAILABILITY.containsMatchIn(query) -> "availability"
+        RATINGS.containsMatchIn(query) -> "current ratings"
+        else -> null
+    }
+}
+
+/**
  * Decides when a question that retrieved nothing gets the app's fixed refusal instead of going to Gemma: it names
  * something specific the app should know (a winery, wine, place) or uses winery or production wording, and it is not a
  * greeting, thanks, out-of-scope or a safety matter, which Gemma handles.
@@ -114,7 +140,7 @@ object RefusalGate {
             "\\b(system\\s+prompt|instructions?|ignore\\s+(all|previous|your)|reveal|jailbreak|what\\s+model|which\\s+model|who\\s+(made|built|created)\\s+you|underage|minors?|kids?|children|teen\\w*|stupid|idiot|shut\\s+up)\\b",
         RegexOption.IGNORE_CASE,
     )
-    private val QUESTION_STARTERS = setOf(
+    internal val QUESTION_STARTERS = setOf(
         "what", "whats", "which", "who", "whose", "where", "when", "why", "how", "is", "are", "was", "does", "do", "did", "can", "could",
         "would", "should", "tell", "name", "list", "give", "show", "describe", "explain", "i", "my", "the", "a", "an", "any", "and", "or",
         "but", "so", "yes", "no", "please", "uncork", "hi", "hello", "hey", "thanks", "thank",
@@ -374,6 +400,31 @@ class WineAskExtras(
         return if (kept.isEmpty()) null else GrapeWineriesSample(kept, totalWineries)
     }
 
+    /** The longest run of capitalised words that is not a question word ("Chateau Margaux", "Opus One"), as the user wrote it. */
+    private fun nameIn(query: String): String? {
+        val words = query.split(Regex("\\s+")).map { it.trim(',', '.', '?', '!', ';', ':', '"', '(', ')') }
+        val runs = mutableListOf<MutableList<String>>()
+        var current: MutableList<String>? = null
+        for (w in words) {
+            val capital = w.length >= 2 && w[0].isUpperCase() && w.lowercase() !in RefusalGate.QUESTION_STARTERS
+            if (capital) { if (current == null) { current = mutableListOf(); runs += current }; current.add(w) } else current = null
+        }
+        return runs.maxByOrNull { it.size }?.joinToString(" ")
+    }
+
+    /**
+     * A question about price, availability or today's rating gets the app's own "I do not have that" reply (naming what was
+     * asked and about what), plus the winery's location when it is in the directory, so a location is never given as the answer.
+     */
+    private suspend fun unanswerableReply(query: String): String? {
+        val missing = UnanswerableIntent.missingData(query) ?: return null
+        val directory = loadWineries?.let { runCatching { it() }.getOrNull() }
+        val listed = directory?.findMentioned(query, null, limit = 1)?.firstOrNull()
+        val name = listed?.winery ?: nameIn(query) ?: ownWineName.takeIf { it.isNotBlank() }
+        val sorry = "I'm sorry, I do not have information on $missing${name?.let { " for $it" }.orEmpty()}."
+        return if (listed != null) "$sorry\nWhat I can tell you is that ${listed.winery} is in ${listed.place}, ${listed.country}." else sorry
+    }
+
     private fun isSideInfo(block: String) =
         block.startsWith("Grape_Profile_Internal") || block.startsWith("Grape_Profile_Kaggle_Extracted") || block.startsWith("OTHER COUNTRIES")
 
@@ -425,6 +476,7 @@ class WineAskExtras(
 
     override suspend fun lookup(rawQuery: String): AskLookup {
         clarificationFor(rawQuery)?.let { return AskLookup(null, it) }
+        unanswerableReply(rawQuery)?.let { return AskLookup(null, it) }
         val query = standalone(rawQuery)
         val rewritten = query.takeIf { it != rawQuery }
         alreadySentHit = false
@@ -813,6 +865,7 @@ class WineAskExtras(
 
     override suspend fun wineryList(query: String): String? {
         clarificationFor(query)?.let { return it }
+        unanswerableReply(query)?.let { return it }
         val question = standalone(query)
         return wineryListFor(question)?.also { noteTurn(question) }
     }

@@ -3,6 +3,7 @@ package com.sheldondesousa.uncork.data.knowledge
 import com.sheldondesousa.uncork.model.KaggleExtractedProfile
 import com.sheldondesousa.uncork.model.CountryMentions
 import com.sheldondesousa.uncork.model.ReviewIntent
+import com.sheldondesousa.uncork.model.UnanswerableIntent
 import com.sheldondesousa.uncork.model.ReplyCheck
 import com.sheldondesousa.uncork.model.ChatFlowText
 import com.sheldondesousa.uncork.model.ProductionIntent
@@ -1247,5 +1248,36 @@ class GrapeAndPlaceListTest {
         assertTrue(region, region.contains("with reviews of Chardonnay") && region.contains("in Burgundy, France"))
         val sub = extras().wineryList("List 3 wineries for Chardonnay in Chablis")!!
         assertTrue(sub, sub.startsWith("I do not have grape-specific winery data for Chablis."))
+    }
+}
+
+class UnanswerableQuestionTest {
+    private val base = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
+    private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
+    private fun extras() = WineAskExtras(base, loadWineries = { directory }) { _, _ -> null }
+
+    @Test fun aPriceQuestionGetsAPriceRefusalWithTheLocationAsASecondLine() = kotlinx.coroutines.runBlocking {
+        val reply = extras().lookup("How much does a bottle of Chateau Margaux cost?").refusal!!
+        assertEquals("I'm sorry, I do not have information on prices for Château Margaux.\nWhat I can tell you is that Château Margaux is in Margaux, Bordeaux, France.", reply)
+        assertEquals(reply, extras().wineryList("How much does a bottle of Chateau Margaux cost?"))
+    }
+
+    @Test fun aWineryNotInTheDataStillGetsThePriceRefusal() = kotlinx.coroutines.runBlocking {
+        assertEquals("I'm sorry, I do not have information on prices for Opus One.", extras().lookup("How much does Opus One cost?").refusal)
+    }
+
+    @Test fun availabilityAndCurrentRatingsAreRefusedToo() = kotlinx.coroutines.runBlocking {
+        assertTrue(extras().lookup("Where can I buy Opus One?").refusal!!.startsWith("I'm sorry, I do not have information on availability for Opus One"))
+        assertTrue(extras().lookup("Is Château Margaux in stock?").refusal!!.contains("availability"))
+        assertTrue(extras().lookup("What is Opus One's current rating?").refusal!!.contains("current ratings"))
+    }
+
+    @Test fun aLocationQuestionStillGetsTheLocationTemplate() = kotlinx.coroutines.runBlocking {
+        assertEquals("Château Margaux is in Margaux, Bordeaux, France.", extras().lookup("Where is Chateau Margaux?").refusal)
+    }
+
+    @Test fun questionsAboutDataTheAppHoldsAreNotMistakenForPrice() = kotlinx.coroutines.runBlocking {
+        listOf("How many points did Château Margaux get?", "Which Merlot reviews have high points?", "How much tannin does Merlot have?", "Tell me about Merlot")
+            .forEach { assertNull(it, UnanswerableIntent.missingData(it)) }
     }
 }
