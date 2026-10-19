@@ -72,7 +72,7 @@ class BottleAskGoldenTest(private val assetName: String) {
 
     @Test fun missingNamesAreRefusedAndSupportedCasesHaveSourceNotes() = runBlocking {
         val cases = set.getJSONArray("cases")
-        assertEquals(when { assetName.contains("v5") -> 300; assetName.contains("v3") || assetName.contains("v4") || assetName.contains("v6") -> 100; else -> 20 }, cases.length())
+        assertEquals(when { assetName.contains("v5") || assetName.contains("v6") -> 300; assetName.contains("v3") || assetName.contains("v4") -> 100; else -> 20 }, cases.length())
         val counts = mutableMapOf<String, Int>()
         for (i in 0 until cases.length()) {
             val case = cases.getJSONObject(i)
@@ -102,7 +102,7 @@ class BottleAskGoldenTest(private val assetName: String) {
             }
         }
         val expectedCounts = when {
-            assetName.contains("v6") -> mapOf("supported" to 50, "false_claim" to 20, "no_information" to 25, "needs_place" to 5)
+            assetName.contains("v6") -> mapOf("supported" to 190, "false_claim" to 80, "no_information" to 15, "needs_place" to 15)
             assetName.contains("v5") -> mapOf("supported" to 100, "no_information" to 100, "false_claim" to 100)
             assetName.contains("v4") -> mapOf("supported" to 50, "no_information" to 25, "false_claim" to 25)
             assetName.contains("v3") -> mapOf("supported" to 50, "no_information" to 25, "false_claim" to 25)

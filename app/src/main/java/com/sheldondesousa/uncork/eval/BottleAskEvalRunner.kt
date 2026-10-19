@@ -142,7 +142,7 @@ internal object BottleAskEvalRunner {
     }
 
     /**
-     * One pass over a held-out set: v5 (300 questions in equal thirds) or v6 (100 grape-knowledge questions, 35 on the
+     * One pass over a held-out set: v5 (300 questions in equal thirds) or v6 (300 grape-knowledge questions, half on the
      * extracted table). v4 gave near-identical output on repeat runs, so one pass is enough.
      */
     suspend fun runOnce(context: Context, bottle: BottleFactory, assetName: String, onProgress: (EvalProgress) -> Unit): File {
