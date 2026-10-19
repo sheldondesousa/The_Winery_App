@@ -1,0 +1,112 @@
+{
+  "metric": "Answer vs decline, judged from the text the user sees",
+  "positive_class": "Question that should be answered",
+  "source_file": "3x100 Combined.jsonl",
+  "runs": {
+    "1": {
+      "cases": 100,
+      "tp": 66,
+      "fp": 0,
+      "fn": 9,
+      "tn": 25,
+      "accuracy": 0.91,
+      "precision": 1.0,
+      "recall": 0.88,
+      "f1": 0.9361702127659575,
+      "route_only_fail_count": 3,
+      "output_source_fail_count": 9,
+      "output_source_fail_ids": [
+        "ASK4-005",
+        "ASK4-006",
+        "ASK4-007",
+        "ASK4-015",
+        "ASK4-030",
+        "ASK4-037",
+        "ASK4-039",
+        "ASK4-049",
+        "ASK4-064"
+      ],
+      "fail_reasons": {
+        "ASK4-005": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-006": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-007": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-015": "Kotlin replied before Gemma was asked (winery list, not the grape answer)",
+        "ASK4-030": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-037": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-039": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-049": "Kotlin replied before Gemma was asked (winery list, not the grape answer)",
+        "ASK4-064": "Kotlin replied before Gemma was asked (winery list, not the grape answer)"
+      }
+    },
+    "2": {
+      "cases": 100,
+      "tp": 66,
+      "fp": 0,
+      "fn": 9,
+      "tn": 25,
+      "accuracy": 0.91,
+      "precision": 1.0,
+      "recall": 0.88,
+      "f1": 0.9361702127659575,
+      "route_only_fail_count": 3,
+      "output_source_fail_count": 9,
+      "output_source_fail_ids": [
+        "ASK4-005",
+        "ASK4-006",
+        "ASK4-007",
+        "ASK4-015",
+        "ASK4-030",
+        "ASK4-037",
+        "ASK4-039",
+        "ASK4-049",
+        "ASK4-064"
+      ],
+      "fail_reasons": {
+        "ASK4-005": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-006": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-007": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-015": "Kotlin replied before Gemma was asked (winery list, not the grape answer)",
+        "ASK4-030": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-037": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-039": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-049": "Kotlin replied before Gemma was asked (winery list, not the grape answer)",
+        "ASK4-064": "Kotlin replied before Gemma was asked (winery list, not the grape answer)"
+      }
+    },
+    "3": {
+      "cases": 100,
+      "tp": 66,
+      "fp": 0,
+      "fn": 9,
+      "tn": 25,
+      "accuracy": 0.91,
+      "precision": 1.0,
+      "recall": 0.88,
+      "f1": 0.9361702127659575,
+      "route_only_fail_count": 3,
+      "output_source_fail_count": 9,
+      "output_source_fail_ids": [
+        "ASK4-005",
+        "ASK4-006",
+        "ASK4-007",
+        "ASK4-015",
+        "ASK4-030",
+        "ASK4-037",
+        "ASK4-039",
+        "ASK4-049",
+        "ASK4-064"
+      ],
+      "fail_reasons": {
+        "ASK4-005": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-006": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-007": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-015": "Kotlin replied before Gemma was asked (winery list, not the grape answer)",
+        "ASK4-030": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-037": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-039": "Reply check replaced Gemma's answer with the refusal",
+        "ASK4-049": "Kotlin replied before Gemma was asked (winery list, not the grape answer)",
+        "ASK4-064": "Kotlin replied before Gemma was asked (winery list, not the grape answer)"
+      }
+    }
+  }
+}

@@ -1,0 +1,301 @@
+id,run_index,category,expected_route,actual_route,output_source,shown_by,old_status,new_status,reason,shown
+ASK4-001,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Barbera is a juicy, easy red wine with lively acidity and gentle tannins. It offers flavors of cherry and plum with a ta"
+ASK4-002,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Rkatsiteli is an ancient grape from Georgia that has been cultivated for a very long time. It offers a crisp, citrusy, a"
+ASK4-003,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Mourvèdre is a red grape known for being dark, structured, and a little wild. It offers brooding dark fruit with notes o"
+ASK4-004,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Macabeo is a versatile white grape from Catalonia or Aragón in Spain. It can offer fresh and fruity notes or nutty and l
+ASK4-005,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-006,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-007,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-008,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Carménère is a velvety red wine with a signature whisper of green pepper. It offers dark fruit, spice, and soft tannins."
+ASK4-009,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Nero d'Avola is Sicily's signature red grape, known for being sun-ripened and full of flavour. It brings aromas of dark "
+ASK4-010,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Verdejo is a white wine from Rueda in Spain. It has a medium body and high acidity, and it has no tannins. Aromas includ"
+ASK4-011,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Roussanne is a rich, fragrant white wine from France's Rhône Valley. It has a full body and low acidity, with no tannins"
+ASK4-012,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Frühburgunder is a German red grape that is a relative of Pinot Noir. It ripens a bit sooner than Pinot Noir. It has a m
+ASK4-013,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Pinot Blanc is a white grape variety. It has a medium body and moderate acidity. It contains no tannins. Its aromas incl
+ASK4-014,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Arinto is a white grape from Portugal that stays sharp and fresh even in hot weather. It offers a crisp and long-lived t
+ASK4-015,1,supported,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Château Carignan is in Côtes de Bordeaux Cadillac, Bordeaux, France."
+ASK4-016,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Malbec has medium acidity, while Negroamaro has low acidity. So, Malbec has a higher acidity level than Negroamaro. This"
+ASK4-017,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Cortese has high acidity, while Sémillon has low acidity. Cortese is known for its crisp white character, and Sémillon i"
+ASK4-018,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Corvina has high acidity, which means it has a lively tartness in the wine. Sémillon, on the other hand, has low acidity"
+ASK4-019,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Tempranillo has low acidity, while Verdicchio has high acidity. This means Verdicchio will likely feel sharper in terms "
+ASK4-020,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Chenin Blanc has high acidity, which means it has a bright, refreshing quality. Merlot has low acidity, making it feel s"
+ASK4-021,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Bobal has high acidity, while Viognier has low acidity. This means Bobal will likely have a sharper, more refreshing fee"
+ASK4-022,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Chardonnay generally has high acidity, while Macabeo has moderate acidity. The notes for Chardonnay mention high acidity"
+ASK4-023,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Sémillon has low acidity, which means it doesn't have much tartness in it. Malbec, on the other hand, has medium acidity"
+ASK4-024,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Gewürztraminer has low acidity, while Agiorgitiko has high acidity. Therefore, Agiorgitiko would be the sharper wine bas"
+ASK4-025,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Mencía has high acidity, while Pinotage has moderate acidity. This means Mencía will feel brighter and more tart on your"
+ASK4-026,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level for Sauvignon Blanc is light-bodied. This means the wine feels light on your palate. It also has high aci
+ASK4-027,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Nebbiolo grape has high acidity. This means it has a sharp tartness that keeps the wine feeling fresh. This high aci
+ASK4-028,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Airén has no tannin. It is light-bodied.
+ASK4-029,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Silvaner include chalk, herbs, citrus, pear, and green apple. This white wine has a medium body "
+ASK4-030,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-031,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Agiorgitiko originates from Nemea in the Peloponnese region of Greece. This area is where about eighty percent of the gr
+ASK4-032,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Cabernet Sauvignon is a heavyweight in red wines, known for its deep color and firm tannins that build a structure for a"
+ASK4-033,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Malvasia is medium-bodied. This means the wine has a medium weight in the mouth. It is also 
+ASK4-034,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The acidity for Cabernet Franc is medium. This means it has a balanced level of tartness that keeps the wine lively. It 
+ASK4-035,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Assyrtiko generally has no tannin, which means it will be quite smooth on the palate. You should expect a full body and "
+ASK4-036,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Trebbiano Toscano include white flowers, almond, chalk, green apple, and lemon. This grape is kn"
+ASK4-037,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-038,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Viognier originates from the Rhône Valley in France.
+ASK4-039,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-040,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Verdicchio is medium-bodied. This means the wine has a medium weight in the mouth. It also h
+ASK4-041,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The Aligoté grape has very high acidity. This means it has a sharp, refreshing quality in the wine. You can expect that "
+ASK4-042,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,You should expect a very firm tannin level in Shiraz or Syrah. This means the wine will have a noticeable grip on your p
+ASK4-043,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Graševina include chalk, elderflower, white peach, citrus, and green apple. This grape is known "
+ASK4-044,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Blaufränkisch is a peppery, vibrant red from Central Europe known for its dark cherry and blackberry flavors with violet"
+ASK4-045,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Schwarzriesling originates from Champagne, France. It is known for its soft red fruit, gentle tannins, and juicy acidity"
+ASK4-046,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Petit Verdot grape is known for being a deeply coloured Bordeaux grape that ripens late and needs warmth. It has a f
+ASK4-047,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Verdelho is medium-bodied. This means it has a balanced weight to the palate. It is a zesty 
+ASK4-048,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The acidity level for Portugieser is moderate. This means it has a noticeable level of tartness that keeps the wine bala
+ASK4-049,1,supported,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Weingut Müller is in Kremstal, Lower Austria, Austria."
+ASK4-050,1,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Pinotage include pepper, coffee, smoke, strawberry, and red plum. This grape has a full body, mo"
+ASK4-051,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Sangiovese is actually medium-bodied, not light-bodied. It has medium acidity and firm tannins, which suit it well with "
+ASK4-052,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, the information I have suggests that Dornfelder has moderate acidity. It is a German red grape bred for deep color a"
+ASK4-053,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Not quite. Pinot Gris has no tannins, which means it is very smooth. It is known for aromas like spice, almond, honey, r"
+ASK4-054,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Zinfandel can have a body ranging from light to very full-bodied depending on the style. The grape itself is known for h
+ASK4-055,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Gamay has high acidity. The information I have tells us that Gamay is known for having high acidity, not low acidity"
+ASK4-056,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Merlot has moderate tannins, which means they are not very harsh. This makes it a softer red wine that is easy to drink."
+ASK4-057,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Touriga Nacional is actually described as having a very full body. It has medium acidity and very firm tannins. The arom
+ASK4-058,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't quite agree with the information I have. Elbling is known for having very high acidity, not low acidity"
+ASK4-059,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Not quite. Riesling generally has no tannins, which means it lacks those firm structures found in some other wines. Inst"
+ASK4-060,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,St. Laurent is described as having a medium to full body. It also has moderate acidity and moderate tannins. It is known
+ASK4-061,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Gutedel has moderate acidity, not low. It is described as a gentle, light German white with moderate acidity and no tann"
+ASK4-062,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Touriga Franca has moderate tannins, not none at all. These tannins give the wine a silky texture. It also has bright ac"
+ASK4-063,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Alicante Bouschet is actually full-bodied. It has moderate acidity and firm tannins, and its aromas are herbs, peppe"
+ASK4-064,1,false_claim,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Weingut Kerner is in Weinviertel, Lower Austria, Austria."
+ASK4-065,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"That's not quite right. Grenache Noir has moderate tannins, which means it has some structure in the wine. Think of tann"
+ASK4-066,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Grüner Veltliner is described as having a medium body. It is known for its high acidity and a lack of tannin. The aromas
+ASK4-067,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Castelão has moderate acidity. It is described as a juicy red from southern Portugal with moderate acidity and moderate 
+ASK4-068,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Barbera has low tannins, which means the tannins in this wine are soft. It is known for being a juicy red with livel"
+ASK4-069,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Rkatsiteli grape is described as having a medium body. It also has very high acidity and no tannin. You can expect c
+ASK4-070,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't agree with the information I have. Mourvèdre is known for having high acidity. This means the wine will"
+ASK4-071,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Macabeo is known for having no tannins. It is a versatile Spanish white that can be fresh and fruity or nutty and layere
+ASK4-072,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Parellada is light-bodied. It has high acidity and no tannin. Its aromas include aniseed, white flowers, citrus, pear, a"
+ASK4-073,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't quite agree with what I know about Negroamaro. The grape has low acidity, which means it doesn't have a"
+ASK4-074,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Vermentino is known for having no tannins. It is a sunny seaside white with a briny, ocean-air edge, offering aromas of "
+ASK4-075,1,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Carménère is actually full-bodied, not light-bodied. It has low acidity and firm but velvety tannins that are softer tha"
+ASK4-076,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-077,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-078,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-079,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-080,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-081,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-082,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-083,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-084,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-085,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-086,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-087,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-088,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-089,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-090,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-091,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-092,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-093,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-094,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-095,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-096,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-097,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-098,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-099,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-100,1,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-001,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Barbera is a red grape known for being juicy and easy to drink. It has lively acidity and gentle tannins. The aromas inc
+ASK4-002,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Rkatsiteli is an ancient grape from Georgia that has been cultivated for a very long time. It offers a crisp, citrusy, a"
+ASK4-003,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Mourvèdre is a red grape known for being dark, structured, and a little wild. It offers brooding dark fruit with notes o"
+ASK4-004,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Macabeo is a versatile white grape from Catalonia or Aragón in Spain. It can offer fresh and fruity notes or nutty and l
+ASK4-005,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-006,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-007,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-008,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Carménère is a velvety red wine with a signature whisper of green pepper. It offers dark fruit, spice, and soft tannins."
+ASK4-009,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Nero d'Avola is Sicily's signature red grape, known for being sun-ripened and full of flavour. It brings aromas of dark "
+ASK4-010,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Verdejo is a white wine from Rueda in Spain. It has a medium body and high acidity, and it has no tannins. Aromas includ"
+ASK4-011,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Roussanne is a rich, fragrant white wine from France's Rhône Valley. It has a full body and low acidity, with no tannins"
+ASK4-012,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Frühburgunder is a German red grape that is a relative of Pinot Noir. It ripens a bit sooner than Pinot Noir. It has a m
+ASK4-013,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Pinot Blanc is a white grape variety. It has a medium body and moderate acidity. It contains no tannins. Its aromas incl
+ASK4-014,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Arinto is a white grape from Portugal that stays sharp and fresh even in hot weather. It offers a crisp and long-lived t
+ASK4-015,2,supported,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Château Carignan is in Côtes de Bordeaux Cadillac, Bordeaux, France."
+ASK4-016,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Malbec has medium acidity, while Negroamaro has low acidity. So, Malbec has a higher acidity level than Negroamaro. This"
+ASK4-017,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Cortese has high acidity, while Sémillon has low acidity. Cortese is known for its crisp white character, and Sémillon i"
+ASK4-018,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Corvina has high acidity, which means it has a lively tartness in the wine. Sémillon, on the other hand, has low acidity"
+ASK4-019,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Tempranillo has low acidity, while Verdicchio has high acidity. This means Verdicchio will likely feel sharper in terms "
+ASK4-020,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Chenin Blanc has high acidity, which means it has a bright, refreshing quality. Merlot has low acidity, making it feel s"
+ASK4-021,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Bobal has high acidity, while Viognier has low acidity. This means Bobal will likely have a sharper, more refreshing fee"
+ASK4-022,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Chardonnay generally has high acidity, while Macabeo has moderate acidity. The notes for Chardonnay mention high acidity"
+ASK4-023,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Sémillon has low acidity, which means it doesn't have much tartness in it. Malbec, on the other hand, has medium acidity"
+ASK4-024,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Gewürztraminer has low acidity, while Agiorgitiko has high acidity. Therefore, Agiorgitiko would be the sharper wine bas"
+ASK4-025,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Mencía has high acidity, while Pinotage has moderate acidity. This means Mencía will feel brighter and more tart on your"
+ASK4-026,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level for Sauvignon Blanc is light-bodied. This means the wine feels light on your palate. It also has high aci
+ASK4-027,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Nebbiolo grape has high acidity. This means it has a sharp tartness that keeps the wine feeling fresh. This high aci
+ASK4-028,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Airén has no tannin. It is light-bodied.
+ASK4-029,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Silvaner include chalk, herbs, citrus, pear, and green apple. This white wine has a medium body "
+ASK4-030,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-031,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Agiorgitiko originates from Nemea in the Peloponnese region of Greece. This area is where about eighty percent of the gr
+ASK4-032,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Cabernet Sauvignon is a heavyweight in red wines, known for its deep color and firm tannins that build a structure for a"
+ASK4-033,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Malvasia is medium-bodied. This means the wine has a medium weight in the mouth. It is also 
+ASK4-034,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The acidity for Cabernet Franc is medium. This means it has a balanced level of tartness that keeps the wine lively. It 
+ASK4-035,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Assyrtiko generally has no tannin, which means it will be quite smooth on the palate. You should expect a full body and "
+ASK4-036,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Trebbiano Toscano include white flowers, almond, chalk, green apple, and lemon. This grape is kn"
+ASK4-037,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-038,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Viognier originates from the Rhône Valley in France.
+ASK4-039,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-040,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Verdicchio is medium-bodied. This means the wine has a medium weight in the mouth. It also h
+ASK4-041,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The Aligoté grape has very high acidity. This means it has a sharp, refreshing quality in the wine. You can expect that "
+ASK4-042,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,You should expect a very firm tannin level in Shiraz or Syrah. This means the wine will have a noticeable grip on your p
+ASK4-043,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Graševina include chalk, elderflower, white peach, citrus, and green apple. This grape is known "
+ASK4-044,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Blaufränkisch is a peppery, vibrant red from Central Europe known for its dark cherry and blackberry flavors with violet"
+ASK4-045,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Schwarzriesling originates from Champagne, France. It is known for its soft red fruit, gentle tannins, and juicy acidity"
+ASK4-046,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Petit Verdot grape is known for being a deeply coloured Bordeaux grape that ripens late and needs warmth. It has a f
+ASK4-047,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Verdelho is medium-bodied. This means it has a balanced weight to the palate. It is a zesty 
+ASK4-048,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The acidity level for Portugieser is moderate. This means it has a noticeable level of tartness that keeps the wine bala
+ASK4-049,2,supported,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Weingut Müller is in Kremstal, Lower Austria, Austria."
+ASK4-050,2,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Pinotage include pepper, coffee, smoke, strawberry, and red plum. This grape has a full body, mo"
+ASK4-051,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Sangiovese is actually medium-bodied, not light-bodied. It has medium acidity and firm tannins, which suit it well with "
+ASK4-052,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, the information I have suggests that Dornfelder has moderate acidity. It is a German red grape bred for deep color a"
+ASK4-053,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Not quite. Pinot Gris has no tannins, which means it is very smooth. It is known for aromas like spice, almond, honey, r"
+ASK4-054,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Zinfandel can have a body ranging from light to very full-bodied depending on the style. The grape itself is known for h
+ASK4-055,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Gamay has high acidity. The information I have tells us that Gamay is known for having high acidity, not low acidity"
+ASK4-056,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Merlot has moderate tannins, which means they are not very harsh. This makes it a softer red wine that is easy to drink."
+ASK4-057,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Touriga Nacional is actually described as having a very full body. It has medium acidity and very firm tannins. The arom
+ASK4-058,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't quite agree with the information I have. Elbling is known for having very high acidity, not low acidity"
+ASK4-059,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Not quite. Riesling generally has no tannins, which means it lacks those firm structures found in some other wines. Inst"
+ASK4-060,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,St. Laurent is described as having a medium to full body. It also has moderate acidity and moderate tannins. It is known
+ASK4-061,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Gutedel has moderate acidity, not low. It is described as a gentle, light German white with moderate acidity and no tann"
+ASK4-062,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Touriga Franca has moderate tannins, not none at all. These tannins give the wine a silky texture. It also has bright ac"
+ASK4-063,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Alicante Bouschet is actually full-bodied. It has moderate acidity and firm tannins, and its aromas are herbs, peppe"
+ASK4-064,2,false_claim,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Weingut Kerner is in Weinviertel, Lower Austria, Austria."
+ASK4-065,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"That's not quite right. Grenache Noir has moderate tannins, which means it has some structure in the wine. Think of tann"
+ASK4-066,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Grüner Veltliner is described as having a medium body. It is known for its high acidity and a lack of tannin. The aromas
+ASK4-067,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Castelão has moderate acidity. It is described as a juicy red from southern Portugal with moderate acidity and moderate 
+ASK4-068,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Barbera has low tannins, which means the tannins in this wine are soft. It is known for being a juicy red with livel"
+ASK4-069,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Rkatsiteli grape is described as having a medium body. It also has very high acidity and no tannin. You can expect c
+ASK4-070,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't agree with the information I have. Mourvèdre is known for having high acidity. This means the wine will"
+ASK4-071,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Macabeo is known for having no tannins. It is a versatile Spanish white that can be fresh and fruity or nutty and layere
+ASK4-072,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Parellada is light-bodied. It has high acidity and no tannin. Its aromas include aniseed, white flowers, citrus, pear, a"
+ASK4-073,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't quite agree with what I know about Negroamaro. The grape has low acidity, which means it doesn't have a"
+ASK4-074,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Vermentino is known for having no tannins. It is a sunny seaside white with a briny, ocean-air edge, offering aromas of "
+ASK4-075,2,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Carménère is actually full-bodied, not light-bodied. It has low acidity and firm but velvety tannins that are softer tha"
+ASK4-076,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-077,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-078,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-079,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-080,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-081,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-082,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-083,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-084,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-085,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-086,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-087,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-088,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-089,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-090,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-091,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-092,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-093,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-094,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-095,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-096,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-097,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-098,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-099,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-100,2,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-001,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Barbera is a red grape known for being juicy and easy to drink. It has lively acidity and gentle tannins. The aromas inc
+ASK4-002,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Rkatsiteli is an ancient grape from Georgia that has been cultivated for a very long time. It offers a crisp, citrusy, a"
+ASK4-003,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Mourvèdre is a red grape known for being dark, structured, and a little wild. It offers brooding dark fruit with notes o"
+ASK4-004,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Macabeo is a versatile white grape from Catalonia or Aragón in Spain. It can offer fresh and fruity notes or nutty and l
+ASK4-005,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-006,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-007,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-008,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Carménère is a velvety red wine with a signature whisper of green pepper. It offers dark fruit, spice, and soft tannins."
+ASK4-009,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Nero d'Avola is Sicily's signature red grape, known for being sun-ripened and full of flavour. It brings aromas of dark "
+ASK4-010,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Verdejo is a white wine from Rueda in Spain. It has a medium body and high acidity, and it has no tannins. Aromas includ"
+ASK4-011,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Roussanne is a rich, fragrant white wine from France's Rhône Valley. It has a full body and low acidity, with no tannins"
+ASK4-012,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Frühburgunder is a German red grape that is a relative of Pinot Noir. It ripens a bit sooner than Pinot Noir. It has a m
+ASK4-013,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Pinot Blanc is a white grape variety. It has a medium body and moderate acidity. It contains no tannins. Its aromas incl
+ASK4-014,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Arinto is a white grape from Portugal that stays sharp and fresh even in hot weather. It offers a crisp and long-lived t
+ASK4-015,3,supported,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Château Carignan is in Côtes de Bordeaux Cadillac, Bordeaux, France."
+ASK4-016,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Malbec has medium acidity, while Negroamaro has low acidity. So, Malbec has a higher acidity level than Negroamaro. This"
+ASK4-017,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Cortese has high acidity, while Sémillon has low acidity. Cortese is known for its crisp white character, and Sémillon i"
+ASK4-018,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Corvina has high acidity, which means it has a lively tartness in the wine. Sémillon, on the other hand, has low acidity"
+ASK4-019,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Tempranillo has low acidity, while Verdicchio has high acidity. This means Verdicchio will likely feel sharper in terms "
+ASK4-020,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Chenin Blanc has high acidity, which means it has a bright, refreshing quality. Merlot has low acidity, making it feel s"
+ASK4-021,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Bobal has high acidity, while Viognier has low acidity. This means Bobal will likely have a sharper, more refreshing fee"
+ASK4-022,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Chardonnay generally has high acidity, while Macabeo has moderate acidity. The notes for Chardonnay mention high acidity"
+ASK4-023,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Sémillon has low acidity, which means it doesn't have much tartness in it. Malbec, on the other hand, has medium acidity"
+ASK4-024,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Gewürztraminer has low acidity, while Agiorgitiko has high acidity. Therefore, Agiorgitiko would be the sharper wine bas"
+ASK4-025,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Mencía has high acidity, while Pinotage has moderate acidity. This means Mencía will feel brighter and more tart on your"
+ASK4-026,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level for Sauvignon Blanc is light-bodied. This means the wine feels light on your palate. It also has high aci
+ASK4-027,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Nebbiolo grape has high acidity. This means it has a sharp tartness that keeps the wine feeling fresh. This high aci
+ASK4-028,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Airén has no tannin. It is light-bodied.
+ASK4-029,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Silvaner include chalk, herbs, citrus, pear, and green apple. This white wine has a medium body "
+ASK4-030,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-031,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Agiorgitiko originates from Nemea in the Peloponnese region of Greece. This area is where about eighty percent of the gr
+ASK4-032,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Cabernet Sauvignon is a heavyweight in red wines, known for its deep color and firm tannins that build a structure for a"
+ASK4-033,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Malvasia is medium-bodied. This means the wine has a medium weight in the mouth. It is also 
+ASK4-034,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The acidity for Cabernet Franc is medium. This means it has a balanced level of tartness that keeps the wine lively. It 
+ASK4-035,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Assyrtiko generally has no tannin, which means it will be quite smooth on the palate. You should expect a full body and "
+ASK4-036,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Trebbiano Toscano include white flowers, almond, chalk, green apple, and lemon. This grape is kn"
+ASK4-037,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-038,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Viognier originates from the Rhône Valley in France.
+ASK4-039,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,KOTLIN_OPINION_REFUSAL,KOTLIN,REVIEW,FAIL,Reply check replaced Gemma's answer with the refusal,"I'm sorry, I do not have that information."
+ASK4-040,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Verdicchio is medium-bodied. This means the wine has a medium weight in the mouth. It also h
+ASK4-041,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The Aligoté grape has very high acidity. This means it has a sharp, refreshing quality in the wine. You can expect that "
+ASK4-042,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,You should expect a very firm tannin level in Shiraz or Syrah. This means the wine will have a noticeable grip on your p
+ASK4-043,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Graševina include chalk, elderflower, white peach, citrus, and green apple. This grape is known "
+ASK4-044,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Blaufränkisch is a peppery, vibrant red from Central Europe known for its dark cherry and blackberry flavors with violet"
+ASK4-045,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Schwarzriesling originates from Champagne, France. It is known for its soft red fruit, gentle tannins, and juicy acidity"
+ASK4-046,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Petit Verdot grape is known for being a deeply coloured Bordeaux grape that ripens late and needs warmth. It has a f
+ASK4-047,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The body level recorded for Verdelho is medium-bodied. This means it has a balanced weight to the palate. It is a zesty 
+ASK4-048,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The acidity level for Portugieser is moderate. This means it has a noticeable level of tartness that keeps the wine bala
+ASK4-049,3,supported,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Weingut Müller is in Kremstal, Lower Austria, Austria."
+ASK4-050,3,supported,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"The aromas recorded for Pinotage include pepper, coffee, smoke, strawberry, and red plum. This grape has a full body, mo"
+ASK4-051,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Sangiovese is actually medium-bodied, not light-bodied. It has medium acidity and firm tannins, which suit it well with "
+ASK4-052,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, the information I have suggests that Dornfelder has moderate acidity. It is a German red grape bred for deep color a"
+ASK4-053,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Not quite. Pinot Gris has no tannins, which means it is very smooth. It is known for aromas like spice, almond, honey, r"
+ASK4-054,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Zinfandel can have a body ranging from light to very full-bodied depending on the style. The grape itself is known for h
+ASK4-055,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Gamay has high acidity. The information I have tells us that Gamay is known for having high acidity, not low acidity"
+ASK4-056,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Merlot has moderate tannins, which means they are not very harsh. This makes it a softer red wine that is easy to drink."
+ASK4-057,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Touriga Nacional is actually described as having a very full body. It has medium acidity and very firm tannins. The arom
+ASK4-058,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't quite agree with the information I have. Elbling is known for having very high acidity, not low acidity"
+ASK4-059,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Not quite. Riesling generally has no tannins, which means it lacks those firm structures found in some other wines. Inst"
+ASK4-060,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,St. Laurent is described as having a medium to full body. It also has moderate acidity and moderate tannins. It is known
+ASK4-061,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Gutedel has moderate acidity, not low. It is described as a gentle, light German white with moderate acidity and no tann"
+ASK4-062,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Touriga Franca has moderate tannins, not none at all. These tannins give the wine a silky texture. It also has bright ac"
+ASK4-063,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Alicante Bouschet is actually full-bodied. It has moderate acidity and firm tannins, and its aromas are herbs, peppe"
+ASK4-064,3,false_claim,WINE_DISCUSSION,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,FAIL,FAIL,"Kotlin replied before Gemma was asked (winery list, not the grape answer)","Weingut Kerner is in Weinviertel, Lower Austria, Austria."
+ASK4-065,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"That's not quite right. Grenache Noir has moderate tannins, which means it has some structure in the wine. Think of tann"
+ASK4-066,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Grüner Veltliner is described as having a medium body. It is known for its high acidity and a lack of tannin. The aromas
+ASK4-067,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Castelão has moderate acidity. It is described as a juicy red from southern Portugal with moderate acidity and moderate 
+ASK4-068,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, Barbera has low tannins, which means the tannins in this wine are soft. It is known for being a juicy red with livel"
+ASK4-069,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,The Rkatsiteli grape is described as having a medium body. It also has very high acidity and no tannin. You can expect c
+ASK4-070,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't agree with the information I have. Mourvèdre is known for having high acidity. This means the wine will"
+ASK4-071,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,Macabeo is known for having no tannins. It is a versatile Spanish white that can be fresh and fruity or nutty and layere
+ASK4-072,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Parellada is light-bodied. It has high acidity and no tannin. Its aromas include aniseed, white flowers, citrus, pear, a"
+ASK4-073,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"No, that doesn't quite agree with what I know about Negroamaro. The grape has low acidity, which means it doesn't have a"
+ASK4-074,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Vermentino is known for having no tannins. It is a sunny seaside white with a briny, ocean-air edge, offering aromas of "
+ASK4-075,3,false_claim,WINE_DISCUSSION,WINE_DISCUSSION,GEMMA,GEMMA,REVIEW,REVIEW,,"Carménère is actually full-bodied, not light-bodied. It has low acidity and firm but velvety tannins that are softer tha"
+ASK4-076,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-077,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-078,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-079,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-080,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-081,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-082,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-083,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-084,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-085,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-086,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-087,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-088,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-089,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-090,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-091,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-092,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-093,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-094,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-095,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-096,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-097,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-098,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-099,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."
+ASK4-100,3,no_information,KOTLIN_REFUSAL,KOTLIN_REFUSAL,KOTLIN_LOOKUP_REFUSAL,KOTLIN,PASS,PASS,,"I'm sorry, I do not have that information."

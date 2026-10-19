@@ -1,0 +1,108 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Grape Eval v4</title><style>
+:root{color-scheme:light;--surface:#fcfcfb;--bg:#f6f5f2;--text:#0b0b0b;--text2:#52514e;--text3:#7a7873;--grid:#e6e4de;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--k1:#184f94;--on-k1:#fff;--k2:#2a78d6;--k3:#a9c8f0;--okbg:#e3f3ea;--okfg:#0b5b3a;--pbg:#fdf0cf;--pfg:#7a5200;--bbg:#fbe0df;--bfg:#9a1f1e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--surface:#1a1a19;--bg:#121211;--text:#f0efec;--text2:#c3c2b7;--text3:#9a998f;--grid:#2e2e2b;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--k1:#6fa8ee;--on-k1:#0b0b0b;--k2:#3987e5;--k3:#2b4a74;--okbg:#17382a;--okfg:#8fd9b4;--pbg:#3d3213;--pfg:#f0c860;--bbg:#4a1d1d;--bfg:#f1a3a2}}
+:root[data-theme="dark"]{color-scheme:dark;--surface:#1a1a19;--bg:#121211;--text:#f0efec;--text2:#c3c2b7;--text3:#9a998f;--grid:#2e2e2b;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--k1:#6fa8ee;--on-k1:#0b0b0b;--k2:#3987e5;--k3:#2b4a74;--okbg:#17382a;--okfg:#8fd9b4;--pbg:#3d3213;--pfg:#f0c860;--bbg:#4a1d1d;--bfg:#f1a3a2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,system-ui,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 56px}h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 4px}
+p.lead{color:var(--text2);margin:0 0 20px}section{background:var(--surface);border:1px solid var(--grid);border-radius:12px;padding:18px 18px 14px;margin:0 0 16px}
+section p{color:var(--text2);margin:0 0 12px;font-size:14px}svg{width:100%;height:auto;display:block}
+.t1{fill:var(--text);font-size:13px}.t2{fill:var(--text2);font-size:12px}.t3{fill:var(--text3);font-size:11px}.seg{font-size:13px;font-weight:600}.num{font-variant-numeric:tabular-nums}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--grid);stroke-width:2}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 8px;border-top:1px solid var(--grid);text-align:left;vertical-align:top}thead th{border-top:0;color:var(--text2);font-weight:600}
+tbody th{font-weight:500;color:var(--text)}td.id{font-variant-numeric:tabular-nums;color:var(--text2)}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;white-space:nowrap}.ok{background:var(--okbg);color:var(--okfg)}.part{background:var(--pbg);color:var(--pfg)}.bad{background:var(--bbg);color:var(--bfg)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.tile{border:1px solid var(--grid);border-radius:10px;padding:10px 12px}.tile b{display:block;font-size:24px;line-height:1.2}.tile span{color:var(--text2);font-size:12px}
+@media(max-width:600px){.tiles{grid-template-columns:repeat(2,1fr)}.wide{overflow-x:auto}}
+.note{font-size:12.5px;color:var(--text2)}
+ .note{font-size:12.5px;color:var(--text2)} td.n{font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap}
+:root{--on-k2:#fff}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--on-k2:#0b0b0b}}</style></head><body><main>
+<h1>Grape profile eval v4: 100 varied questions, 3 runs</h1>
+<p class="lead">50 answerable, 25 false-claim and 25 unsupported questions across 67 grapes. The three runs used the same prompt and app build, and 99 of 100 answers were identical, so the runs repeat rather than add evidence.</p>
+<section><h2>Where the model stands</h2><p>The axis starts at 70%. Blue is what the user sees; orange is only the answers Gemma wrote, which leaves out the app's own refusals and winery replies.</p><svg viewBox="0 0 780 318" role="img" aria-label="Dot plot of app-level and Gemma-only metrics, axis 70 to 100 percent">
+<circle cx="180" cy="22" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/><text x="192" y="26" class="t2">Whole app (what the user sees)</text>
+<circle cx="410" cy="22" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"/><text x="422" y="26" class="t2">Gemma-written answers only</text>
+<text x="630" y="26" class="t2">App · Gemma only</text>
+<line x1="300.0" y1="50" x2="300.0" y2="270" class="grid"/><text x="300.0" y="290" text-anchor="middle" class="t3">70%</text>
+<line x1="400.0" y1="50" x2="400.0" y2="270" class="grid"/><text x="400.0" y="290" text-anchor="middle" class="t3">80%</text>
+<line x1="500.0" y1="50" x2="500.0" y2="270" class="grid"/><text x="500.0" y="290" text-anchor="middle" class="t3">90%</text>
+<line x1="600.0" y1="50" x2="600.0" y2="270" class="grid"/><text x="600.0" y="290" text-anchor="middle" class="t3">100%</text>
+<text x="282" y="68" text-anchor="end" class="t1">Decision accuracy, what the user sees</text><line x1="300" y1="64" x2="600" y2="64" class="axis"/>
+<circle cx="510.0" cy="64" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Decision accuracy, what the user sees: 91.0%</title></circle>
+<text x="630" y="68" class="t1 num">91.0 · n/a</text>
+<text x="282" y="112" text-anchor="end" class="t1">Answers fully correct</text><line x1="300" y1="108" x2="600" y2="108" class="axis"/>
+<circle cx="460.0" cy="104" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Answers fully correct: 86.0%</title></circle>
+<circle cx="524.2" cy="112" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Answers fully correct, Gemma only: 92.4%</title></circle>
+<text x="630" y="112" class="t1 num">86.0 · 92.4</text>
+<text x="282" y="156" text-anchor="end" class="t1">Claim precision (nothing unsupported)</text><line x1="300" y1="152" x2="600" y2="152" class="axis"/>
+<circle cx="556.9" cy="148" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Claim precision (nothing unsupported): 95.7%</title></circle>
+<circle cx="595.5" cy="156" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Claim precision (nothing unsupported), Gemma only: 99.6%</title></circle>
+<text x="630" y="156" class="t1 num">95.7 · 99.6</text>
+<text x="282" y="200" text-anchor="end" class="t1">Claim recall (required fields covered)</text><line x1="300" y1="196" x2="600" y2="196" class="axis"/>
+<circle cx="436.7" cy="192" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Claim recall (required fields covered): 83.7%</title></circle>
+<circle cx="564.7" cy="200" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Claim recall (required fields covered), Gemma only: 96.5%</title></circle>
+<text x="630" y="200" class="t1 num">83.7 · 96.5</text>
+<text x="282" y="244" text-anchor="end" class="t1">Claim F1</text><line x1="300" y1="240" x2="600" y2="240" class="axis"/>
+<circle cx="492.8" cy="236" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Claim F1: 89.3%</title></circle>
+<circle cx="579.9" cy="244" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Claim F1, Gemma only: 98.0%</title></circle>
+<text x="630" y="244" class="t1 num">89.3 · 98.0</text>
+</svg></section>
+<section><h2>Results by question type</h2><p>Every comparison, body, acidity, aroma and origin question was fully correct. Of the 15 full descriptions, 9 are fully correct and 4 are Kotlin's (reply-check refusals and the winery reply). Most ageing and summary failures are also Kotlin's.</p><svg viewBox="0 0 680 402" role="img" aria-label="Stacked bars of fully correct, partial and zero answers by question type">
+<rect x="170" y="6" width="14" height="14" rx="3" fill="var(--k3)"/><text x="190" y="18" class="t2">Fully correct (2)</text>
+<rect x="320" y="6" width="14" height="14" rx="3" fill="var(--k2)"/><text x="340" y="18" class="t2">Partial (1)</text>
+<rect x="470" y="6" width="14" height="14" rx="3" fill="var(--k1)"/><text x="490" y="18" class="t2">Zero (0)</text>
+<text x="156" y="53" text-anchor="end" class="t1">Full description (15)</text>
+<rect x="170.0" y="36" width="196.0" height="24" rx="4" fill="var(--k3)"><title>9</title></rect><text x="268.0" y="53" text-anchor="middle" class="seg" fill="var(--text)">9</text>
+<rect x="368.0" y="36" width="42.0" height="24" rx="4" fill="var(--k2)"><title>2</title></rect><text x="389.0" y="53" text-anchor="middle" class="seg" fill="var(--on-k2)">2</text>
+<rect x="412.0" y="36" width="86.0" height="24" rx="4" fill="var(--k1)"><title>4</title></rect><text x="455.0" y="53" text-anchor="middle" class="seg" fill="var(--on-k1)">4</text>
+<text x="156" y="85" text-anchor="end" class="t1">Summary (3)</text>
+<rect x="170.0" y="68" width="218.0" height="24" rx="4" fill="var(--k2)"><title>2</title></rect><text x="279.0" y="85" text-anchor="middle" class="seg" fill="var(--on-k2)">2</text>
+<rect x="390.0" y="68" width="108.0" height="24" rx="4" fill="var(--k1)"><title>1</title></rect><text x="444.0" y="85" text-anchor="middle" class="seg" fill="var(--on-k1)">1</text>
+<text x="156" y="117" text-anchor="end" class="t1">Ageing (3)</text>
+<rect x="170.0" y="100" width="108.0" height="24" rx="4" fill="var(--k2)"><title>1</title></rect><text x="224.0" y="117" text-anchor="middle" class="seg" fill="var(--on-k2)">1</text>
+<rect x="280.0" y="100" width="218.0" height="24" rx="4" fill="var(--k1)"><title>2</title></rect><text x="389.0" y="117" text-anchor="middle" class="seg" fill="var(--on-k1)">2</text>
+<text x="156" y="149" text-anchor="end" class="t1">Tannin (4)</text>
+<rect x="170.0" y="132" width="245.5" height="24" rx="4" fill="var(--k3)"><title>3</title></rect><text x="292.8" y="149" text-anchor="middle" class="seg" fill="var(--text)">3</text>
+<rect x="417.5" y="132" width="80.5" height="24" rx="4" fill="var(--k1)"><title>1</title></rect><text x="457.8" y="149" text-anchor="middle" class="seg" fill="var(--on-k1)">1</text>
+<text x="156" y="181" text-anchor="end" class="t1">Aromas (4)</text>
+<rect x="170.0" y="164" width="328.0" height="24" rx="4" fill="var(--k3)"><title>4</title></rect><text x="334.0" y="181" text-anchor="middle" class="seg" fill="var(--text)">4</text>
+<text x="156" y="213" text-anchor="end" class="t1">Body (4)</text>
+<rect x="170.0" y="196" width="328.0" height="24" rx="4" fill="var(--k3)"><title>4</title></rect><text x="334.0" y="213" text-anchor="middle" class="seg" fill="var(--text)">4</text>
+<text x="156" y="245" text-anchor="end" class="t1">Acidity (4)</text>
+<rect x="170.0" y="228" width="328.0" height="24" rx="4" fill="var(--k3)"><title>4</title></rect><text x="334.0" y="245" text-anchor="middle" class="seg" fill="var(--text)">4</text>
+<text x="156" y="277" text-anchor="end" class="t1">Origin (3)</text>
+<rect x="170.0" y="260" width="328.0" height="24" rx="4" fill="var(--k3)"><title>3</title></rect><text x="334.0" y="277" text-anchor="middle" class="seg" fill="var(--text)">3</text>
+<text x="156" y="309" text-anchor="end" class="t1">Comparison (10)</text>
+<rect x="170.0" y="292" width="328.0" height="24" rx="4" fill="var(--k3)"><title>10</title></rect><text x="334.0" y="309" text-anchor="middle" class="seg" fill="var(--text)">10</text>
+<text x="156" y="341" text-anchor="end" class="t1">False claims (25)</text>
+<rect x="170.0" y="324" width="314.8" height="24" rx="4" fill="var(--k3)"><title>24</title></rect><text x="327.4" y="341" text-anchor="middle" class="seg" fill="var(--text)">24</text>
+<rect x="486.8" y="324" width="11.2" height="24" rx="4" fill="var(--k1)"><title>1</title></rect>
+<text x="156" y="373" text-anchor="end" class="t1">Unsupported (25)</text>
+<rect x="170.0" y="356" width="328.0" height="24" rx="4" fill="var(--k3)"><title>25</title></rect><text x="334.0" y="373" text-anchor="middle" class="seg" fill="var(--text)">25</text>
+</svg></section>
+<section><h2>What cost points, and who owns them</h2><p>Gemma is graded only on facts Kotlin supplied, and every required fact was in the supplied context. Kotlin's failures are scored to Kotlin: all 9 zeros. Gemma owns 5 answers in run 1 (4 in runs 2 and 3), and none is a zero. Ageing and origin may be dropped from a description because of the six-sentence limit, but not when the question asks about that field.</p><div class="wide"><table><thead><tr><th>Cause</th><th>Owner</th><th>Questions</th><th>Which</th><th>Grade</th></tr></thead><tbody><tr><td>Reply check replaced a good answer with a refusal</td><td>Kotlin</td><td class="n">6</td><td>ASK4-005 Parellada, 006 Negroamaro, 007 Vermentino, 030 Pinot Noir ageing, 037 Albariño ageing, 039 Scheurebe summary</td><td class="n">0</td></tr>
+<tr><td>Winery list instead of the grape answer</td><td>Kotlin</td><td class="n">3</td><td>ASK4-015 Carignan, 049 Müller-Thurgau, 064 Kerner</td><td class="n">0</td></tr>
+<tr><td>Description left out core fields Kotlin supplied</td><td>Gemma (omission)</td><td class="n">2 (1 in runs 2 and 3)</td><td>ASK4-008 Carménère: no body or acidity; ASK4-001 Barbera, run 1 only</td><td class="n">1</td></tr>
+<tr><td>Summary only partly covered</td><td>Gemma (omission)</td><td class="n">2</td><td>ASK4-032 Cabernet Sauvignon, 046 Petit Verdot</td><td class="n">1</td></tr>
+<tr><td>Ageing wording shifts the meaning</td><td>Gemma (error)</td><td class="n">1</td><td>ASK4-044 Blaufränkisch: &quot;enjoyed after 8 to 15 years&quot;</td><td class="n">1</td></tr>
+<tr><td>Seven sentences, over the limit of six</td><td>Gemma (format)</td><td class="n">1</td><td>ASK4-013 Pinot Blanc; the content is correct</td><td class="n">2, flagged</td></tr></tbody></table></div></section>
+<section><h2>All numbers</h2><div class="wide"><table><thead><tr><th></th><th>Run 1</th><th>Run 2</th><th>Run 3</th></tr></thead><tbody><tr><th scope="row">Decision seen by user: accuracy / precision / recall / F1</th><td>91 / 100 / 88 / 93.6</td><td>91 / 100 / 88 / 93.6</td><td>91 / 100 / 88 / 93.6</td></tr>
+<tr><th scope="row">Fully correct (2) / partial (1) / zero (0)</th><td>86 / 5 / 9</td><td>87 / 4 / 9</td><td>87 / 4 / 9</td></tr>
+<tr><th scope="row">Gemma-written answers fully correct</th><td>61 of 66 (92.4%)</td><td>62 of 66 (93.9%)</td><td>62 of 66 (93.9%)</td></tr>
+<tr><th scope="row">Gemma-only claim precision / recall / F1</th><td>99.6% / 96.5% / 98.0%</td><td>99.6% / 97.6% / 98.6%</td><td>99.6% / 97.6% / 98.6%</td></tr>
+<tr><th scope="row">Weighted score (partial = half)</th><td>88.5%</td><td>89.0%</td><td>89.0%</td></tr>
+<tr><th scope="row">Claim precision (whole app)</th><td>95.7% (10 of 232)</td><td>95.7% (10 of 233)</td><td>95.7% (10 of 233)</td></tr>
+<tr><th scope="row">Claim recall (whole app)</th><td>83.7% (32 of 196 missed)</td><td>84.7% (30 of 196 missed)</td><td>84.7% (30 of 196 missed)</td></tr>
+<tr><th scope="row">Claim F1 (whole app)</th><td>89.3%</td><td>89.9%</td><td>89.9%</td></tr>
+<tr><th scope="row">Median time to first word</th><td>396 ms</td><td>409 ms</td><td>464 ms</td></tr>
+<tr><th scope="row">Median / slowest 5% full reply</th><td>4.3 s / 7.4 s</td><td>4.4 s / 7.6 s</td><td>5.7 s / 10.1 s</td></tr>
+<tr><th scope="row">Answers over 6 sentences</th><td>1 (ASK4-013)</td><td>1 (ASK4-013)</td><td>1 (ASK4-013)</td></tr></tbody></table></div>
+<p class="note" style="margin-top:12px">Grades follow the 2/1/0 marker: 2 = covers what the question asked for, with nothing wrong, missed or invented; 1 = partly right, with something wrong, invented or missed; 0 = most or all of the answer is wrong, invented or missed. Gemma does not lose a point for leaving out facts Kotlin did not supply. For a full description, the five core fields (summary, body, acidity, tannin, aromas) earn a 2; ageing and origin may be dropped within the six-sentence limit. If a question asks about a field and Kotlin supplied it, leaving it out counts against Gemma. The run log's route check reports 97% because it misses the 6 reply-check refusals; it is not the decision accuracy. Claim metrics count sentences and required fields over the 75 answerable questions. Run 1 differs from runs 2 and 3 only in ASK4-001.</p>
+<p class="note"><b>Caveat:</b> these grades are Claude's reading of each answer against its context. They have not had the blind human check that v3 had.</p></section>
+<section><h2>Confidence intervals</h2><p>95% Wilson ranges for one set of 100 questions. The three runs give almost identical answers, so they do not tighten the intervals, and the questions share templates, so treat the ranges as optimistic. The Gemma-written and whole-app ranges overlap, so that gap is suggestive rather than proven.</p><div class="wide"><table><thead><tr><th>Measure</th><th>Run 1</th><th>95% interval</th><th>Runs 2 and 3</th><th>95% interval</th></tr></thead><tbody>
+<tr><th scope="row">Decision accuracy (what the user sees)</th><td>91 of 100</td><td>84–95%</td><td>91 of 100</td><td>84–95%</td></tr>
+<tr><th scope="row">Decision recall</th><td>66 of 75</td><td>79–94%</td><td>66 of 75</td><td>79–94%</td></tr>
+<tr><th scope="row">Fully correct, whole app</th><td>86 of 100</td><td>78–91%</td><td>87 of 100</td><td>79–92%</td></tr>
+<tr><th scope="row">Fully correct, Gemma-written answers</th><td>61 of 66</td><td>83–97%</td><td>62 of 66</td><td>85–98%</td></tr>
+<tr><th scope="row">Unsupported questions refused</th><td>25 of 25</td><td>87–100%</td><td>25 of 25</td><td>87–100%</td></tr>
+</tbody></table></div></section>
+</main></body></html>

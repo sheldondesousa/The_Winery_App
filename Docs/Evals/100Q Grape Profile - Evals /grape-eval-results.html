@@ -1,0 +1,115 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grape Profile Eval</title>
+<style>
+:root{color-scheme:light;--surface:#fcfcfb;--bg:#f6f5f2;--text:#0b0b0b;--text2:#52514e;--text3:#7a7873;--grid:#e6e4de;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--k1:#184f94;--on-k1:#fff;--k2:#2a78d6;--k3:#a9c8f0;--okbg:#e3f3ea;--okfg:#0b5b3a;--pbg:#fdf0cf;--pfg:#7a5200;--bbg:#fbe0df;--bfg:#9a1f1e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--surface:#1a1a19;--bg:#121211;--text:#f0efec;--text2:#c3c2b7;--text3:#9a998f;--grid:#2e2e2b;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--k1:#6fa8ee;--on-k1:#0b0b0b;--k2:#3987e5;--k3:#2b4a74;--okbg:#17382a;--okfg:#8fd9b4;--pbg:#3d3213;--pfg:#f0c860;--bbg:#4a1d1d;--bfg:#f1a3a2}}
+:root[data-theme="dark"]{color-scheme:dark;--surface:#1a1a19;--bg:#121211;--text:#f0efec;--text2:#c3c2b7;--text3:#9a998f;--grid:#2e2e2b;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--k1:#6fa8ee;--on-k1:#0b0b0b;--k2:#3987e5;--k3:#2b4a74;--okbg:#17382a;--okfg:#8fd9b4;--pbg:#3d3213;--pfg:#f0c860;--bbg:#4a1d1d;--bfg:#f1a3a2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,system-ui,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 56px}h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 4px}
+p.lead{color:var(--text2);margin:0 0 20px}section{background:var(--surface);border:1px solid var(--grid);border-radius:12px;padding:18px 18px 14px;margin:0 0 16px}
+section p{color:var(--text2);margin:0 0 12px;font-size:14px}svg{width:100%;height:auto;display:block}
+.t1{fill:var(--text);font-size:13px}.t2{fill:var(--text2);font-size:12px}.t3{fill:var(--text3);font-size:11px}.seg{font-size:13px;font-weight:600}.num{font-variant-numeric:tabular-nums}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--grid);stroke-width:2}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 8px;border-top:1px solid var(--grid);text-align:left;vertical-align:top}thead th{border-top:0;color:var(--text2);font-weight:600}
+tbody th{font-weight:500;color:var(--text)}td.id{font-variant-numeric:tabular-nums;color:var(--text2)}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;white-space:nowrap}.ok{background:var(--okbg);color:var(--okfg)}.part{background:var(--pbg);color:var(--pfg)}.bad{background:var(--bbg);color:var(--bfg)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.tile{border:1px solid var(--grid);border-radius:10px;padding:10px 12px}.tile b{display:block;font-size:24px;line-height:1.2}.tile span{color:var(--text2);font-size:12px}
+@media(max-width:600px){.tiles{grid-template-columns:repeat(2,1fr)}.wide{overflow-x:auto}}
+.note{font-size:12.5px;color:var(--text2)}
+</style></head><body><main>
+<h1>Grape profile eval: 3 rounds of 100 questions</h1>
+<p class="lead">Same 100 questions each round (50 factual, 25 false claims, 25 unsupported). Every answer was checked against the context Kotlin supplied.</p>
+<section><h2>Where the model stands</h2><p>Dots show each round; the axis starts at 85% because everything scores high. Exact numbers are at the right and in the table below.</p>
+<svg viewBox="0 0 780 374" role="img" aria-label="Dot plot of six metrics for rounds 1 to 3, axis 85 to 100 percent">
+<circle cx="300" cy="22" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/><text x="312" y="26" class="t2">Round 1</text>
+<circle cx="392" cy="22" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"/><text x="404" y="26" class="t2">Round 2</text>
+<circle cx="484" cy="22" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"/><text x="496" y="26" class="t2">Round 3</text>
+<text x="644" y="26" class="t2">R1 · R2 · R3</text>
+<line x1="300.0" y1="50" x2="300.0" y2="326" class="grid"/><text x="300.0" y="346" text-anchor="middle" class="t3">85%</text>
+<line x1="403.3333333333333" y1="50" x2="403.3333333333333" y2="326" class="grid"/><text x="403.3333333333333" y="346" text-anchor="middle" class="t3">90%</text>
+<line x1="506.66666666666663" y1="50" x2="506.66666666666663" y2="326" class="grid"/><text x="506.66666666666663" y="346" text-anchor="middle" class="t3">95%</text>
+<line x1="610.0" y1="50" x2="610.0" y2="326" class="grid"/><text x="610.0" y="346" text-anchor="middle" class="t3">100%</text>
+<text x="282" y="68" text-anchor="end" class="t1">Decision accuracy (answer vs decline)</text>
+<line x1="300" y1="64" x2="610" y2="64" class="axis"/>
+<circle cx="589.3" cy="58" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Round 1: 99.0%</title></circle>
+<circle cx="610.0" cy="64" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Round 2: 100.0%</title></circle>
+<circle cx="610.0" cy="70" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Round 3: 100.0%</title></circle>
+<text x="644" y="68" class="t1 num">99.0 · 100.0 · 100.0</text>
+<text x="282" y="114" text-anchor="end" class="t1">Answers correct, all 100 (strict)</text>
+<line x1="300" y1="110" x2="610" y2="110" class="axis"/>
+<circle cx="444.7" cy="104" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Round 1: 92.0%</title></circle>
+<circle cx="527.3" cy="110" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Round 2: 96.0%</title></circle>
+<circle cx="548.0" cy="116" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Round 3: 97.0%</title></circle>
+<text x="644" y="114" class="t1 num">92.0 · 96.0 · 97.0</text>
+<text x="282" y="160" text-anchor="end" class="t1">Answers correct, Gemma-written only</text>
+<line x1="300" y1="156" x2="610" y2="156" class="axis"/>
+<circle cx="426.9" cy="150" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Round 1: 91.1%</title></circle>
+<circle cx="499.8" cy="156" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Round 2: 94.7%</title></circle>
+<circle cx="527.3" cy="162" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Round 3: 96.0%</title></circle>
+<text x="644" y="160" class="t1 num">91.1 · 94.7 · 96.0</text>
+<text x="282" y="206" text-anchor="end" class="t1">Claim precision (nothing unsupported)</text>
+<line x1="300" y1="202" x2="610" y2="202" class="axis"/>
+<circle cx="547.4" cy="196" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Round 1: 97.0%</title></circle>
+<circle cx="548.9" cy="202" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Round 2: 97.0%</title></circle>
+<circle cx="583.8" cy="208" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Round 3: 98.7%</title></circle>
+<text x="644" y="206" class="t1 num">97.0 · 97.0 · 98.7</text>
+<text x="282" y="252" text-anchor="end" class="t1">Claim recall (required facts used)</text>
+<line x1="300" y1="248" x2="610" y2="248" class="axis"/>
+<circle cx="525.3" cy="242" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Round 1: 95.9%</title></circle>
+<circle cx="542.2" cy="248" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Round 2: 96.7%</title></circle>
+<circle cx="610.0" cy="254" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Round 3: 100.0%</title></circle>
+<text x="644" y="252" class="t1 num">95.9 · 96.7 · 100.0</text>
+<text x="282" y="298" text-anchor="end" class="t1">Claim F1</text>
+<line x1="300" y1="294" x2="610" y2="294" class="axis"/>
+<circle cx="536.3" cy="288" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>Round 1: 96.4%</title></circle>
+<circle cx="545.6" cy="294" r="6" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>Round 2: 96.9%</title></circle>
+<circle cx="596.8" cy="300" r="6" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Round 3: 99.4%</title></circle>
+<text x="644" y="298" class="t1 num">96.4 · 96.9 · 99.4</text>
+</svg></section>
+<section><h2>What went wrong, by round</h2><p>Answers that were not fully correct. Round 3 has the fewest, but the same questions fail in different rounds.</p>
+<svg viewBox="0 0 680 182" role="img" aria-label="Stacked bars of non-correct answers per round">
+<rect x="90" y="8" width="14" height="14" rx="3" fill="var(--k1)"/><text x="110" y="20" class="t2">Zero: wrong or no answer</text>
+<rect x="300" y="8" width="14" height="14" rx="3" fill="var(--k3)"/><text x="320" y="20" class="t2">Partial (1)</text>
+<text x="76" y="63" text-anchor="end" class="t1">Round 1</text>
+<rect x="90" y="44" width="40" height="30" rx="4" fill="var(--k1)"><title>Zero: wrong or no answer: 1</title></rect><text x="110.0" y="64" text-anchor="middle" class="seg" fill="var(--on-k1)">1</text>
+<rect x="132" y="44" width="292" height="30" rx="4" fill="var(--k3)"><title>Partial (1): 7</title></rect><text x="278.0" y="64" text-anchor="middle" class="seg" fill="var(--text)">7</text>
+<text x="434" y="64" class="t2">8 of 100 not fully correct</text>
+<text x="76" y="107" text-anchor="end" class="t1">Round 2</text>
+<rect x="90" y="88" width="40" height="30" rx="4" fill="var(--k1)"><title>Zero: wrong or no answer: 1</title></rect><text x="110.0" y="108" text-anchor="middle" class="seg" fill="var(--on-k1)">1</text>
+<rect x="132" y="88" width="124" height="30" rx="4" fill="var(--k3)"><title>Partial (1): 3</title></rect><text x="194.0" y="108" text-anchor="middle" class="seg" fill="var(--text)">3</text>
+<text x="266" y="108" class="t2">4 of 100 not fully correct</text>
+<text x="76" y="151" text-anchor="end" class="t1">Round 3</text>
+<rect x="90" y="132" width="124" height="30" rx="4" fill="var(--k3)"><title>Partial (1): 3</title></rect><text x="152.0" y="152" text-anchor="middle" class="seg" fill="var(--text)">3</text>
+<text x="224" y="152" class="t2">3 of 100 not fully correct</text>
+</svg></section>
+<section><h2>Consistency across rounds</h2>
+<div class="tiles"><div class="tile"><b>89</b><span>correct in all 3 rounds</span></div><div class="tile"><b>7</b><span>correct in 2 of 3</span></div><div class="tile"><b>4</b><span>correct in 1 of 3</span></div><div class="tile"><b>0</b><span>never fully correct</span></div></div>
+<p style="margin-top:12px">Answers are worded differently every round (almost none are identical), so a single run can miss or catch these.</p>
+<div class="wide"><table><thead><tr><th>#</th><th>What happened</th><th>R1</th><th>R2</th><th>R3</th></tr></thead><tbody>
+<tr><td class="id">004</td><td>Syrah vs Shiraz: R1 said different grapes; R2 implied they are different. R3 is OK because Kotlin never states they are the same grape</td><td><span class="chip part">Partial</span></td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">005</td><td>Vermentino vs Arinto acidity: R1 got both levels but said it could not compare; R2 called Vermentino &quot;very high&quot; (0)</td><td><span class="chip part">Partial</span></td><td><span class="chip bad">Wrong</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">020</td><td>Garnacha false claim: R1 returned a Kotlin winery list instead of an answer</td><td><span class="chip bad">No answer</span></td><td><span class="chip ok">OK</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">021</td><td>Merlot body: R1 and R2 invented &quot;Cabernet Sauvignon Blanc&quot;</td><td><span class="chip part">Partial</span></td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">036</td><td>Merlot acidity: R2 invented &quot;Cabernet Sauvignon Blanc&quot;</td><td><span class="chip ok">OK</span></td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">051</td><td>Merlot tannin: R1 and R3 invented &quot;Cabernet Sauvignon Blanc&quot;</td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td><td><span class="chip part">Partial</span></td></tr>
+<tr><td class="id">076</td><td>&quot;zenvaril&quot; (unknown): R1 said it can only talk about wine instead of saying it has no information</td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">077</td><td>&quot;molvessa&quot; (unknown): R1 treated it as the bottle and answered about Merlot</td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">078</td><td>&quot;ravnexia&quot; (unknown): R1 treated it as the bottle and answered about Merlot</td><td><span class="chip part">Partial</span></td><td><span class="chip ok">OK</span></td><td><span class="chip ok">OK</span></td></tr>
+<tr><td class="id">083</td><td>Cabernet Sauvignon light-bodied claim: R3 contains a garbled word, &quot;blackcurrantena&quot;</td><td><span class="chip ok">OK</span></td><td><span class="chip ok">OK</span></td><td><span class="chip part">Partial</span></td></tr>
+<tr><td class="id">094</td><td>Mourvèdre light-bodied claim: R3 put Bandol in Spain (it is in Provence)</td><td><span class="chip ok">OK</span></td><td><span class="chip ok">OK</span></td><td><span class="chip part">Partial</span></td></tr>
+</tbody></table></div></section>
+<section><h2>All numbers</h2><div class="wide"><table><thead><tr><th></th><th>Round 1</th><th>Round 2</th><th>Round 3</th></tr></thead><tbody>
+<tr><th scope="row">Decision: accuracy / precision / recall / F1</th><td>99 / 100 / 98.7 / 99.3</td><td>100 / 100 / 100.0 / 100.0</td><td>100 / 100 / 100.0 / 100.0</td></tr>
+<tr><th scope="row">Answers fully correct (of 100)</th><td>92  (85–96%)</td><td>96  (90–98%)</td><td>97  (92–99%)</td></tr>
+<tr><th scope="row">Weighted score (partial = half)</th><td>95.5%</td><td>97.5%</td><td>98.5%</td></tr>
+<tr><th scope="row">Gemma-written answers fully correct</th><td>72 of 79</td><td>71 of 75</td><td>72 of 75</td></tr>
+<tr><th scope="row">Claim precision (unsupported sentences)</th><td>97.0%  (6 of 198)</td><td>97.0%  (6 of 203)</td><td>98.7%  (3 of 237)</td></tr>
+<tr><th scope="row">Claim recall (required facts missed)</th><td>95.9%  (5 of 122)</td><td>96.7%  (4 of 122)</td><td>100.0%  (0 of 122)</td></tr>
+<tr><th scope="row">Claim F1</th><td>96.4%</td><td>96.9%</td><td>99.4%</td></tr>
+<tr><th scope="row">Answers with zero unsupported content (of 75)</th><td>70</td><td>70</td><td>72</td></tr>
+<tr><th scope="row">False claims corrected explicitly (of 25)</th><td>14</td><td>14</td><td>16</td></tr>
+<tr><th scope="row">Longest answer (sentences, limit 6)</th><td>4</td><td>4</td><td>4</td></tr>
+</tbody></table></div>
+<p class="note" style="margin-top:12px">Intervals are 95% Wilson ranges; questions share templates, so treat them as optimistic. Decision metrics count an unknown-name reply that acknowledges missing information as a correct decline. Claim metrics are counted per sentence over the 75 answerable questions (Kotlin refusals excluded), not per atomic claim. Tone was read, not scored: nothing impolite was seen.</p>
+<p class="note"><b>Grading:</b> 2 = all correct; 1 = partly right, with something wrong, invented or missed; 0 = mostly wrong, invented or missed. Grades are Claude's reading of each answer against its context, checked by a blind human review of 30 answers: 30 of 30 agree on correct vs not fully correct, 29 of 30 on exact 0/1/2.</p></section>
+</main></body></html>
