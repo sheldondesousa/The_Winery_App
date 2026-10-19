@@ -1,0 +1,101 @@
+id,category,question_type,knowledge_source,bottle,country,province,question,expected_answer
+ASK6-001,supported,body,internal,Castelão,Unknown,Unknown,What is the body of Castelão?,body: Medium-bodied
+ASK6-002,supported,body,internal,Müller-Thurgau,Unknown,Unknown,What body does Müller-Thurgau usually have?,body: Light-bodied
+ASK6-003,supported,body,internal,Tempranillo,Unknown,Unknown,How heavy does Tempranillo feel in the mouth?,body: Medium-bodied
+ASK6-004,supported,body,internal,Albariño,Unknown,Unknown,"Would you call Albariño light, medium or full?",body: Light-bodied
+ASK6-005,supported,acidity,internal,Corvina,Unknown,Unknown,What is the acidity of Corvina?,acidity: High
+ASK6-006,supported,acidity,internal,Scheurebe,Unknown,Unknown,Would Scheurebe taste sharp or soft?,acidity: High
+ASK6-007,supported,acidity,internal,Pinot Noir,Unknown,Unknown,How lively is the acidity in Pinot Noir?,acidity: High
+ASK6-008,supported,acidity,internal,Verdejo,Unknown,Unknown,Does Verdejo have bright acidity?,acidity: High
+ASK6-009,supported,tannin,internal,Arinto,Unknown,Unknown,How grippy is Arinto?,tannin: None
+ASK6-010,supported,tannin,internal,Cortese,Unknown,Unknown,Is Cortese tannic?,tannin: None
+ASK6-011,supported,tannin,internal,Negroamaro,Unknown,Unknown,What tannin level do you have for Negroamaro?,tannin: Firm
+ASK6-012,supported,tannin,internal,Portugieser,Unknown,Unknown,What is the tannin like in Portugieser?,tannin: Low
+ASK6-013,supported,aromas,internal,Blaufränkisch,Unknown,Unknown,Which scents show up in Blaufränkisch?,Aroma: earth; Aroma: violet; Aroma: black pepper; Aroma: blackberry; Aroma: black cherry
+ASK6-014,supported,aromas,internal,Assyrtiko,Unknown,Unknown,What are the main aromas of Assyrtiko?,Aroma: flint; Aroma: green apple; Aroma: sea salt; Aroma: wet stone; Aroma: lemon
+ASK6-015,supported,aromas,internal,Nero d'Avola,Unknown,Unknown,What can I smell in Nero d'Avola?,Aroma: pepper; Aroma: licorice; Aroma: dried herbs; Aroma: plum; Aroma: black cherry
+ASK6-016,supported,ageing_potential,internal,Touriga Nacional,Unknown,Unknown,What do you say about cellaring Touriga Nacional?,ageing_potential: Often keeps improving for ten to twenty years
+ASK6-017,supported,ageing_potential,internal,Macabeo,Unknown,Unknown,How many years can I keep Macabeo?,ageing_potential: Best enjoyed in the first 2–4 years
+ASK6-018,supported,ageing_potential,internal,Trebbiano Toscano,Unknown,Unknown,Will Trebbiano Toscano improve with age?,ageing_potential: Drink young
+ASK6-019,supported,origin,internal,Barbera,Unknown,Unknown,What country is Barbera from?,"origin: Piemonte (Piedmont), Italy"
+ASK6-020,supported,origin,internal,Alicante Bouschet,Unknown,Unknown,What is the birthplace of Alicante Bouschet?,origin: France
+ASK6-021,supported,summary,internal,Carignan,Unknown,Unknown,What is Carignan known for?,"summary: A dark, sturdy red that brings colour, acidity and tannin. Old vines give brambly fruit and savoury spice. Often a blending grape, but impressive alone when carefully made."
+ASK6-022,supported,summary,internal,Mencía,Unknown,Unknown,Give me the one-paragraph story of Mencía.,"summary: A fresh, mineral red from Spain's north-west. Cherry, raspberry and violet with herbal freshness and fine tannins. Vines on steep, slaty slopes give wines with real character."
+ASK6-023,supported,full_description,internal,Cabernet Sauvignon,Unknown,Unknown,Walk me through Cabernet Sauvignon.,"Summary meaning: Red wine's heavyweight, with deep colour, grippy tannins and a backbone built for ageing. It began in Bordeaux and now grows almost everywhere, tasting darker and plusher in warm places and leaner and more savoury in cool o"
+ASK6-024,supported,full_description,internal,Kerner,Unknown,Unknown,Describe Kerner to a beginner.,"Summary meaning: A fresh, fruity German white created by crossing Trollinger and Riesling. Lively acidity, apple, citrus and floral notes, light body. Easygoing and refreshing. Body: Light-bodied Acidity: High Tannin level/texture: None Aro"
+ASK6-025,supported,full_description,internal,Graševina,Unknown,Unknown,Tell me about the grape Graševina.,"Summary meaning: The white grape Croatians grow more than any other: fresh, citrusy and mineral, with apple and elderflower. Despite the name, it's no relation to German Riesling. Body: Light-bodied Acidity: High Tannin level/texture: None "
+ASK6-026,supported,full_description,internal,Malbec,Unknown,Unknown,I'd like a full picture of Malbec.,"Summary meaning: Deeply coloured, juicy and brimming with fruit. Argentine versions are plush and velvety with dark plum and blackberry, while those from Cahors in France are earthier and firmer. Hearty and easy to love. Body: Full-bodied A"
+ASK6-027,supported,comparison,internal,Zinfandel,Unknown,Unknown,Compare Zinfandel with Chenin Blanc on acidity.,Chenin Blanc: High acidity; Zinfandel: Medium acidity; Chenin Blanc has higher recorded acidity
+ASK6-028,supported,comparison,internal,Sangiovese,Unknown,Unknown,Contrast the acidity of Sangiovese and Parellada.,Parellada: High acidity; Sangiovese: Medium acidity; Parellada has higher recorded acidity
+ASK6-029,supported,comparison,internal,Schwarzriesling,Unknown,Unknown,"Which is higher in tannin, Schwarzriesling or Pinot Blanc?",Schwarzriesling: Low tannin; Pinot Blanc: None tannin; Schwarzriesling has higher recorded tannin
+ASK6-030,supported,comparison,internal,Shiraz / Syrah,Unknown,Unknown,Compare Shiraz / Syrah with Rkatsiteli on body.,Shiraz / Syrah: Very full-bodied body; Rkatsiteli: Medium-bodied body; Shiraz / Syrah has higher recorded body
+ASK6-031,false_claim,correct_body,internal,Riesling,Unknown,Unknown,"Riesling is full-bodied, isn't it?",Not quite. Riesling: body Very light-bodied.
+ASK6-032,false_claim,correct_body,internal,Sémillon,Unknown,Unknown,Someone told me Sémillon is very light-bodied. Correct?,Not quite. Sémillon: body Full-bodied.
+ASK6-033,false_claim,correct_body,internal,Grenache Noir,Unknown,Unknown,Can you confirm Grenache Noir is medium-bodied?,Not quite. Grenache Noir: body Very full-bodied.
+ASK6-034,false_claim,correct_body,internal,Sauvignon Blanc,Unknown,Unknown,Someone told me Sauvignon Blanc is full-bodied. Correct?,Not quite. Sauvignon Blanc: body Light-bodied.
+ASK6-035,false_claim,correct_body,internal,Roussanne,Unknown,Unknown,"Roussanne is light-bodied, isn't it?",Not quite. Roussanne: body Full-bodied.
+ASK6-036,false_claim,correct_acidity,internal,Malvasia,Unknown,Unknown,"Malvasia has high acidity, doesn't it?",Not quite. Malvasia: acidity Low.
+ASK6-037,false_claim,correct_acidity,internal,Agiorgitiko,Unknown,Unknown,Can you confirm Agiorgitiko has moderate acidity?,Not quite. Agiorgitiko: acidity High.
+ASK6-038,false_claim,correct_acidity,internal,Elbling,Unknown,Unknown,Someone told me Elbling has moderate acidity. Correct?,Not quite. Elbling: acidity Very high.
+ASK6-039,false_claim,correct_acidity,internal,Grüner Veltliner,Unknown,Unknown,Can you confirm Grüner Veltliner has moderate acidity?,Not quite. Grüner Veltliner: acidity High.
+ASK6-040,false_claim,correct_acidity,internal,Viognier,Unknown,Unknown,"Viognier has high acidity, doesn't it?",Not quite. Viognier: acidity Low.
+ASK6-041,false_claim,correct_tannin,internal,Verdicchio,Unknown,Unknown,"Verdicchio has firm tannins, doesn't it?",Not quite. Verdicchio: tannin None.
+ASK6-042,false_claim,correct_tannin,internal,Dornfelder,Unknown,Unknown,Someone told me Dornfelder has very firm tannins. Correct?,Not quite. Dornfelder: tannin Moderate.
+ASK6-043,false_claim,correct_tannin,internal,Mourvèdre,Unknown,Unknown,Can you confirm Mourvèdre has low tannins?,Not quite. Mourvèdre: tannin Firm.
+ASK6-044,false_claim,correct_tannin,internal,Bobal,Unknown,Unknown,"Bobal has very firm tannins, doesn't it?",Not quite. Bobal: tannin Moderate.
+ASK6-045,false_claim,correct_tannin,internal,Frühburgunder,Unknown,Unknown,Can you confirm Frühburgunder has very firm tannins?,Not quite. Frühburgunder: tannin Moderate.
+ASK6-046,supported,extracted_body,extracted,Lagrein,Italy,Northeastern Italy,"How heavy is Lagrein in the mouth, according to reviewers?","Wine enthusiasts say, in Italy: Northeastern Italy: body light to medium"
+ASK6-047,supported,extracted_body,extracted,Mantonico,Italy,Southern Italy,Is Mantonico light or full in body?,"Wine enthusiasts say, in Italy: Southern Italy: body full (limited evidence)"
+ASK6-048,supported,extracted_body,extracted,Loureiro,Portugal,Vinho Verde,How full-bodied is Loureiro?,"Wine enthusiasts say, in Portugal: Vinho Verde: body light (limited evidence)"
+ASK6-049,supported,extracted_body,extracted,Fiano,United States,California,What body does Fiano usually have?,"Wine enthusiasts say, in United States: California: body medium to full"
+ASK6-050,supported,extracted_tannin,extracted,Sagrantino,Italy,Central Italy,Does Sagrantino have much tannin?,"Wine enthusiasts say, in Italy: Central Italy: tannin medium to high"
+ASK6-051,supported,extracted_tannin,extracted,Casavecchia,Italy,Southern Italy,How tannic is Casavecchia?,"Wine enthusiasts say, in Italy: Southern Italy: tannin medium (limited evidence)"
+ASK6-052,supported,extracted_tannin,extracted,Mondeuse,Italy,Sicily & Sardinia,What are the tannins like in Mondeuse?,"Wine enthusiasts say, in Italy: Sicily & Sardinia: tannin medium (limited evidence)"
+ASK6-053,supported,extracted_tannin,extracted,Chelois,United States,New York,"How grippy is Chelois, according to reviewers?","Wine enthusiasts say, in United States: New York: tannin low to medium (limited evidence)"
+ASK6-054,supported,extracted_acidity,extracted,Mission,United States,California,How much acidity does Mission have?,"Wine enthusiasts say, in United States: California: acidity medium (limited evidence)"
+ASK6-055,supported,extracted_acidity,extracted,Zweigelt,United States,New York,Is Zweigelt high or low in acidity?,"Wine enthusiasts say, in United States: New York: acidity high (limited evidence)"
+ASK6-056,supported,extracted_acidity,extracted,Terrantez,Portugal,Madeira,How acidic is Terrantez?,"Wine enthusiasts say, in Portugal: Madeira: acidity medium (limited evidence)"
+ASK6-057,supported,extracted_acidity,extracted,Carcajolu,France,France Other,"How sharp is Carcajolu, according to reviewers?","Wine enthusiasts say, in France: France Other: acidity medium (limited evidence)"
+ASK6-058,supported,extracted_flavours,extracted,Piedirosso,Italy,Southern Italy,What does Piedirosso taste like?,"Wine enthusiasts say, in Italy: Southern Italy: flavours cherry, plum, pepper, spice"
+ASK6-059,supported,extracted_flavours,extracted,Poulsard,France,France Other,What flavours do reviewers pick out in Poulsard?,"Wine enthusiasts say, in France: France Other: flavours oak, smoke, cinnamon, spice"
+ASK6-060,supported,extracted_flavours,extracted,Marquette,United States,New York,What flavours does Marquette have?,"Wine enthusiasts say, in United States: New York: flavours rose, cherry, strawberry, chocolate"
+ASK6-061,supported,extracted_flavours,extracted,Nuragus,Italy,Sicily & Sardinia,Which flavour notes show up in Nuragus?,"Wine enthusiasts say, in Italy: Sicily & Sardinia: flavours lemon, stone fruit, peach, herbal"
+ASK6-062,supported,extracted_overview,extracted,Vilana,Greece,Crete,What do wine enthusiasts say about Vilana from Greece?,"Wine enthusiasts say, in Greece: Crete: acidity medium (limited evidence); flavours citrus, apple, pear, tropical fruit"
+ASK6-063,supported,extracted_overview,extracted,Muscat of Alexandria / Zibibbo,Portugal,Tejo,What do wine enthusiasts say about Muscat of Alexandria / Zibibbo from Portugal?,"Wine enthusiasts say, in Portugal: Tejo: acidity medium to high (limited evidence); flavours spice, floral, lemon, pear"
+ASK6-064,supported,extracted_overview,extracted,Monica,Italy,Sicily & Sardinia,Tell me about Monica.,"Wine enthusiasts say, in Italy: Sicily & Sardinia: tannin low (limited evidence); acidity medium to high (limited evidence); flavours cherry, pepper, blackberry, licorice"
+ASK6-065,supported,extracted_overview,extracted,Nielluciu,France,France Other,What do wine enthusiasts say about Nielluccio from France?,"Wine enthusiasts say, in France: France Other: tannin high (limited evidence); flavours spice, cherry"
+ASK6-066,false_claim,extracted_correct_body,extracted,Nosiola,Italy,Northeastern Italy,I read that Nosiola is full-bodied. Is that right?,"Not quite. Wine enthusiasts say, in Italy: Northeastern Italy: body light (limited evidence)"
+ASK6-067,false_claim,extracted_correct_body,extracted,Gros Manseng,France,Southwest France,"Gros Manseng is full-bodied, correct?","Not quite. Wine enthusiasts say, in France: Southwest France: body light (limited evidence)"
+ASK6-068,false_claim,extracted_correct_tannin,extracted,Refosco,United States,California,I read that Refosco is low in tannin. Is that right?,"Not quite. Wine enthusiasts say, in United States: California: tannin high (limited evidence)"
+ASK6-069,false_claim,extracted_correct_tannin,extracted,Francisa,Italy,Sicily & Sardinia,"Francisa is high in tannin, correct?","Not quite. Wine enthusiasts say, in Italy: Sicily & Sardinia: tannin low (limited evidence)"
+ASK6-070,false_claim,extracted_correct_acidity,extracted,Magliocco,Italy,Southern Italy,I read that Magliocco is low in acidity. Is that right?,"Not quite. Wine enthusiasts say, in Italy: Southern Italy: acidity high (limited evidence)"
+ASK6-071,needs_place,extracted_no_country,extracted,Teroldego,Unknown,Unknown,Tell me about Teroldego.,Asks which country or region the user means; states nothing about the grape.
+ASK6-072,needs_place,extracted_no_country,extracted,Marsanne,Unknown,Unknown,What is Marsanne like?,Asks which country or region the user means; states nothing about the grape.
+ASK6-073,needs_place,extracted_no_country,extracted,Malvasia Istriana,Unknown,Unknown,How full-bodied is Malvasia Istriana?,Asks which country or region the user means; states nothing about the grape.
+ASK6-074,needs_place,extracted_no_country,extracted,Muskat Ottonel,Unknown,Unknown,What does Muskat Ottonel taste like?,Asks which country or region the user means; states nothing about the grape.
+ASK6-075,needs_place,extracted_no_country,extracted,Muscadelle,Unknown,Unknown,Give me a quick overview of Muscadelle.,Asks which country or region the user means; states nothing about the grape.
+ASK6-076,no_information,extracted_no_rows,none,Teran,New Zealand,Unknown,How full-bodied is Teran?,"I'm sorry, I do not have that information."
+ASK6-077,no_information,extracted_no_rows,none,Tannat,United Kingdom,Unknown,Tell me about Tannat.,"I'm sorry, I do not have that information."
+ASK6-078,no_information,extracted_no_rows,none,Vidal,South Africa,Unknown,What does Vidal taste like?,"I'm sorry, I do not have that information."
+ASK6-079,no_information,extracted_no_rows,none,Gelber Muskateller,China,Unknown,How tannic is Muscat Blanc à Petits Grains / Moscato?,"I'm sorry, I do not have that information."
+ASK6-080,no_information,extracted_no_rows,none,Vranec,Slovenia,Unknown,What is Vranec like?,"I'm sorry, I do not have that information."
+ASK6-081,no_information,unknown_subject,none,Aligoté,Unknown,Unknown,What do your notes say about Glartoun?,"I'm sorry, I do not have that information."
+ASK6-082,no_information,unknown_subject,none,Scheurebe,Unknown,Unknown,Which aromas does serklard have?,"I'm sorry, I do not have that information."
+ASK6-083,no_information,unknown_subject,none,Sangiovese,Unknown,Unknown,How long can Kloulzol age?,"I'm sorry, I do not have that information."
+ASK6-084,no_information,unknown_subject,none,Müller-Thurgau,Unknown,Unknown,Tell me about skanran.,"I'm sorry, I do not have that information."
+ASK6-085,no_information,unknown_subject,none,Frühburgunder,Unknown,Unknown,Describe Kelwir in plain English.,"I'm sorry, I do not have that information."
+ASK6-086,no_information,unknown_subject,none,Sémillon,Unknown,Unknown,What body would drethtolir have?,"I'm sorry, I do not have that information."
+ASK6-087,no_information,unknown_subject,none,Graševina,Unknown,Unknown,How acidic is Glordda?,"I'm sorry, I do not have that information."
+ASK6-088,no_information,unknown_subject,none,Cortese,Unknown,Unknown,Where does lenzaerwin come from?,"I'm sorry, I do not have that information."
+ASK6-089,no_information,unknown_subject,none,Nebbiolo,Unknown,Unknown,How acidic is Peglor?,"I'm sorry, I do not have that information."
+ASK6-090,no_information,unknown_subject,none,Touriga Nacional,Unknown,Unknown,Describe paentil in plain English.,"I'm sorry, I do not have that information."
+ASK6-091,no_information,unknown_subject,none,Barbera,Unknown,Unknown,What body would Plurmaen have?,"I'm sorry, I do not have that information."
+ASK6-092,no_information,unknown_subject,none,Pinot Noir,Unknown,Unknown,Tell me about brilgun.,"I'm sorry, I do not have that information."
+ASK6-093,no_information,unknown_subject,none,Sauvignon Blanc,Unknown,Unknown,Which aromas does Zerdtruth have?,"I'm sorry, I do not have that information."
+ASK6-094,no_information,unknown_subject,none,Kerner,Unknown,Unknown,What do your notes say about couxbraeth?,"I'm sorry, I do not have that information."
+ASK6-095,no_information,unknown_subject,none,Nero d'Avola,Unknown,Unknown,Where does Paexklourd come from?,"I'm sorry, I do not have that information."
+ASK6-096,no_information,unknown_subject,none,Elbling,Unknown,Unknown,How long can klankervox age?,"I'm sorry, I do not have that information."
+ASK6-097,no_information,unknown_subject,none,Bobal,Unknown,Unknown,What do your notes say about Plirklex?,"I'm sorry, I do not have that information."
+ASK6-098,no_information,unknown_subject,none,Gewürztraminer,Unknown,Unknown,Describe tinmiwan in plain English.,"I'm sorry, I do not have that information."
+ASK6-099,no_information,unknown_subject,none,Mencía,Unknown,Unknown,How acidic is Trankon?,"I'm sorry, I do not have that information."
+ASK6-100,no_information,unknown_subject,none,Albariño,Unknown,Unknown,How long can remordsael age?,"I'm sorry, I do not have that information."

@@ -144,6 +144,28 @@ internal fun GemmaEvalDebugScreen(onBack: () -> Unit,
                             .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
                     }
                 }) { Text("Run ASK v4: 100 questions × 3 runs") }
+                if (bottle != null) Button(onClick = {
+                    state = EvalRunState.Running(0, 300, "ASK5")
+                    stage1Job = scope.launch {
+                        runCatching {
+                            BottleAskEvalRunner.runOnce(context, bottle, "bottle_ask_v5.json") { progress ->
+                                state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
+                            }
+                        }.onSuccess { file -> state = EvalRunState.Done(file) }
+                            .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
+                    }
+                }) { Text("Run ASK v5: 300 held-out questions × 1 run") }
+                if (bottle != null) Button(onClick = {
+                    state = EvalRunState.Running(0, 100, "ASK6")
+                    stage1Job = scope.launch {
+                        runCatching {
+                            BottleAskEvalRunner.runOnce(context, bottle, "bottle_ask_v6.json") { progress ->
+                                state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
+                            }
+                        }.onSuccess { file -> state = EvalRunState.Done(file) }
+                            .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
+                    }
+                }) { Text("Run ASK v6: 100 grape-knowledge questions × 1 run") }
             }
 
             is EvalRunState.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

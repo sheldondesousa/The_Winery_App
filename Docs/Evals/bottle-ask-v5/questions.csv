@@ -1,0 +1,301 @@
+id,category,question_type,casing,bottle,question,expected_answer
+ASK5-001,supported,full_description,,Pinot Gris,What is Pinot Gris all about?,"Summary meaning: A white with a little more weight than most. Pear, apple, honey and spice, usually fuller and richer in the Alsace style. The grape's skin is actually a greyish pink. Body: Medium-bod"
+ASK5-002,supported,full_description,,Zinfandel,Tell me everything important about Zinfandel.,"Summary meaning: A big, jammy red; Primitivo is its Italian name. Ripe berries, spice and frequently lots of alcohol, and a lighter pink 'blush' version is also popular. Bold and generous. Acidity: Me"
+ASK5-003,supported,full_description,,Castelão,Can you describe Castelão for me?,"Summary meaning: A juicy red from southern Portugal, often sold under the nickname Periquita. Red plum and raspberry with a peppery edge and firm but friendly tannins. It softens into spicy, leathery "
+ASK5-004,supported,full_description,,Dornfelder,I'm new to wine. Explain Dornfelder to me.,"Summary meaning: A German red bred for deep colour and soft, easy drinking. Dark berries and cherry with gentle tannins; styles run light and juicy through to rich and barrel-aged. Often blended to de"
+ASK5-005,supported,full_description,,Touriga Franca,Give me a quick profile of Touriga Franca.,"Summary meaning: A major Port grape that also makes good dry Douro reds. Plump dark berries, violets and herbs, with silky tannins and bright acidity. Friendlier and lighter-footed than its cousin Tou"
+ASK5-006,supported,full_description,,Bobal,What are the key characteristics of Bobal?,"Summary meaning: A deeply coloured Spanish red with bright acidity and plenty of red fruit. Light and fresh when young, richer and more serious after time in barrel. A good-value find from the Valenci"
+ASK5-007,supported,full_description,,Chenin Blanc,What is Chenin Blanc all about?,"Summary meaning: A shape-shifter that goes anywhere from razor-dry to honeyed-sweet, still to sparkling. Bright acidity with orchard fruit, honey and a waxy note. Loire versions lean mineral, while So"
+ASK5-008,supported,full_description,lowercase_name,Scheurebe,Can you describe scheurebe for me?,"Summary meaning: A strikingly fragrant German white that smells of ruby grapefruit and cassis. Brisk acidity, made dry through to sweet. Unmistakable once you've smelled it. Body: Medium-bodied Acidit"
+ASK5-009,supported,full_description,,Assyrtiko,Tell me everything important about Assyrtiko.,"Summary meaning: The flagship white of the Greek island of Santorini. Piercing acidity, citrus and a salty, volcanic minerality with real weight. Brilliant with seafood. Body: Full-bodied Acidity: Ver"
+ASK5-010,supported,full_description,,Portugieser,I'm new to wine. Explain Portugieser to me.,"Summary meaning: A light, juicy red that isn't Portuguese at all. Soft red cherry and strawberry, low tannin, low alcohol. Perfect for easy summer drinking. Body: Light-bodied Acidity: Moderate Tannin"
+ASK5-011,supported,full_description,lowercase_name,Schwarzriesling,What are the key characteristics of schwarzriesling?,"Summary meaning: Better known as Pinot Meunier, a quiet star in Champagne. Soft red fruit with a gentle bready note, gentle tannins and juicy acidity. Charming and easy. Body: Medium-bodied Acidity: H"
+ASK5-012,supported,full_description,,St. Laurent,Give me a quick profile of St. Laurent.,"Summary meaning: A velvety, Pinot Noir-like red that's one of Austria's finest. Dark cherry and raspberry with violets, earthy spice and soft tannins. Graceful and great with food. Acidity: Moderate T"
+ASK5-013,supported,comparison,,Grenache Noir,Is Grenache Noir or Gutedel higher in acidity?,Gutedel: Moderate acidity; Grenache Noir: Low acidity; Gutedel has higher recorded acidity
+ASK5-014,supported,comparison,,Tempranillo,"Which has more acidity, Tempranillo or Cabernet Sauvignon?",Cabernet Sauvignon: Medium to high acidity; Tempranillo: Low acidity; Cabernet Sauvignon has higher recorded acidity
+ASK5-015,supported,comparison,,Agiorgitiko,Rank Agiorgitiko and Airén by acidity.,Agiorgitiko: High acidity; Airén: Low acidity; Agiorgitiko has higher recorded acidity
+ASK5-016,supported,comparison,,Rkatsiteli,"Which has more acidity, Rkatsiteli or Mencía?",Rkatsiteli: Very high acidity; Mencía: High acidity; Rkatsiteli has higher recorded acidity
+ASK5-017,supported,comparison,,Chardonnay,"Which has more acidity, Chardonnay or Carménère?",Chardonnay: High acidity; Carménère: Low acidity; Chardonnay has higher recorded acidity
+ASK5-018,supported,comparison,,Cortese,Is Cortese or Merlot higher in tannin?,Merlot: Moderate (softer than Cabernet Sauvignon) tannin; Cortese: None tannin; Merlot has higher recorded tannin
+ASK5-019,supported,comparison,,Verdejo,How does Verdejo compare with Negroamaro for tannin?,Negroamaro: Firm tannin; Verdejo: None tannin; Negroamaro has higher recorded tannin
+ASK5-020,supported,comparison,,Carignan,Compare the tannin of Carignan and Corvina.,Carignan: Firm tannin; Corvina: Moderate tannin; Carignan has higher recorded tannin
+ASK5-021,supported,comparison,,Frühburgunder,How does Frühburgunder compare with Graševina for body?,Frühburgunder: Medium-bodied body; Graševina: Light-bodied body; Frühburgunder has higher recorded body
+ASK5-022,supported,comparison,,Shiraz / Syrah,Is Shiraz / Syrah or Blaufränkisch higher in body?,Shiraz / Syrah: Very full-bodied body; Blaufränkisch: Full-bodied body; Shiraz / Syrah has higher recorded body
+ASK5-023,supported,comparison,,Macabeo,How does Macabeo compare with Sémillon for body?,Sémillon: Full-bodied body; Macabeo: Medium-bodied body; Sémillon has higher recorded body
+ASK5-024,supported,body,,Nero d'Avola,Describe the body of Nero d'Avola.,body: Full-bodied
+ASK5-025,supported,body,,Elbling,What weight should I expect from Elbling?,body: Light-bodied
+ASK5-026,supported,body,,Gewürztraminer,Is Gewürztraminer light or full in body?,body: Full-bodied
+ASK5-027,supported,body,lowercase_name,Silvaner,How full-bodied is silvaner?,body: Medium-bodied
+ASK5-028,supported,body,,Kerner,What body does Kerner have according to your notes?,body: Light-bodied
+ASK5-029,supported,body,,Malbec,What weight should I expect from Malbec?,body: Full-bodied
+ASK5-030,supported,body,,Pinot Noir,What body does Pinot Noir have according to your notes?,body: Medium-bodied
+ASK5-031,supported,body,,Pinotage,Is Pinotage light or full in body?,body: Full-bodied
+ASK5-032,supported,body,,Aligoté,How full-bodied is Aligoté?,body: Light-bodied
+ASK5-033,supported,body,lowercase_name,Barbera,Describe the body of barbera.,body: Medium-bodied
+ASK5-034,supported,body,,Viognier,What weight should I expect from Viognier?,body: Medium-bodied
+ASK5-035,supported,acidity,,Parellada,Is Parellada high or low in acidity?,acidity: High
+ASK5-036,supported,acidity,,Alicante Bouschet,What acidity do your notes record for Alicante Bouschet?,acidity: Moderate
+ASK5-037,supported,acidity,,Verdelho,How sharp is Verdelho on the palate?,acidity: High
+ASK5-038,supported,acidity,,Sangiovese,Tell me the acidity of Sangiovese.,acidity: Medium
+ASK5-039,supported,acidity,lowercase_name,Sauvignon Blanc,How much acidity does sauvignon blanc have?,acidity: High
+ASK5-040,supported,acidity,,Vermentino,What acidity do your notes record for Vermentino?,acidity: High
+ASK5-041,supported,acidity,,Arinto,How sharp is Arinto on the palate?,acidity: Very high
+ASK5-042,supported,acidity,,Albariño,Is Albariño high or low in acidity?,acidity: Very high
+ASK5-043,supported,acidity,,Pinot Blanc,Tell me the acidity of Pinot Blanc.,acidity: Moderate
+ASK5-044,supported,acidity,,Müller-Thurgau,How much acidity does Müller-Thurgau have?,acidity: Low
+ASK5-045,supported,acidity,,Riesling,Tell me the acidity of Riesling.,acidity: High
+ASK5-046,supported,tannin,,Roussanne,What does your data say about tannin in Roussanne?,tannin: None
+ASK5-047,supported,tannin,,Touriga Nacional,Tell me about the tannin in Touriga Nacional.,tannin: Very firm
+ASK5-048,supported,tannin,,Nebbiolo,Does Nebbiolo have tannins?,tannin: Very firm
+ASK5-049,supported,tannin,,Trebbiano Toscano,How tannic is Trebbiano Toscano?,tannin: None
+ASK5-050,supported,tannin,,Gamay,What are the tannins like in Gamay?,tannin: Low
+ASK5-051,supported,tannin,,Petit Verdot,Tell me about the tannin in Petit Verdot.,tannin: Very firm
+ASK5-052,supported,tannin,,Cabernet Franc,Does Cabernet Franc have tannins?,tannin: Moderate
+ASK5-053,supported,tannin,,Grüner Veltliner,What does your data say about tannin in Grüner Veltliner?,tannin: None
+ASK5-054,supported,tannin,,Mourvèdre,How tannic is Mourvèdre?,tannin: Firm
+ASK5-055,supported,tannin,,Malvasia,What are the tannins like in Malvasia?,tannin: None
+ASK5-056,supported,tannin,,Verdicchio,What are the tannins like in Verdicchio?,tannin: None
+ASK5-057,supported,aromas,,Pinot Gris,What aromas can I expect from Pinot Gris?,Aroma: spice; Aroma: almond; Aroma: honey; Aroma: ripe peach; Aroma: pear
+ASK5-058,supported,aromas,,Müller-Thurgau,What aroma notes do you have for Müller-Thurgau?,Aroma: honeysuckle; Aroma: peach; Aroma: pear; Aroma: green apple; Aroma: elderflower
+ASK5-059,supported,aromas,lowercase_name,Airén,Describe the nose of airén.,Aroma: herbs; Aroma: melon; Aroma: pear; Aroma: green apple; Aroma: citrus
+ASK5-060,supported,aromas,,Tempranillo,List the aromas in Tempranillo.,Aroma: vanilla; Aroma: tobacco; Aroma: leather; Aroma: plum; Aroma: cherry
+ASK5-061,supported,aromas,,Shiraz / Syrah,What does Shiraz / Syrah smell like?,Aroma: olive; Aroma: smoke; Aroma: violet; Aroma: black pepper; Aroma: blackberry
+ASK5-062,supported,aromas,,Castelão,What aromas can I expect from Castelão?,Aroma: leather; Aroma: pepper; Aroma: cherry; Aroma: red plum; Aroma: raspberry
+ASK5-063,supported,aromas,,Gutedel,What does Gutedel smell like?,Aroma: flint; Aroma: almond; Aroma: white peach; Aroma: pear; Aroma: green apple
+ASK5-064,supported,aromas,lowercase_name,Aligoté,List the aromas in aligoté.,Aroma: chalk; Aroma: flowers; Aroma: white peach; Aroma: green apple; Aroma: lemon
+ASK5-065,supported,aromas,,Schwarzriesling,What aroma notes do you have for Schwarzriesling?,Aroma: fresh bread; Aroma: rose; Aroma: red cherry; Aroma: strawberry; Aroma: red apple
+ASK5-066,supported,aromas,,Portugieser,Describe the nose of Portugieser.,Aroma: herbs; Aroma: flowers; Aroma: raspberry; Aroma: strawberry; Aroma: red cherry
+ASK5-067,supported,aromas,,Kerner,What does Kerner smell like?,Aroma: peach; Aroma: blossom; Aroma: citrus; Aroma: pear; Aroma: green apple
+ASK5-068,supported,ageing_potential,,Viognier,Should I keep a bottle of Viognier for years?,ageing_potential: Best enjoyed in the first two to four years
+ASK5-069,supported,ageing_potential,,Zinfandel,What is the ageing potential of Zinfandel?,ageing_potential: Best enjoyed in the first 5–8 years
+ASK5-070,supported,ageing_potential,,Sauvignon Blanc,Is Sauvignon Blanc best young or aged?,ageing_potential: Best in the first few years
+ASK5-071,supported,ageing_potential,,Petit Verdot,How long can Petit Verdot age?,ageing_potential: Improves over 8–15 years
+ASK5-072,supported,ageing_potential,,Dornfelder,How does Dornfelder age?,ageing_potential: Best enjoyed in the first 3–6 years
+ASK5-073,supported,ageing_potential,,Arinto,How long can Arinto age?,ageing_potential: Fresh for 2–5 years; good ones longer
+ASK5-074,supported,ageing_potential,lowercase_name,Sangiovese,Is sangiovese best young or aged?,ageing_potential: Simple ones young; top bottles ten years or more
+ASK5-075,supported,ageing_potential,,Carignan,How does Carignan age?,ageing_potential: Best enjoyed in the first 5–10 years
+ASK5-076,supported,ageing_potential,,Merlot,Should I keep a bottle of Merlot for years?,"ageing_potential: Most bottles are made for drinking soon, though the best keep improving"
+ASK5-077,supported,ageing_potential,lowercase_name,Sémillon,What is the ageing potential of sémillon?,ageing_potential: Dry versions can age ten years or more
+ASK5-078,supported,ageing_potential,,Silvaner,What is the ageing potential of Silvaner?,ageing_potential: Best enjoyed in the first 2–5 years
+ASK5-079,supported,origin,,Elbling,Where does Elbling originate according to your notes?,"origin: Upper Mosel, Germany"
+ASK5-080,supported,origin,lowercase_name,Chenin Blanc,Tell me the origin of chenin blanc.,"origin: Loire Valley, France"
+ASK5-081,supported,origin,,Pinot Noir,Where is Pinot Noir from?,"origin: Bourgogne (Burgundy), France"
+ASK5-082,supported,origin,,Mourvèdre,Which country does Mourvèdre come from?,"origin: Valencia, Spain"
+ASK5-083,supported,origin,lowercase_name,Carménère,What is the home region of carménère?,"origin: Bordeaux, France"
+ASK5-084,supported,origin,lowercase_name,Gamay,Where is gamay from?,"origin: Beaujolais, France"
+ASK5-085,supported,origin,lowercase_name,Corvina,Which country does corvina come from?,"origin: Veneto (Valpolicella), Italy"
+ASK5-086,supported,origin,lowercase_name,Touriga Nacional,Where does touriga nacional originate according to your notes?,"origin: Dão, Portugal"
+ASK5-087,supported,origin,,Albariño,What is the home region of Albariño?,"origin: Galicia (Rías Baixas), Spain"
+ASK5-088,supported,origin,,Roussanne,Tell me the origin of Roussanne.,"origin: Northern Rhône, France"
+ASK5-089,supported,origin,,Negroamaro,Tell me the origin of Negroamaro.,"origin: Puglia (Salento), Italy"
+ASK5-090,supported,summary,,Rkatsiteli,What is the personality of Rkatsiteli?,"summary: An ancient grape from Georgia, among the earliest ever cultivated. Crisp, citrusy and mineral with quince and white peach, made dry, amber-orange in clay vessels, sweet or sparkling. A fascin"
+ASK5-091,supported,summary,,Vermentino,What is Vermentino like in a nutshell?,"summary: A sunny seaside white with a briny, ocean-air edge. Citrus and white peach with zesty acidity and a refreshing finish. Perfect for lunches by the water."
+ASK5-092,supported,summary,,Nebbiolo,Summarise Nebbiolo in a sentence or two.,"summary: Pale in colour but huge in presence. Rose, tar, cherry and dried herbs, backed by sharp acidity and firm tannins, so it demands patience. It's what Barolo and Barbaresco are made from."
+ASK5-093,supported,summary,,Graševina,How does your summary characterise Graševina?,"summary: The white grape Croatians grow more than any other: fresh, citrusy and mineral, with apple and elderflower. Despite the name, it's no relation to German Riesling."
+ASK5-094,supported,summary,,Alicante Bouschet,Give me your short summary of Alicante Bouschet.,"summary: An unusual grape with red flesh as well as red skin, giving almost ink-black wines. Powerful, peppery and rich in dark berries. It copes well with heat and drought."
+ASK5-095,supported,summary,,Grüner Veltliner,Give me your short summary of Grüner Veltliner.,"summary: Austria's calling-card white: fresh, herbal and peppery. Crunchy apple and lime with a white-pepper bite, light and zippy in some versions and rich and stony in others. Brilliant with lots of"
+ASK5-096,supported,summary,,Verdelho,Summarise Verdelho in a sentence or two.,"summary: A zesty white with lime, grapefruit-style zest and melon plus fresh herbs. Made as a dry table wine in Portugal and Australia, and as a fortified style in Madeira. Often confused with Verdejo"
+ASK5-097,supported,summary,,Pinotage,What is Pinotage like in a nutshell?,"summary: A South African original, bred from Pinot Noir and Cinsault. Red plum and strawberry with smoky, coffee-like notes. Its bold style divides opinion, so it's worth trying for yourself."
+ASK5-098,supported,summary,,Riesling,How does your summary characterise Riesling?,"summary: Bright, aromatic and endlessly versatile. It can taste razor-dry, gently sweet or syrupy-rich, with racy acidity holding it all together. The grape alone won't tell you how sweet it is, so ch"
+ASK5-099,supported,summary,,Chardonnay,What is the personality of Chardonnay?,"summary: A grape that takes on the character of wherever it's grown and however it's handled. Cool, unoaked versions are crisp and citrusy, while warmer, oak-aged ones are creamy and rounded. Many spa"
+ASK5-100,supported,summary,lowercase_name,Trebbiano Toscano,What is trebbiano toscano like in a nutshell?,"summary: Italy's everyday white, light, crisp and simple. Citrus, crisp apple and a faint stony touch. Careful growers can make something more characterful."
+ASK5-101,false_claim,correct_body,,Malvasia,My friend insists Malvasia is very light-bodied. Does that match your notes?,Not quite. Malvasia: body Medium-bodied.
+ASK5-102,false_claim,correct_body,,Scheurebe,Would you say Scheurebe is very light-bodied?,Not quite. Scheurebe: body Medium-bodied.
+ASK5-103,false_claim,correct_body,,Parellada,Is it true that Parellada is full-bodied?,Not quite. Parellada: body Light-bodied.
+ASK5-104,false_claim,correct_body,lowercase_name,Cabernet Franc,"So cabernet franc is very full-bodied, yes?",Not quite. Cabernet Franc: body Medium-bodied.
+ASK5-105,false_claim,correct_body,lowercase_name,Cabernet Sauvignon,I read that cabernet sauvignon is very light-bodied. Is that right?,Not quite. Cabernet Sauvignon: body Full-bodied.
+ASK5-106,false_claim,correct_body,,Assyrtiko,My friend insists Assyrtiko is very light-bodied. Does that match your notes?,Not quite. Assyrtiko: body Full-bodied.
+ASK5-107,false_claim,correct_body,,Mencía,"So Mencía is very full-bodied, yes?",Not quite. Mencía: body Medium-bodied.
+ASK5-108,false_claim,correct_body,,Cortese,I read that Cortese is full-bodied. Is that right?,Not quite. Cortese: body Light-bodied.
+ASK5-109,false_claim,correct_body,,Grenache Noir,Would you say Grenache Noir is light-bodied?,Not quite. Grenache Noir: body Very full-bodied.
+ASK5-110,false_claim,correct_body,,Verdicchio,Is it true that Verdicchio is very full-bodied?,Not quite. Verdicchio: body Medium-bodied.
+ASK5-111,false_claim,correct_body,,Barbera,Would you say Barbera is very full-bodied?,Not quite. Barbera: body Medium-bodied.
+ASK5-112,false_claim,correct_body,,Verdejo,I read that Verdejo is very full-bodied. Is that right?,Not quite. Verdejo: body Medium-bodied.
+ASK5-113,false_claim,correct_body,,Pinot Blanc,Is it true that Pinot Blanc is very full-bodied?,Not quite. Pinot Blanc: body Medium-bodied.
+ASK5-114,false_claim,correct_body,,Bobal,My friend insists Bobal is very light-bodied. Does that match your notes?,Not quite. Bobal: body Medium-bodied.
+ASK5-115,false_claim,correct_body,,Blaufränkisch,"So Blaufränkisch is very light-bodied, yes?",Not quite. Blaufränkisch: body Full-bodied.
+ASK5-116,false_claim,correct_body,,Frühburgunder,"So Frühburgunder is very full-bodied, yes?",Not quite. Frühburgunder: body Medium-bodied.
+ASK5-117,false_claim,correct_body,,Nero d'Avola,Is it true that Nero d'Avola is very light-bodied?,Not quite. Nero d'Avola: body Full-bodied.
+ASK5-118,false_claim,correct_body,,Malbec,My friend insists Malbec is light-bodied. Does that match your notes?,Not quite. Malbec: body Full-bodied.
+ASK5-119,false_claim,correct_body,,Agiorgitiko,I read that Agiorgitiko is very light-bodied. Is that right?,Not quite. Agiorgitiko: body Full-bodied.
+ASK5-120,false_claim,correct_body,,Gewürztraminer,Would you say Gewürztraminer is very light-bodied?,Not quite. Gewürztraminer: body Full-bodied.
+ASK5-121,false_claim,correct_body,,Macabeo,My friend insists Macabeo is very light-bodied. Does that match your notes?,Not quite. Macabeo: body Medium-bodied.
+ASK5-122,false_claim,correct_body,,Chenin Blanc,Would you say Chenin Blanc is very light-bodied?,Not quite. Chenin Blanc: body Medium-bodied.
+ASK5-123,false_claim,correct_body,,Graševina,Is it true that Graševina is full-bodied?,Not quite. Graševina: body Light-bodied.
+ASK5-124,false_claim,correct_body,,Pinot Noir,I read that Pinot Noir is very full-bodied. Is that right?,Not quite. Pinot Noir: body Medium-bodied.
+ASK5-125,false_claim,correct_body,,Dornfelder,"So Dornfelder is very light-bodied, yes?",Not quite. Dornfelder: body Full-bodied.
+ASK5-126,false_claim,correct_body,,Nebbiolo,"So Nebbiolo is very light-bodied, yes?",Not quite. Nebbiolo: body Full-bodied.
+ASK5-127,false_claim,correct_body,,Trebbiano Toscano,Would you say Trebbiano Toscano is very full-bodied?,Not quite. Trebbiano Toscano: body Light-bodied.
+ASK5-128,false_claim,correct_body,lowercase_name,Elbling,My friend insists elbling is full-bodied. Does that match your notes?,Not quite. Elbling: body Light-bodied.
+ASK5-129,false_claim,correct_body,,Verdelho,Is it true that Verdelho is very light-bodied?,Not quite. Verdelho: body Medium-bodied.
+ASK5-130,false_claim,correct_body,,Portugieser,I read that Portugieser is very full-bodied. Is that right?,Not quite. Portugieser: body Light-bodied.
+ASK5-131,false_claim,correct_body,,Pinotage,Is it true that Pinotage is very light-bodied?,Not quite. Pinotage: body Full-bodied.
+ASK5-132,false_claim,correct_body,lowercase_name,Viognier,My friend insists viognier is very full-bodied. Does that match your notes?,Not quite. Viognier: body Medium-bodied.
+ASK5-133,false_claim,correct_body,,Corvina,"So Corvina is light-bodied, yes?",Not quite. Corvina: body Full-bodied.
+ASK5-134,false_claim,correct_body,lowercase_name,Chardonnay,I read that chardonnay is very full-bodied. Is that right?,Not quite. Chardonnay: body Medium-bodied.
+ASK5-135,false_claim,correct_acidity,,Touriga Franca,"Touriga Franca has moderate acidity, doesn't it?",Not quite. Touriga Franca: acidity High.
+ASK5-136,false_claim,correct_acidity,,St. Laurent,A sommelier told me St. Laurent has high acidity. Can you confirm?,Not quite. St. Laurent: acidity Moderate.
+ASK5-137,false_claim,correct_acidity,,Mencía,Is it true that Mencía has moderate acidity?,Not quite. Mencía: acidity High.
+ASK5-138,false_claim,correct_acidity,,Agiorgitiko,I read that Agiorgitiko has moderate acidity. Is that right?,Not quite. Agiorgitiko: acidity High.
+ASK5-139,false_claim,correct_acidity,,Mourvèdre,"Does Mourvèdre have moderate acidity, according to your notes?",Not quite. Mourvèdre: acidity High.
+ASK5-140,false_claim,correct_acidity,,Pinot Gris,"Does Pinot Gris have very high acidity, according to your notes?",Not quite. Pinot Gris: acidity Medium.
+ASK5-141,false_claim,correct_acidity,,Gewürztraminer,"Gewürztraminer has very high acidity, doesn't it?",Not quite. Gewürztraminer: acidity Low.
+ASK5-142,false_claim,correct_acidity,,Sémillon,A sommelier told me Sémillon has very high acidity. Can you confirm?,Not quite. Sémillon: acidity Low.
+ASK5-143,false_claim,correct_acidity,,Arinto,Is it true that Arinto has moderate acidity?,Not quite. Arinto: acidity Very high.
+ASK5-144,false_claim,correct_acidity,,Negroamaro,I read that Negroamaro has very high acidity. Is that right?,Not quite. Negroamaro: acidity Low.
+ASK5-145,false_claim,correct_acidity,,Sauvignon Blanc,I read that Sauvignon Blanc has low acidity. Is that right?,Not quite. Sauvignon Blanc: acidity High.
+ASK5-146,false_claim,correct_acidity,,Grüner Veltliner,A sommelier told me Grüner Veltliner has moderate acidity. Can you confirm?,Not quite. Grüner Veltliner: acidity High.
+ASK5-147,false_claim,correct_acidity,,Carignan,"Does Carignan have low acidity, according to your notes?",Not quite. Carignan: acidity High.
+ASK5-148,false_claim,correct_acidity,,Blaufränkisch,Is it true that Blaufränkisch has low acidity?,Not quite. Blaufränkisch: acidity High.
+ASK5-149,false_claim,correct_acidity,,Alicante Bouschet,"Alicante Bouschet has high acidity, doesn't it?",Not quite. Alicante Bouschet: acidity Moderate.
+ASK5-150,false_claim,correct_acidity,,Albariño,"Does Albariño have moderate acidity, according to your notes?",Not quite. Albariño: acidity Very high.
+ASK5-151,false_claim,correct_acidity,,Malbec,Is it true that Malbec has very high acidity?,Not quite. Malbec: acidity Medium.
+ASK5-152,false_claim,correct_acidity,lowercase_name,Bobal,"bobal has low acidity, doesn't it?",Not quite. Bobal: acidity High.
+ASK5-153,false_claim,correct_acidity,,Verdicchio,A sommelier told me Verdicchio has moderate acidity. Can you confirm?,Not quite. Verdicchio: acidity High.
+ASK5-154,false_claim,correct_acidity,,Cabernet Franc,I read that Cabernet Franc has high acidity. Is that right?,Not quite. Cabernet Franc: acidity Medium.
+ASK5-155,false_claim,correct_acidity,,Shiraz / Syrah,"Does Shiraz / Syrah have very high acidity, according to your notes?",Not quite. Shiraz / Syrah: acidity Medium.
+ASK5-156,false_claim,correct_acidity,,Merlot,Is it true that Merlot has very high acidity?,Not quite. Merlot: acidity Low.
+ASK5-157,false_claim,correct_acidity,,Petit Verdot,A sommelier told me Petit Verdot has moderate acidity. Can you confirm?,Not quite. Petit Verdot: acidity High.
+ASK5-158,false_claim,correct_acidity,,Frühburgunder,I read that Frühburgunder has low acidity. Is that right?,Not quite. Frühburgunder: acidity High.
+ASK5-159,false_claim,correct_acidity,lowercase_name,Cortese,"cortese has moderate acidity, doesn't it?",Not quite. Cortese: acidity High.
+ASK5-160,false_claim,correct_acidity,,Aligoté,Is it true that Aligoté has low acidity?,Not quite. Aligoté: acidity Very high.
+ASK5-161,false_claim,correct_acidity,lowercase_name,Zinfandel,A sommelier told me zinfandel has very high acidity. Can you confirm?,Not quite. Zinfandel: acidity Medium.
+ASK5-162,false_claim,correct_acidity,lowercase_name,Barbera,"Does barbera have very high acidity, according to your notes?",Not quite. Barbera: acidity Medium to high.
+ASK5-163,false_claim,correct_acidity,,Schwarzriesling,I read that Schwarzriesling has moderate acidity. Is that right?,Not quite. Schwarzriesling: acidity High.
+ASK5-164,false_claim,correct_acidity,,Macabeo,"Macabeo has high acidity, doesn't it?",Not quite. Macabeo: acidity Moderate.
+ASK5-165,false_claim,correct_acidity,lowercase_name,Müller-Thurgau,Is it true that müller-thurgau has high acidity?,Not quite. Müller-Thurgau: acidity Low.
+ASK5-166,false_claim,correct_acidity,,Vermentino,"Vermentino has moderate acidity, doesn't it?",Not quite. Vermentino: acidity High.
+ASK5-167,false_claim,correct_acidity,lowercase_name,Gamay,"Does gamay have low acidity, according to your notes?",Not quite. Gamay: acidity High.
+ASK5-168,false_claim,correct_tannin,,Silvaner,"Does Silvaner have moderate tannins, according to your notes?",Not quite. Silvaner: tannin None.
+ASK5-169,false_claim,correct_tannin,,Riesling,Is it true that Riesling has very firm tannins?,Not quite. Riesling: tannin None.
+ASK5-170,false_claim,correct_tannin,lowercase_name,Kerner,"kerner has moderate tannins, doesn't it?",Not quite. Kerner: tannin None.
+ASK5-171,false_claim,correct_tannin,,Rkatsiteli,A sommelier told me Rkatsiteli has firm tannins. Can you confirm?,Not quite. Rkatsiteli: tannin None.
+ASK5-172,false_claim,correct_tannin,lowercase_name,Tempranillo,I read that tempranillo has low tannins. Is that right?,Not quite. Tempranillo: tannin Firm.
+ASK5-173,false_claim,correct_tannin,,Roussanne,"Roussanne has very firm tannins, doesn't it?",Not quite. Roussanne: tannin None.
+ASK5-174,false_claim,correct_tannin,,St. Laurent,A sommelier told me St. Laurent has no tannins. Can you confirm?,Not quite. St. Laurent: tannin Moderate.
+ASK5-175,false_claim,correct_tannin,,Touriga Nacional,Is it true that Touriga Nacional has low tannins?,Not quite. Touriga Nacional: tannin Very firm.
+ASK5-176,false_claim,correct_tannin,,Nero d'Avola,I read that Nero d'Avola has low tannins. Is that right?,Not quite. Nero d'Avola: tannin Firm.
+ASK5-177,false_claim,correct_tannin,,Airén,"Does Airén have moderate tannins, according to your notes?",Not quite. Airén: tannin None.
+ASK5-178,false_claim,correct_tannin,,Castelão,"Castelão has no tannins, doesn't it?",Not quite. Castelão: tannin Moderate.
+ASK5-179,false_claim,correct_tannin,,Gutedel,A sommelier told me Gutedel has moderate tannins. Can you confirm?,Not quite. Gutedel: tannin None.
+ASK5-180,false_claim,correct_tannin,,Pinot Blanc,Is it true that Pinot Blanc has moderate tannins?,Not quite. Pinot Blanc: tannin None.
+ASK5-181,false_claim,correct_tannin,,Grenache Noir,"Does Grenache Noir have very firm tannins, according to your notes?",Not quite. Grenache Noir: tannin Moderate.
+ASK5-182,false_claim,correct_tannin,,Malvasia,I read that Malvasia has very firm tannins. Is that right?,Not quite. Malvasia: tannin None.
+ASK5-183,false_claim,correct_tannin,,Verdejo,"Does Verdejo have firm tannins, according to your notes?",Not quite. Verdejo: tannin None.
+ASK5-184,false_claim,correct_tannin,,Touriga Franca,Is it true that Touriga Franca has no tannins?,Not quite. Touriga Franca: tannin Moderate.
+ASK5-185,false_claim,correct_tannin,,Sangiovese,"Sangiovese has low tannins, doesn't it?",Not quite. Sangiovese: tannin Firm.
+ASK5-186,false_claim,correct_tannin,,Scheurebe,A sommelier told me Scheurebe has firm tannins. Can you confirm?,Not quite. Scheurebe: tannin None.
+ASK5-187,false_claim,correct_tannin,,Carménère,I read that Carménère has no tannins. Is that right?,Not quite. Carménère: tannin Firm but velvety (softer than Cabernet Sauvignon).
+ASK5-188,false_claim,correct_tannin,,Assyrtiko,"Assyrtiko has moderate tannins, doesn't it?",Not quite. Assyrtiko: tannin None.
+ASK5-189,false_claim,correct_tannin,,Parellada,A sommelier told me Parellada has very firm tannins. Can you confirm?,Not quite. Parellada: tannin None.
+ASK5-190,false_claim,correct_tannin,,Cabernet Sauvignon,Is it true that Cabernet Sauvignon has low tannins?,Not quite. Cabernet Sauvignon: tannin Very firm.
+ASK5-191,false_claim,correct_tannin,,Carignan,"Does Carignan have no tannins, according to your notes?",Not quite. Carignan: tannin Firm.
+ASK5-192,false_claim,correct_tannin,,Barbera,I read that Barbera has firm tannins. Is that right?,Not quite. Barbera: tannin Low.
+ASK5-193,false_claim,correct_tannin,,Blaufränkisch,Is it true that Blaufränkisch has low tannins?,Not quite. Blaufränkisch: tannin Firm.
+ASK5-194,false_claim,correct_tannin,,Alicante Bouschet,"Does Alicante Bouschet have no tannins, according to your notes?",Not quite. Alicante Bouschet: tannin Firm.
+ASK5-195,false_claim,correct_tannin,,Trebbiano Toscano,A sommelier told me Trebbiano Toscano has firm tannins. Can you confirm?,Not quite. Trebbiano Toscano: tannin None.
+ASK5-196,false_claim,correct_tannin,lowercase_name,Petit Verdot,"petit verdot has moderate tannins, doesn't it?",Not quite. Petit Verdot: tannin Very firm.
+ASK5-197,false_claim,correct_tannin,lowercase_name,Macabeo,I read that macabeo has very firm tannins. Is that right?,Not quite. Macabeo: tannin None.
+ASK5-198,false_claim,correct_tannin,,Chardonnay,"Does Chardonnay have moderate tannins, according to your notes?",Not quite. Chardonnay: tannin None.
+ASK5-199,false_claim,correct_tannin,,Mourvèdre,Is it true that Mourvèdre has low tannins?,Not quite. Mourvèdre: tannin Firm.
+ASK5-200,false_claim,correct_tannin,,Pinot Noir,I read that Pinot Noir has very firm tannins. Is that right?,Not quite. Pinot Noir: tannin Low.
+ASK5-201,no_information,unknown_subject,,Pinot Blanc,What body would Selkix have?,"I'm sorry, I do not have that information."
+ASK5-202,no_information,unknown_subject,lowercase_name,Sangiovese,Is there a tannin level for zhexpror?,"I'm sorry, I do not have that information."
+ASK5-203,no_information,unknown_subject,,Grüner Veltliner,Tell me about Korzhoxkux.,"I'm sorry, I do not have that information."
+ASK5-204,no_information,unknown_subject,lowercase_name,Mencía,How acidic is pensviath?,"I'm sorry, I do not have that information."
+ASK5-205,no_information,unknown_subject,,Riesling,Where does Konpergru come from?,"I'm sorry, I do not have that information."
+ASK5-206,no_information,unknown_subject,lowercase_name,Nebbiolo,Give me a quick overview of ziaxzol.,"I'm sorry, I do not have that information."
+ASK5-207,no_information,unknown_subject,,Assyrtiko,What do your notes say about Cufarkax?,"I'm sorry, I do not have that information."
+ASK5-208,no_information,unknown_subject,lowercase_name,Alicante Bouschet,How long can laenpir age?,"I'm sorry, I do not have that information."
+ASK5-209,no_information,unknown_subject,,Verdejo,Describe Fextalrae in plain English.,"I'm sorry, I do not have that information."
+ASK5-210,no_information,unknown_subject,lowercase_name,St. Laurent,Which aromas does praethfess have?,"I'm sorry, I do not have that information."
+ASK5-211,no_information,unknown_subject,,Zinfandel,What body would Palsvuss have?,"I'm sorry, I do not have that information."
+ASK5-212,no_information,unknown_subject,lowercase_name,Parellada,Describe zhoxbungur in plain English.,"I'm sorry, I do not have that information."
+ASK5-213,no_information,unknown_subject,,Blaufränkisch,How long can Zhiarbriar age?,"I'm sorry, I do not have that information."
+ASK5-214,no_information,unknown_subject,lowercase_name,Tempranillo,Is there a tannin level for tilnass?,"I'm sorry, I do not have that information."
+ASK5-215,no_information,unknown_subject,,Pinot Gris,Give me a quick overview of Goxtreth.,"I'm sorry, I do not have that information."
+ASK5-216,no_information,unknown_subject,lowercase_name,Dornfelder,How acidic is durlel?,"I'm sorry, I do not have that information."
+ASK5-217,no_information,unknown_subject,,Chenin Blanc,Where does Rentruss come from?,"I'm sorry, I do not have that information."
+ASK5-218,no_information,unknown_subject,lowercase_name,Viognier,Tell me about brarvurrol.,"I'm sorry, I do not have that information."
+ASK5-219,no_information,unknown_subject,,Chardonnay,Which aromas does Krassmol have?,"I'm sorry, I do not have that information."
+ASK5-220,no_information,unknown_subject,lowercase_name,Cabernet Franc,What do your notes say about zhasvith?,"I'm sorry, I do not have that information."
+ASK5-221,no_information,unknown_subject,,Verdicchio,Which aromas does Vexvraeth have?,"I'm sorry, I do not have that information."
+ASK5-222,no_information,unknown_subject,lowercase_name,Barbera,Where does maeldreth come from?,"I'm sorry, I do not have that information."
+ASK5-223,no_information,unknown_subject,,Frühburgunder,Describe Fathlirpa in plain English.,"I'm sorry, I do not have that information."
+ASK5-224,no_information,unknown_subject,lowercase_name,Gutedel,What body would trathqel have?,"I'm sorry, I do not have that information."
+ASK5-225,no_information,unknown_subject,,Portugieser,How acidic is Qervoprin?,"I'm sorry, I do not have that information."
+ASK5-226,no_information,unknown_subject,lowercase_name,Merlot,Is there a tannin level for zexzex?,"I'm sorry, I do not have that information."
+ASK5-227,no_information,unknown_subject,,Cortese,What do your notes say about Svezhor?,"I'm sorry, I do not have that information."
+ASK5-228,no_information,unknown_subject,lowercase_name,Touriga Nacional,Give me a quick overview of tilbercox.,"I'm sorry, I do not have that information."
+ASK5-229,no_information,unknown_subject,,Vermentino,Tell me about Lunprux.,"I'm sorry, I do not have that information."
+ASK5-230,no_information,unknown_subject,lowercase_name,Aligoté,How long can pevrardun age?,"I'm sorry, I do not have that information."
+ASK5-231,no_information,unknown_subject,,Corvina,Tell me about Koneth.,"I'm sorry, I do not have that information."
+ASK5-232,no_information,unknown_subject,lowercase_name,Silvaner,Is there a tannin level for krukruthbu?,"I'm sorry, I do not have that information."
+ASK5-233,no_information,unknown_subject,,Sémillon,Give me a quick overview of Fental.,"I'm sorry, I do not have that information."
+ASK5-234,no_information,unknown_subject,lowercase_name,Verdelho,What do your notes say about texzelsoth?,"I'm sorry, I do not have that information."
+ASK5-235,no_information,unknown_subject,,Malbec,Describe Bialmuth in plain English.,"I'm sorry, I do not have that information."
+ASK5-236,no_information,unknown_subject,lowercase_name,Cabernet Sauvignon,What body would rixzhel have?,"I'm sorry, I do not have that information."
+ASK5-237,no_information,unknown_subject,,Negroamaro,How long can Drethnath age?,"I'm sorry, I do not have that information."
+ASK5-238,no_information,unknown_subject,lowercase_name,Malvasia,How acidic is kruxdrax?,"I'm sorry, I do not have that information."
+ASK5-239,no_information,unknown_subject,,Castelão,Where does Fianvun come from?,"I'm sorry, I do not have that information."
+ASK5-240,no_information,unknown_subject,lowercase_name,Carménère,Which aromas does zalvaex have?,"I'm sorry, I do not have that information."
+ASK5-241,no_information,unknown_subject,,Shiraz / Syrah,How long can Grulclolpa age?,"I'm sorry, I do not have that information."
+ASK5-242,no_information,unknown_subject,lowercase_name,Trebbiano Toscano,Give me a quick overview of flotrath.,"I'm sorry, I do not have that information."
+ASK5-243,no_information,unknown_subject,,Petit Verdot,Tell me about Tussgel.,"I'm sorry, I do not have that information."
+ASK5-244,no_information,unknown_subject,lowercase_name,Mourvèdre,Which aromas does krildixcar have?,"I'm sorry, I do not have that information."
+ASK5-245,no_information,unknown_subject,,Sauvignon Blanc,Where does Trianal come from?,"I'm sorry, I do not have that information."
+ASK5-246,no_information,unknown_subject,lowercase_name,Airén,How acidic is vroxvrer?,"I'm sorry, I do not have that information."
+ASK5-247,no_information,unknown_subject,,Kerner,Describe Svaesscur in plain English.,"I'm sorry, I do not have that information."
+ASK5-248,no_information,unknown_subject,lowercase_name,Müller-Thurgau,Is there a tannin level for penkaecler?,"I'm sorry, I do not have that information."
+ASK5-249,no_information,unknown_subject,,Gewürztraminer,What body would Diataexvix have?,"I'm sorry, I do not have that information."
+ASK5-250,no_information,unknown_subject,lowercase_name,Carignan,What do your notes say about bolfuthvil?,"I'm sorry, I do not have that information."
+ASK5-251,no_information,unknown_subject,,Gamay,How long can Prilmi age?,"I'm sorry, I do not have that information."
+ASK5-252,no_information,unknown_subject,lowercase_name,Grenache Noir,Is there a tannin level for bupriatun?,"I'm sorry, I do not have that information."
+ASK5-253,no_information,unknown_subject,,Pinot Noir,Describe Giltra in plain English.,"I'm sorry, I do not have that information."
+ASK5-254,no_information,unknown_subject,lowercase_name,Arinto,What body would cleriass have?,"I'm sorry, I do not have that information."
+ASK5-255,no_information,unknown_subject,,Bobal,How acidic is Svilser?,"I'm sorry, I do not have that information."
+ASK5-256,no_information,unknown_subject,lowercase_name,Macabeo,Give me a quick overview of drardo.,"I'm sorry, I do not have that information."
+ASK5-257,no_information,unknown_subject,,Albariño,Where does Buthnurtia come from?,"I'm sorry, I do not have that information."
+ASK5-258,no_information,unknown_subject,lowercase_name,Rkatsiteli,What do your notes say about finfar?,"I'm sorry, I do not have that information."
+ASK5-259,no_information,unknown_subject,,Scheurebe,Which aromas does Miassbiss have?,"I'm sorry, I do not have that information."
+ASK5-260,no_information,unknown_subject,lowercase_name,Elbling,Tell me about nurdix.,"I'm sorry, I do not have that information."
+ASK5-261,no_information,unknown_subject,,Nero d'Avola,How long can Trirmur age?,"I'm sorry, I do not have that information."
+ASK5-262,no_information,unknown_subject,lowercase_name,Agiorgitiko,Where does tokessmax come from?,"I'm sorry, I do not have that information."
+ASK5-263,no_information,unknown_subject,,Schwarzriesling,How acidic is Niacaeth?,"I'm sorry, I do not have that information."
+ASK5-264,no_information,unknown_subject,lowercase_name,Pinotage,Describe geltrun in plain English.,"I'm sorry, I do not have that information."
+ASK5-265,no_information,unknown_subject,,Touriga Franca,Is there a tannin level for Prolbel?,"I'm sorry, I do not have that information."
+ASK5-266,no_information,unknown_subject,lowercase_name,Graševina,What do your notes say about flassbrial?,"I'm sorry, I do not have that information."
+ASK5-267,no_information,unknown_subject,,Roussanne,Tell me about Galzirsur.,"I'm sorry, I do not have that information."
+ASK5-268,no_information,unknown_subject,lowercase_name,Schwarzriesling,Give me a quick overview of braenbax.,"I'm sorry, I do not have that information."
+ASK5-269,no_information,unknown_subject,,Verdejo,Which aromas does Sviaxku have?,"I'm sorry, I do not have that information."
+ASK5-270,no_information,unknown_subject,lowercase_name,Pinotage,What body would zhifloth have?,"I'm sorry, I do not have that information."
+ASK5-271,no_information,unknown_subject,,Carménère,Is there a tannin level for Lorbathsvi?,"I'm sorry, I do not have that information."
+ASK5-272,no_information,unknown_subject,lowercase_name,Agiorgitiko,What body would fuxtraross have?,"I'm sorry, I do not have that information."
+ASK5-273,no_information,unknown_subject,,Albariño,Describe Nethfaex in plain English.,"I'm sorry, I do not have that information."
+ASK5-274,no_information,unknown_subject,lowercase_name,Castelão,How acidic is brarrin?,"I'm sorry, I do not have that information."
+ASK5-275,no_information,unknown_subject,,Bobal,How long can Kuthcliss age?,"I'm sorry, I do not have that information."
+ASK5-276,no_information,unknown_subject,lowercase_name,Pinot Gris,What do your notes say about krirbex?,"I'm sorry, I do not have that information."
+ASK5-277,no_information,unknown_subject,,Corvina,Tell me about Zhaerfil.,"I'm sorry, I do not have that information."
+ASK5-278,no_information,unknown_subject,lowercase_name,Nebbiolo,Where does caermuss come from?,"I'm sorry, I do not have that information."
+ASK5-279,no_information,unknown_subject,,Assyrtiko,Which aromas does Raervrun have?,"I'm sorry, I do not have that information."
+ASK5-280,no_information,unknown_subject,lowercase_name,Sauvignon Blanc,Give me a quick overview of sothgae.,"I'm sorry, I do not have that information."
+ASK5-281,no_information,unknown_subject,,Cabernet Sauvignon,Which aromas does Nolmaer have?,"I'm sorry, I do not have that information."
+ASK5-282,no_information,unknown_subject,lowercase_name,Riesling,How long can cocoxgaex age?,"I'm sorry, I do not have that information."
+ASK5-283,no_information,unknown_subject,,Mencía,Give me a quick overview of Virbervael.,"I'm sorry, I do not have that information."
+ASK5-284,no_information,unknown_subject,lowercase_name,Frühburgunder,Is there a tannin level for fathtraen?,"I'm sorry, I do not have that information."
+ASK5-285,no_information,unknown_subject,,Silvaner,Describe Dreqiax in plain English.,"I'm sorry, I do not have that information."
+ASK5-286,no_information,unknown_subject,lowercase_name,Tempranillo,Tell me about vrullial.,"I'm sorry, I do not have that information."
+ASK5-287,no_information,unknown_subject,,Scheurebe,What body would Cathzheth have?,"I'm sorry, I do not have that information."
+ASK5-288,no_information,unknown_subject,lowercase_name,Trebbiano Toscano,How acidic is pathcaxlix?,"I'm sorry, I do not have that information."
+ASK5-289,no_information,unknown_subject,,Gewürztraminer,What do your notes say about Zokaevaess?,"I'm sorry, I do not have that information."
+ASK5-290,no_information,unknown_subject,lowercase_name,Gutedel,Where does futhsvath come from?,"I'm sorry, I do not have that information."
+ASK5-291,no_information,unknown_subject,,Airén,Which aromas does Tandon have?,"I'm sorry, I do not have that information."
+ASK5-292,no_information,unknown_subject,lowercase_name,Pinot Blanc,What do your notes say about mermuthtra?,"I'm sorry, I do not have that information."
+ASK5-293,no_information,unknown_subject,,Blaufränkisch,What body would Claesaer have?,"I'm sorry, I do not have that information."
+ASK5-294,no_information,unknown_subject,lowercase_name,Macabeo,Tell me about caergaeth.,"I'm sorry, I do not have that information."
+ASK5-295,no_information,unknown_subject,,Malbec,Where does Kraenfloth come from?,"I'm sorry, I do not have that information."
+ASK5-296,no_information,unknown_subject,lowercase_name,Elbling,Is there a tannin level for ciathgriss?,"I'm sorry, I do not have that information."
+ASK5-297,no_information,unknown_subject,,Sangiovese,Describe Drenvuflor in plain English.,"I'm sorry, I do not have that information."
+ASK5-298,no_information,unknown_subject,lowercase_name,Grüner Veltliner,How long can vetrun age?,"I'm sorry, I do not have that information."
+ASK5-299,no_information,unknown_subject,,Carignan,How acidic is Fixken?,"I'm sorry, I do not have that information."
+ASK5-300,no_information,unknown_subject,lowercase_name,Touriga Franca,Give me a quick overview of kaethtriax.,"I'm sorry, I do not have that information."

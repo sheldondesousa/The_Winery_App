@@ -46,10 +46,8 @@ Factual consistency and Completeness decide whether the answer is good. Verbosit
 - Gemma errors vs Kotlin errors, shown separately.
 - A margin of error on every percentage.
 
-## 7. Ship rules (set these before you run)
-For example:
-- Zero invented facts on unsupported questions.
-- At least 95% correct overall.
-- No category below 90%.
-
-If it misses, fix and re-run on the same frozen set.
+## 7. Pass rule (set before the run)
+- **Pass:** at least **90%** of answers fully correct (grade 2 on the 2/1/0 marker), overall and in each of the three categories: answerable, false claims and unsupported.
+- **What is measured:** the whole app, meaning the text the user sees. Report the Gemma-written answers beside it, with Kotlin's failures scored to Kotlin.
+- **How it is judged:** on the point estimate, shown with its 95% interval. A result of exactly 90% on 100 questions has an interval of about 83–94%, so the interval is reported alongside and not hidden.
+- **Set:** v5, 300 held-out questions in equal thirds (`bottle_ask_v5.json`). Do not tune the prompt or Kotlin against it. If it misses, fix and re-run on a fresh set.

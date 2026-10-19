@@ -7,6 +7,8 @@ import com.sheldondesousa.uncork.model.WineAskExtras
 import com.sheldondesousa.uncork.model.WineryIntent
 import com.sheldondesousa.uncork.model.WineFactsNote
 import kotlinx.coroutines.runBlocking
+import com.sheldondesousa.uncork.model.KaggleExtractedProfile
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -18,14 +20,32 @@ import java.io.File
 class BottleAskGoldenTest(private val assetName: String) {
     companion object {
         @JvmStatic @Parameterized.Parameters(name = "{0}")
-        fun assets() = listOf(arrayOf("bottle_ask_v1.json"), arrayOf("bottle_ask_v2.json"), arrayOf("bottle_ask_v3.json"), arrayOf("bottle_ask_v4.json"))
+        fun assets() = listOf(arrayOf("bottle_ask_v1.json"), arrayOf("bottle_ask_v2.json"), arrayOf("bottle_ask_v3.json"), arrayOf("bottle_ask_v4.json"), arrayOf("bottle_ask_v5.json"), arrayOf("bottle_ask_v6.json"))
     }
     private val set = JSONObject(File("src/debug/assets/eval/$assetName").readText())
     private val knowledge = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
 
+    // The app reads Grape_Profile_Kaggle_Extracted through a database; here the same asset is filtered the same way
+    // (country, grape spellings, any of body/tannin/acidity, province order, three rows) so lookups see real rows.
+    private val extractedRows: List<JSONObject> = JSONArray(File("src/main/assets/grape_profile_kaggle_extracted.json").readText())
+        .let { array -> (0 until array.length()).map { array.getJSONObject(it) } }
+    private val kaggle: suspend (List<String>, String) -> List<KaggleExtractedProfile> = { spellings, country ->
+        extractedRows.filter { row ->
+            row.getString("country").equals(country, ignoreCase = true) &&
+                spellings.any { it.equals(row.getString("variety"), ignoreCase = true) } &&
+                listOf("body", "tannin", "acidity").any { !row.isNull(it) && row.getString(it).isNotBlank() }
+        }.sortedBy { it.getString("province") }.take(3).map { row ->
+            KaggleExtractedProfile(
+                body = row.optString("body").takeIf { it.isNotBlank() && it != "null" }, tannin = row.optString("tannin").takeIf { it.isNotBlank() && it != "null" },
+                acidity = row.optString("acidity").takeIf { it.isNotBlank() && it != "null" },
+                flavorNotes = row.optJSONArray("flavor_notes")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty(),
+                province = row.getString("province"), country = row.getString("country"))
+        }
+    }
+
     @Test fun goldenProfilesStillMatchTheBundledSource() {
         val profiles = set.getJSONArray("profiles")
-        assertEquals(if (assetName.contains("v4")) 67 else 15, profiles.length())
+        assertEquals(if (assetName.contains("v4") || assetName.contains("v5") || assetName.contains("v6")) 67 else 15, profiles.length())
         for (i in 0 until profiles.length()) {
             val saved = profiles.getJSONObject(i)
             val source = File("src/main/assets/knowledge/grape_profile_internal.jsonl").readLines()
@@ -52,17 +72,27 @@ class BottleAskGoldenTest(private val assetName: String) {
 
     @Test fun missingNamesAreRefusedAndSupportedCasesHaveSourceNotes() = runBlocking {
         val cases = set.getJSONArray("cases")
-        assertEquals(if (assetName.contains("v3") || assetName.contains("v4")) 100 else 20, cases.length())
+        assertEquals(when { assetName.contains("v5") -> 300; assetName.contains("v3") || assetName.contains("v4") || assetName.contains("v6") -> 100; else -> 20 }, cases.length())
         val counts = mutableMapOf<String, Int>()
         for (i in 0 until cases.length()) {
             val case = cases.getJSONObject(i)
             val category = case.getString("category")
             counts[category] = counts.getOrDefault(category, 0) + 1
-            val own = knowledge.find(case.getJSONObject("bottle").getString("variety")).grapes
-            val extras = WineAskExtras(knowledge, ownGrapes = own.map { it.grape }.toSet(), ownVariety = own.map { it.grape }, loadReviews = { _, _ -> null })
+            val bottle = case.getJSONObject("bottle")
+            val variety = bottle.getString("variety")
+            val own = knowledge.find(variety).grapes
+            // As in WineAskContext.extrasFor: the bottle's own grape, country and region are known even when the grape
+            // has no internal profile (it then comes from Grape_Profile_Kaggle_Extracted).
+            fun place(key: String) = bottle.getString(key).takeUnless { it.equals("Unknown", ignoreCase = true) }.orEmpty()
+            val extras = WineAskExtras(knowledge, ownGrapes = own.map { it.grape }.toSet(),
+                ownVariety = if (own.isNotEmpty()) own.map { it.grape } else listOf(variety),
+                ownCountry = place("country"), ownRegion = place("province"), loadKaggleExtracted = kaggle, loadReviews = { _, _ -> null })
             val lookup = extras.lookup(case.getString("question"))
             if (category == "no_information") {
-                assertEquals(case.getString("id"), ChatFlowText.NO_INFORMATION, lookup.refusal)
+                // v5 marks the unsupported questions Kotlin's lookup did not refuse when the set was built; they reach Gemma on
+                // purpose. If Kotlin is fixed this fails, which is the reminder to update the flag.
+                if (case.optBoolean("expected_kotlin_miss")) assertNull(case.getString("id"), lookup.refusal)
+                else assertEquals(case.getString("id"), ChatFlowText.NO_INFORMATION, lookup.refusal)
                 assertEquals(ChatFlowText.NO_INFORMATION, case.getString("expected_answer"))
             } else {
                 assertNull(case.getString("id"), lookup.refusal)
@@ -72,6 +102,8 @@ class BottleAskGoldenTest(private val assetName: String) {
             }
         }
         val expectedCounts = when {
+            assetName.contains("v6") -> mapOf("supported" to 50, "false_claim" to 20, "no_information" to 25, "needs_place" to 5)
+            assetName.contains("v5") -> mapOf("supported" to 100, "no_information" to 100, "false_claim" to 100)
             assetName.contains("v4") -> mapOf("supported" to 50, "no_information" to 25, "false_claim" to 25)
             assetName.contains("v3") -> mapOf("supported" to 50, "no_information" to 25, "false_claim" to 25)
             else -> mapOf("supported" to 10, "no_information" to 5, "false_claim" to 5)

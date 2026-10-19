@@ -197,7 +197,7 @@ class WineReminderTest {
             WineSuggestion(name = "Estate Merlot", province = "Bordeaux", country = "France", variety = "Merlot"),
         )
         assertTrue(reminder.contains("Estate Merlot (Merlot, Bordeaux, France)"))
-        assertTrue(reminder.contains("only if they are in WINE FACTS"))
+        assertTrue(reminder.contains("State specifics about this bottle or <more context>"))
         assertTrue(reminder.length < 400)
     }
 
@@ -873,10 +873,12 @@ class NoFixtureLeakTest {
         assertTrue("A placeholder bottle is still built in: $hits", hits.isEmpty())
     }
 
-    @Test fun noBottleSelectedMeansNoBottleBlockInTheEvalBottleChat() {
+    // The eval chat is the bottle ASK path with a synthetic bottle: it sends that bottle's facts and reminder, as the app does.
+    @Test fun theEvalBottleChatSendsTheSyntheticBottlesFactsAndReminder() {
         val main = File("src/main/java/com/sheldondesousa/uncork/MainActivity.kt").readText()
-        assertTrue(main.contains("factsProvider = { \"\" }"))
-        assertTrue(main.contains("reminder = \"\""))
+        assertTrue(main.contains("BottleAskEvalRunner.BottleFactory"))
+        assertTrue(main.contains("factsProvider = { askContext.factsFor(suggestion).also(recordFacts) }"))
+        assertTrue(main.contains("reminder = WineFactsNote.reminder(suggestion)"))
     }
 }
 
