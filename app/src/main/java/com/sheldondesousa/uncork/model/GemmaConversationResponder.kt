@@ -134,23 +134,15 @@ class GemmaConversationResponder(
             record?.invoke(WineReplyAudit(first, reply, output, retryAttempted, source, context))
             return output
         }
-        val opinions = ReplyCheck.unsupportedOpinionWords(reply, context)
-        if (ReplyCheck.needsRetry(reply) || opinions.isNotEmpty()) {
+        if (ReplyCheck.needsRetry(reply)) {
             retryAttempted = true
-            logFlow("Reply failed the output check (foreign script: ${ReplyCheck.hasForeignScript(reply)}, opinion words: $opinions); asking Gemma once more")
-            reply = runCatching { again(if (opinions.isNotEmpty()) OPINION_RETRY_LINE else null) }.getOrDefault(reply)
+            logFlow("Reply failed the output check (foreign script: ${ReplyCheck.hasForeignScript(reply)}); asking Gemma once more")
+            reply = runCatching { again(null) }.getOrDefault(reply)
         }
         if (ReplyCheck.hasForeignScript(reply)) return finish(ChatFlowText.NO_INFORMATION, "KOTLIN_SCRIPT_REFUSAL")
-        // Still praising something the notes never said: give the notes' own first sentences instead.
-        if (ReplyCheck.unsupportedOpinionWords(reply, context).isNotEmpty()) {
-            val fallback = ReplyCheck.factsFallback(context)
-            return finish(fallback ?: ChatFlowText.NO_INFORMATION, if (fallback == null) "KOTLIN_OPINION_REFUSAL" else "KOTLIN_FACTS_FALLBACK")
-        }
         val visible = ReplyCheck.tidy(reply)
         return finish(visible, if (visible == reply) "GEMMA" else "GEMMA_TIDIED")
     }
-
-    private val OPINION_RETRY_LINE = "Remove opinion words and keep only the facts from the context."
 
     private fun handleModeChoice(query: String): ChatMessage {
         markRoute("KOTLIN_HANDLED")
