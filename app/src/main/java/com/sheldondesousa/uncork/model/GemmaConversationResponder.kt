@@ -62,6 +62,19 @@ class GemmaConversationResponder(
     internal var lastRoute: String? = null
         private set
 
+    /** Evaluation provenance only: distinguish model text from the app's final checks. */
+    internal data class WineReplyAudit(
+        val initialModelText: String,
+        val lastModelText: String,
+        val displayedText: String,
+        val retryAttempted: Boolean,
+        val outputSource: String,
+        val checkContext: String,
+    )
+
+    internal var lastWineReplyAudit: WineReplyAudit? = null
+        private set
+
     private fun markRoute(route: String) {
         lastRoute = route
         logFlow("ROUTE $route mode=$chatMode")
@@ -109,17 +122,32 @@ class GemmaConversationResponder(
      * paragraph within the length limit, Gemma is asked once more. A reply that still has foreign letters is replaced by
      * the app's refusal; one that is only badly formatted is tidied.
      */
-    private suspend fun checkedReply(first: String, context: String, again: suspend (extraLine: String?) -> String): String {
+    private suspend fun checkedReply(
+        first: String,
+        context: String,
+        record: ((WineReplyAudit) -> Unit)? = null,
+        again: suspend (extraLine: String?) -> String,
+    ): String {
         var reply = first
+        var retryAttempted = false
+        fun finish(output: String, source: String): String {
+            record?.invoke(WineReplyAudit(first, reply, output, retryAttempted, source, context))
+            return output
+        }
         val opinions = ReplyCheck.unsupportedOpinionWords(reply, context)
         if (ReplyCheck.needsRetry(reply) || opinions.isNotEmpty()) {
+            retryAttempted = true
             logFlow("Reply failed the output check (foreign script: ${ReplyCheck.hasForeignScript(reply)}, opinion words: $opinions); asking Gemma once more")
             reply = runCatching { again(if (opinions.isNotEmpty()) OPINION_RETRY_LINE else null) }.getOrDefault(reply)
         }
-        if (ReplyCheck.hasForeignScript(reply)) return ChatFlowText.NO_INFORMATION
+        if (ReplyCheck.hasForeignScript(reply)) return finish(ChatFlowText.NO_INFORMATION, "KOTLIN_SCRIPT_REFUSAL")
         // Still praising something the notes never said: give the notes' own first sentences instead.
-        if (ReplyCheck.unsupportedOpinionWords(reply, context).isNotEmpty()) return ReplyCheck.factsFallback(context) ?: ChatFlowText.NO_INFORMATION
-        return ReplyCheck.tidy(reply)
+        if (ReplyCheck.unsupportedOpinionWords(reply, context).isNotEmpty()) {
+            val fallback = ReplyCheck.factsFallback(context)
+            return finish(fallback ?: ChatFlowText.NO_INFORMATION, if (fallback == null) "KOTLIN_OPINION_REFUSAL" else "KOTLIN_FACTS_FALLBACK")
+        }
+        val visible = ReplyCheck.tidy(reply)
+        return finish(visible, if (visible == reply) "GEMMA" else "GEMMA_TIDIED")
     }
 
     private val OPINION_RETRY_LINE = "Remove opinion words and keep only the facts from the context."
@@ -902,6 +930,7 @@ class GemmaConversationResponder(
             query: String,
             onUpdate: (ConversationStreamUpdate) -> Unit,
         ): ChatMessage = requestMutex.withLock {
+            lastWineReplyAudit = null
             markRoute("WINE_DISCUSSION")
             suspend fun rebuild() {
                 withContext(Dispatchers.Default) {
@@ -956,7 +985,9 @@ class GemmaConversationResponder(
                 factsSent = true
                 noteUsage("turn", message.length, reply.length)
             }
-            return checkedReply(first, message) { extra -> send(message + extra?.let { "\n$it" }.orEmpty()) {} }
+            return checkedReply(first, message, record = { lastWineReplyAudit = it }) { extra ->
+                send(message + extra?.let { "\n$it" }.orEmpty()) {}
+            }
         }
 
         private suspend fun send(message: String, onUpdate: (ConversationStreamUpdate) -> Unit): String {

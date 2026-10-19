@@ -5,8 +5,8 @@ package com.sheldondesousa.uncork.model
  * writing system into an English reply, break a reply into several paragraphs or lists, or run long.
  */
 object ReplyCheck {
-    /** The longest reply shown, in characters: roughly the 2 to 4 short sentences the instructions ask for, with room to spare. */
-    const val MAX_CHARS = 800
+    /** The longest reply shown, in characters: up to 5 short sentences as requested by the bottle ASK instructions, with room to spare. */
+    const val MAX_CHARS = 1000
 
     private val MARKDOWN = Regex("(\\*\\*|__|(?m)^\\s*(#{1,6}\\s|[-*\u2022]\\s|\\d+[.)]\\s)|[\\[\\]{}])")
 

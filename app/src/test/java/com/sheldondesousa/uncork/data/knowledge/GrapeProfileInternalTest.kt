@@ -27,8 +27,12 @@ class GrapeProfileInternalTest {
     }
 
     @Test fun aliasesFindTheSameGrapeNoMatterHowTheDatabaseSpellsIt() {
-        listOf("Syrah", "Shiraz", "shiraz").forEach {
-            assertEquals("Shiraz / Syrah", base.find(it).grapes.single().grape)
+        listOf("Syrah", "Shiraz", "shiraz", "Shiraz / Syrah", "Syrah / Shiraz", "shiraz/syrah", "Syrah & Shiraz").forEach {
+            val lookup = base.find(it)
+            assertEquals(it, "Shiraz / Syrah", lookup.grapes.single().grape)
+            assertNull(it, lookup.blendNote)
+            val facts = WineFactsNote.build(WineSuggestion(name = "Test wine", province = "", variety = it), lookup)
+            assertFalse(it, facts.contains("is a blend"))
         }
         assertEquals("Grenache Noir", base.find("Grenache").grapes.single().grape)
         assertEquals("Mourvèdre", base.find("Monastrell").grapes.single().grape)
@@ -40,6 +44,15 @@ class GrapeProfileInternalTest {
         val lookup = base.find("Cabernet Sauvignon-Merlot")
         assertEquals(listOf("Cabernet Sauvignon", "Merlot"), lookup.grapes.map { it.grape })
         assertTrue(lookup.blendNote!!.contains("exact proportions are not known"))
+    }
+
+    @Test fun slashBlendsKeepDistinctAndUnknownComponentsHonest() {
+        val genuine = base.find("Syrah / Merlot")
+        assertEquals(setOf("Shiraz / Syrah", "Merlot"), genuine.grapes.map { it.grape }.toSet())
+        assertNotNull(genuine.blendNote)
+        val partlyUnknown = base.find("Syrah / Zzyzx")
+        assertEquals("Shiraz / Syrah", partlyUnknown.grapes.single().grape)
+        assertNotNull(partlyUnknown.blendNote)
     }
 
     @Test fun styleLabelsUseTypicalGrapesAndSayTheyAreOnlyTypical() {
@@ -1104,7 +1117,8 @@ class ReplyCheckTest {
         assertTrue(ReplyCheck.needsRetry("First point.\n\nSecond point."))
         assertTrue(ReplyCheck.needsRetry("- Merlot\n- Malbec"))
         assertTrue(ReplyCheck.needsRetry("**Merlot** is soft."))
-        assertTrue(ReplyCheck.needsRetry("Sentence. ".repeat(100)))
+        assertFalse(ReplyCheck.needsRetry("Sentence. ".repeat(100)))
+        assertTrue(ReplyCheck.needsRetry("Sentence. ".repeat(101)))
         assertEquals("Merlot is soft. Malbec is bold.", ReplyCheck.tidy("**Merlot** is soft.\n\n- Malbec is bold."))
         val long = ReplyCheck.tidy("This is a sentence about wine. ".repeat(60))
         assertTrue(long.length <= ReplyCheck.MAX_CHARS)

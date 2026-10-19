@@ -27,7 +27,7 @@ import com.sheldondesousa.uncork.data.reviews.GrapeVarieties
 import com.sheldondesousa.uncork.data.reviews.WineReviewRepository
 import com.sheldondesousa.uncork.data.reviews.WineSelectionCriteria
 import com.sheldondesousa.uncork.eval.GemmaEvalDebugScreen
-import com.sheldondesousa.uncork.eval.GemmaRagEvalRunner
+import com.sheldondesousa.uncork.eval.BottleAskEvalRunner
 import com.sheldondesousa.uncork.model.GemmaConversationResponder
 import com.sheldondesousa.uncork.model.BraveSearchHttpClient
 import com.sheldondesousa.uncork.model.BraveWineWebSearchDataSource
@@ -242,14 +242,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (modelReady && showEvalDebug) {
-                    GemmaEvalDebugScreen(onBack = { showEvalDebug = false }, ragExtras = { askContext.extrasForChat() },
-                        bottle = GemmaRagEvalRunner.BottleFactory { responder, ragOn, record ->
-                            // No bottle is selected in this eval, so no bottle block is sent: no facts, no reminder, and the
-                            // lookups work from the question alone (as in the open chat), never from a made-up bottle.
+                    GemmaEvalDebugScreen(onBack = { showEvalDebug = false },
+                        bottle = BottleAskEvalRunner.BottleFactory { responder, suggestion, record, recordFacts ->
                             responder.startWineDiscussion(
-                                factsProvider = { "" },
-                                reminder = "",
-                                extras = if (ragOn) record(askContext.extrasForChat()) else null,
+                                factsProvider = { askContext.factsFor(suggestion).also(recordFacts) },
+                                reminder = WineFactsNote.reminder(suggestion),
+                                extras = record(askContext.extrasFor(suggestion)),
                             )
                         })
                 } else if (modelReady) {

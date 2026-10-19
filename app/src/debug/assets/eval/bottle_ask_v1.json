@@ -1,0 +1,644 @@
+{
+  "meta": {
+    "name": "Bottle detail ASK v1",
+    "entry": "bottle_detail_ask",
+    "synthetic_bottles": true,
+    "notes": "Fresh selected-bottle session per question. Expected answers never sent to Gemma. Fictional absent names are intentional. No model execution has been performed."
+  },
+  "profiles": [
+    {
+      "grape": "Merlot",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Full-bodied",
+      "acidity": "Low",
+      "tannin": "Moderate (softer than Cabernet Sauvignon)",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "cedar, bay leaf, cocoa, black cherry, plum",
+      "flavours": "ripe fruit, chocolate, soft spice",
+      "food_pairings": "roast pork; burgers; mushroom risotto; mild cheeses",
+      "ageing_potential": "Most bottles are made for drinking soon, though the best keep improving",
+      "origin_country": "France",
+      "origin_region": "Bordeaux",
+      "origin_note": "",
+      "key_regions": "Bordeaux; California",
+      "summary": "Plush, rounded and easy to like. Soft tannins and ripe plum fruit make it a friendly red for newcomers, and it often smooths out sharper grapes in blends. Warm places make it jammy and generous, cooler ones leaner and more herbal.",
+      "rag_text": "Merlot (red grape). Plush, rounded and easy to like. Soft tannins and ripe plum fruit make it a friendly red for newcomers, and it often smooths out sharper grapes in blends. Warm places make it jammy and generous, cooler ones leaner and more herbal. Body: Full-bodied. Acidity: Low. Tannin: Moderate (softer than Cabernet Sauvignon). Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: cedar, bay leaf, cocoa, black cherry, plum. Flavours: ripe fruit, chocolate, soft spice. Food pairings: roast pork; burgers; mushroom risotto; mild cheeses. Ageing: Most bottles are made for drinking soon, though the best keep improving. Origin: Bordeaux, France. Key regions: Bordeaux; California."
+    },
+    {
+      "grape": "Pinot Noir",
+      "also_known_as": "Spätburgunder (Germany); Pinot Nero (Italy)",
+      "colour": "Red",
+      "body": "Medium-bodied",
+      "acidity": "High",
+      "tannin": "Low",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "rose, forest floor, wild strawberry, raspberry, cherry",
+      "flavours": "red berries, spice, mushroom with age",
+      "food_pairings": "roast duck; salmon; mushroom dishes; roast chicken",
+      "ageing_potential": "Many bottles are best within 5–10 years; top ones last longer",
+      "origin_country": "France",
+      "origin_region": "Bourgogne (Burgundy)",
+      "origin_note": "",
+      "key_regions": "Burgundy; Oregon; Central Otago; Russian River Valley; Bío Bío; Baden; Alto Adige; Jura; Champagne",
+      "summary": "Pale in the glass but full of charm. Silky and delicate with bright red fruit when young, growing more earthy and savoury as it matures. It's fussy about climate and soil, a big reason the great ones are so prized.",
+      "rag_text": "Pinot Noir (red grape). Pale in the glass but full of charm. Silky and delicate with bright red fruit when young, growing more earthy and savoury as it matures. It's fussy about climate and soil, a big reason the great ones are so prized. Body: Medium-bodied. Acidity: High. Tannin: Low. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: rose, forest floor, wild strawberry, raspberry, cherry. Flavours: red berries, spice, mushroom with age. Food pairings: roast duck; salmon; mushroom dishes; roast chicken. Ageing: Many bottles are best within 5–10 years; top ones last longer. Origin: Bourgogne (Burgundy), France. Also known as: Spätburgunder (Germany); Pinot Nero (Italy). Key regions: Burgundy; Oregon; Central Otago; Russian River Valley; Bío Bío; Baden; Alto Adige; Jura; Champagne."
+    },
+    {
+      "grape": "Cabernet Sauvignon",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Full-bodied",
+      "acidity": "Medium to high",
+      "tannin": "Very firm",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "green pepper in cooler sites, tobacco, graphite, cedar, blackcurrant",
+      "flavours": "dark berries, plum, chocolate, spice",
+      "food_pairings": "grilled steak; roast lamb; mature hard cheese; mushroom dishes",
+      "ageing_potential": "Ages well; good bottles reward ten years or more",
+      "origin_country": "France",
+      "origin_region": "Bordeaux",
+      "origin_note": "Natural cross of Cabernet Franc and Sauvignon Blanc",
+      "key_regions": "Bordeaux; Napa Valley; Coonawarra; Margaret River; Tuscany; Chile; Washington State; Stellenbosch; Maipo Valley",
+      "summary": "Red wine's heavyweight, with deep colour, grippy tannins and a backbone built for ageing. It began in Bordeaux and now grows almost everywhere, tasting darker and plusher in warm places and leaner and more savoury in cool ones.",
+      "rag_text": "Cabernet Sauvignon (red grape). Red wine's heavyweight, with deep colour, grippy tannins and a backbone built for ageing. It began in Bordeaux and now grows almost everywhere, tasting darker and plusher in warm places and leaner and more savoury in cool ones. Body: Full-bodied. Acidity: Medium to high. Tannin: Very firm. Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: green pepper in cooler sites, tobacco, graphite, cedar, blackcurrant. Flavours: dark berries, plum, chocolate, spice. Food pairings: grilled steak; roast lamb; mature hard cheese; mushroom dishes. Ageing: Ages well; good bottles reward ten years or more. Origin: Bordeaux, France. Natural cross of Cabernet Franc and Sauvignon Blanc. Key regions: Bordeaux; Napa Valley; Coonawarra; Margaret River; Tuscany; Chile; Washington State; Stellenbosch; Maipo Valley."
+    },
+    {
+      "grape": "Shiraz / Syrah",
+      "also_known_as": "Syrah (France, Rhône); Shiraz (Australia)",
+      "colour": "Red",
+      "body": "Very full-bodied",
+      "acidity": "Medium",
+      "tannin": "Very firm",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "olive, smoke, violet, black pepper, blackberry",
+      "flavours": "dark fruit, spice, dark chocolate",
+      "food_pairings": "barbecued ribs; lamb; sausages; hard cheese",
+      "ageing_potential": "Good bottles improve over 5–15 years",
+      "origin_country": "France",
+      "origin_region": "Rhône Valley",
+      "origin_note": "",
+      "key_regions": "Northern Rhône; Barossa; Victoria; Argentina; California; Chile; Washington State; Italy; New Zealand; South Africa; Switzerland; Spain",
+      "summary": "Bold, dark and peppery. Warm regions give ripe, rich versions loaded with dark fruit, while cooler ones are more savoury, floral and restrained. In France it's called Syrah, in Australia Shiraz. Syrah and Shiraz are the exact same grape variety.",
+      "rag_text": "Shiraz / Syrah (red grape). Bold, dark and peppery. Warm regions give ripe, rich versions loaded with dark fruit, while cooler ones are more savoury, floral and restrained. In France it's called Syrah, in Australia Shiraz. Syrah and Shiraz are the exact same grape variety. Body: Very full-bodied. Acidity: Medium. Tannin: Very firm. Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: olive, smoke, violet, black pepper, blackberry. Flavours: dark fruit, spice, dark chocolate. Food pairings: barbecued ribs; lamb; sausages; hard cheese. Ageing: Good bottles improve over 5–15 years. Origin: Rhône Valley, France. Also known as: Syrah (France, Rhône); Shiraz (Australia). Key regions: Northern Rhône; Barossa; Victoria; Argentina; California; Chile; Washington State; Italy; New Zealand; South Africa; Switzerland; Spain."
+    },
+    {
+      "grape": "Bobal",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Medium-bodied",
+      "acidity": "High",
+      "tannin": "Moderate",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "pepper, herbs, plum, blackberry, red cherry",
+      "flavours": "red fruit, herbs, spice",
+      "food_pairings": "paella; grilled lamb; tapas; roast chicken",
+      "ageing_potential": "Young wines in 2–3 years; better ones keep much longer",
+      "origin_country": "Spain",
+      "origin_region": "Valencia and Utiel-Requena",
+      "origin_note": "",
+      "key_regions": "Valencia; Utiel-Requena",
+      "summary": "A deeply coloured Spanish red with bright acidity and plenty of red fruit. Light and fresh when young, richer and more serious after time in barrel. A good-value find from the Valencia area.",
+      "rag_text": "Bobal (red grape). A deeply coloured Spanish red with bright acidity and plenty of red fruit. Light and fresh when young, richer and more serious after time in barrel. A good-value find from the Valencia area. Body: Medium-bodied. Acidity: High. Tannin: Moderate. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: pepper, herbs, plum, blackberry, red cherry. Flavours: red fruit, herbs, spice. Food pairings: paella; grilled lamb; tapas; roast chicken. Ageing: Young wines in 2–3 years; better ones keep much longer. Origin: Valencia and Utiel-Requena, Spain. Key regions: Valencia; Utiel-Requena."
+    },
+    {
+      "grape": "Carménère",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Full-bodied",
+      "acidity": "Low",
+      "tannin": "Firm but velvety (softer than Cabernet Sauvignon)",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "herbs, cocoa, spice, red pepper, blackberry",
+      "flavours": "dark fruit, pepper, chocolate",
+      "food_pairings": "grilled meats; empanadas; chilli; roasted vegetables",
+      "ageing_potential": "Best enjoyed in the first 5–10 years",
+      "origin_country": "France",
+      "origin_region": "Bordeaux",
+      "origin_note": "Originally from Bordeaux, now mainly grown in Chile",
+      "key_regions": "Chile",
+      "summary": "A velvety red with a signature whisper of green pepper. Dark fruit, spice and soft tannins; once thought lost, it now thrives in Chile. Smooth and savoury.",
+      "rag_text": "Carménère (red grape). A velvety red with a signature whisper of green pepper. Dark fruit, spice and soft tannins; once thought lost, it now thrives in Chile. Smooth and savoury. Body: Full-bodied. Acidity: Low. Tannin: Firm but velvety (softer than Cabernet Sauvignon). Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: herbs, cocoa, spice, red pepper, blackberry. Flavours: dark fruit, pepper, chocolate. Food pairings: grilled meats; empanadas; chilli; roasted vegetables. Ageing: Best enjoyed in the first 5–10 years. Origin: Bordeaux, France. Originally from Bordeaux, now mainly grown in Chile. Key regions: Chile."
+    },
+    {
+      "grape": "Barbera",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Medium-bodied",
+      "acidity": "Medium to high",
+      "tannin": "Low",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "spice, licorice, plum, blackberry, cherry",
+      "flavours": "sour cherry, plum, pepper",
+      "food_pairings": "pizza; tomato pasta; salami; roast chicken",
+      "ageing_potential": "Best enjoyed in the first 4–6 years",
+      "origin_country": "Italy",
+      "origin_region": "Piemonte (Piedmont)",
+      "origin_note": "",
+      "key_regions": "Piedmont; California",
+      "summary": "A juicy, easy red with lively acidity and gentle tannins. Cherry and plum fruit with a tart edge that suits food. A true everyday Italian red.",
+      "rag_text": "Barbera (red grape). A juicy, easy red with lively acidity and gentle tannins. Cherry and plum fruit with a tart edge that suits food. A true everyday Italian red. Body: Medium-bodied. Acidity: Medium to high. Tannin: Low. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: spice, licorice, plum, blackberry, cherry. Flavours: sour cherry, plum, pepper. Food pairings: pizza; tomato pasta; salami; roast chicken. Ageing: Best enjoyed in the first 4–6 years. Origin: Piemonte (Piedmont), Italy. Key regions: Piedmont; California."
+    },
+    {
+      "grape": "Arinto",
+      "also_known_as": "",
+      "colour": "White",
+      "body": "Medium-bodied",
+      "acidity": "Very high",
+      "tannin": "None",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "sea air, chalk, white peach, green apple, lemon",
+      "flavours": "citrus, apple, minerals",
+      "food_pairings": "grilled sardines; salad with fresh chèvre and walnuts; octopus; ceviche",
+      "ageing_potential": "Fresh for 2–5 years; good ones longer",
+      "origin_country": "Portugal",
+      "origin_region": "",
+      "origin_note": "",
+      "key_regions": "Portugal; Bucelas; Lisboa",
+      "summary": "A Portuguese white that stays sharp and fresh even in great heat. Citrus and orchard fruit over a wet-stone minerality, crisp and long-lived. Very food-friendly.",
+      "rag_text": "Arinto (white grape). A Portuguese white that stays sharp and fresh even in great heat. Citrus and orchard fruit over a wet-stone minerality, crisp and long-lived. Very food-friendly. Body: Medium-bodied. Acidity: Very high. Tannin: None. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: sea air, chalk, white peach, green apple, lemon. Flavours: citrus, apple, minerals. Food pairings: grilled sardines; salad with fresh chèvre and walnuts; octopus; ceviche. Ageing: Fresh for 2–5 years; good ones longer. Origin: Portugal. Key regions: Portugal; Bucelas; Lisboa."
+    },
+    {
+      "grape": "Petit Verdot",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Full-bodied",
+      "acidity": "High",
+      "tannin": "Very firm",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "leather, black pepper, plum, blackberry, violet",
+      "flavours": "dark fruit, spice, smoke",
+      "food_pairings": "braised lamb; game; hard cheese; hearty stews",
+      "ageing_potential": "Improves over 8–15 years",
+      "origin_country": "France",
+      "origin_region": "Bordeaux",
+      "origin_note": "",
+      "key_regions": "Bordeaux; warmer New World regions; California; Spain; Australia; Chile",
+      "summary": "A deeply coloured Bordeaux grape that ripens late and needs warmth. Powerful, tannic and floral, full of dark fruit and pepper. Traditionally a small blending grape, now bottled alone in warmer regions.",
+      "rag_text": "Petit Verdot (red grape). A deeply coloured Bordeaux grape that ripens late and needs warmth. Powerful, tannic and floral, full of dark fruit and pepper. Traditionally a small blending grape, now bottled alone in warmer regions. Body: Full-bodied. Acidity: High. Tannin: Very firm. Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: leather, black pepper, plum, blackberry, violet. Flavours: dark fruit, spice, smoke. Food pairings: braised lamb; game; hard cheese; hearty stews. Ageing: Improves over 8–15 years. Origin: Bordeaux, France. Key regions: Bordeaux; warmer New World regions; California; Spain; Australia; Chile."
+    },
+    {
+      "grape": "Verdicchio",
+      "also_known_as": "",
+      "colour": "White",
+      "body": "Medium-bodied",
+      "acidity": "High",
+      "tannin": "None",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "chalk, white peach, almond, green apple, lemon",
+      "flavours": "citrus, almond, minerals",
+      "food_pairings": "seafood; seafood pasta; soft cheese; roast vegetables",
+      "ageing_potential": "Simple ones young; the best 5+ years",
+      "origin_country": "Italy",
+      "origin_region": "Le Marche",
+      "origin_note": "",
+      "key_regions": "Castelli di Jesi; Matelica",
+      "summary": "A white from central Italy with citrus freshness and a gently bitter-almond finish. Can be a fresh summer sipper or a weightier, ageworthy white. Great with Adriatic seafood.",
+      "rag_text": "Verdicchio (white grape). A white from central Italy with citrus freshness and a gently bitter-almond finish. Can be a fresh summer sipper or a weightier, ageworthy white. Great with Adriatic seafood. Body: Medium-bodied. Acidity: High. Tannin: None. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: chalk, white peach, almond, green apple, lemon. Flavours: citrus, almond, minerals. Food pairings: seafood; seafood pasta; soft cheese; roast vegetables. Ageing: Simple ones young; the best 5+ years. Origin: Le Marche, Italy. Key regions: Castelli di Jesi; Matelica."
+    },
+    {
+      "grape": "Garnacha",
+      "also_known_as": "Grenache Noir (France)",
+      "colour": "Red",
+      "body": "Very full-bodied",
+      "acidity": "Low",
+      "tannin": "Moderate",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "dried herbs, white pepper, red cherry, raspberry, strawberry",
+      "flavours": "ripe red fruit, spice, warmth",
+      "food_pairings": "tapas; roast chicken; paella; grilled meats",
+      "ageing_potential": "Best enjoyed in the first 3–10 years",
+      "origin_country": "Spain",
+      "origin_region": "Aragón",
+      "origin_note": "Same grape as Grenache Noir",
+      "key_regions": "Priorat; Southern Rhône; Mediterranean; United States; Australia",
+      "summary": "The Spanish name for Grenache: sun-ripened, fruity and warm. Ripe strawberry-style fruit, spice and a smooth texture, and Priorat and Rioja put it to great use. Generous and drinkable.",
+      "rag_text": "Garnacha (red grape). The Spanish name for Grenache: sun-ripened, fruity and warm. Ripe strawberry-style fruit, spice and a smooth texture, and Priorat and Rioja put it to great use. Generous and drinkable. Body: Very full-bodied. Acidity: Low. Tannin: Moderate. Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: dried herbs, white pepper, red cherry, raspberry, strawberry. Flavours: ripe red fruit, spice, warmth. Food pairings: tapas; roast chicken; paella; grilled meats. Ageing: Best enjoyed in the first 3–10 years. Origin: Aragón, Spain. Same grape as Grenache Noir. Also known as: Grenache Noir (France). Key regions: Priorat; Southern Rhône; Mediterranean; United States; Australia."
+    },
+    {
+      "grape": "Scheurebe",
+      "also_known_as": "",
+      "colour": "White",
+      "body": "Medium-bodied",
+      "acidity": "High",
+      "tannin": "None",
+      "sweetness": "Off-dry (dry to sweet versions exist)",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "herbs, passion fruit, peach, blackcurrant, grapefruit",
+      "flavours": "citrus, tropical fruit, blackcurrant",
+      "food_pairings": "Asian dishes; spiced fish; salads; soft cheese",
+      "ageing_potential": "Best enjoyed in the first 2–5 years",
+      "origin_country": "Germany",
+      "origin_region": "Pfalz, Rheinhessen and Franken",
+      "origin_note": "Created in Germany in the early 20th century",
+      "key_regions": "Pfalz; Rheinhessen; Franken",
+      "summary": "A strikingly fragrant German white that smells of ruby grapefruit and cassis. Brisk acidity, made dry through to sweet. Unmistakable once you've smelled it.",
+      "rag_text": "Scheurebe (white grape). A strikingly fragrant German white that smells of ruby grapefruit and cassis. Brisk acidity, made dry through to sweet. Unmistakable once you've smelled it. Body: Medium-bodied. Acidity: High. Tannin: None. Sweetness: Off-dry (dry to sweet versions exist). Alcohol: Moderate (12–13.5%). Aromas: herbs, passion fruit, peach, blackcurrant, grapefruit. Flavours: citrus, tropical fruit, blackcurrant. Food pairings: Asian dishes; spiced fish; salads; soft cheese. Ageing: Best enjoyed in the first 2–5 years. Origin: Pfalz, Rheinhessen and Franken, Germany. Created in Germany in the early 20th century. Key regions: Pfalz; Rheinhessen; Franken."
+    },
+    {
+      "grape": "Vermentino",
+      "also_known_as": "Rolle (Provence); Pigato (Liguria); Favorita (Piedmont)",
+      "colour": "White",
+      "body": "Medium-bodied",
+      "acidity": "High",
+      "tannin": "None",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "sea salt, almond, green apple, white peach, citrus",
+      "flavours": "citrus, stone fruit, herbs",
+      "food_pairings": "oysters; grilled fish; pesto; lemony pasta",
+      "ageing_potential": "Best enjoyed in the first 2–5 years",
+      "origin_country": "Italy",
+      "origin_region": "Sardinia, Liguria and Corsica",
+      "origin_note": "",
+      "key_regions": "Sardinia; Liguria; Corsica; Provence",
+      "summary": "A sunny seaside white with a briny, ocean-air edge. Citrus and white peach with zesty acidity and a refreshing finish. Perfect for lunches by the water.",
+      "rag_text": "Vermentino (white grape). A sunny seaside white with a briny, ocean-air edge. Citrus and white peach with zesty acidity and a refreshing finish. Perfect for lunches by the water. Body: Medium-bodied. Acidity: High. Tannin: None. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: sea salt, almond, green apple, white peach, citrus. Flavours: citrus, stone fruit, herbs. Food pairings: oysters; grilled fish; pesto; lemony pasta. Ageing: Best enjoyed in the first 2–5 years. Origin: Sardinia, Liguria and Corsica, Italy. Also known as: Rolle (Provence); Pigato (Liguria); Favorita (Piedmont). Key regions: Sardinia; Liguria; Corsica; Provence."
+    },
+    {
+      "grape": "Mourvèdre",
+      "also_known_as": "Monastrell, Mataró (Spain); Mataro (Australia, Catalonia)",
+      "colour": "Red",
+      "body": "Very full-bodied",
+      "acidity": "High",
+      "tannin": "Firm",
+      "sweetness": "Dry",
+      "alcohol_abv": "High (over 13.5%)",
+      "aromas": "savoury meat, herbs, leather, plum, blackberry",
+      "flavours": "dark fruit, spice, earth",
+      "food_pairings": "slow-cooked lamb; game; barbecue; rich stews",
+      "ageing_potential": "Best with 5–15 years",
+      "origin_country": "Spain",
+      "origin_region": "Valencia",
+      "origin_note": "",
+      "key_regions": "Southern Rhône; Bandol (Provence); Spain; Jumilla; Yecla; Barossa Valley",
+      "summary": "Dark, structured and a little wild. Brooding dark fruit with leather and meaty notes and firm tannins, and it needs lots of sun to ripen. Often blended with Grenache and Syrah; decanting helps it open up.",
+      "rag_text": "Mourvèdre (red grape). Dark, structured and a little wild. Brooding dark fruit with leather and meaty notes and firm tannins, and it needs lots of sun to ripen. Often blended with Grenache and Syrah; decanting helps it open up. Body: Very full-bodied. Acidity: High. Tannin: Firm. Sweetness: Dry. Alcohol: High (over 13.5%). Aromas: savoury meat, herbs, leather, plum, blackberry. Flavours: dark fruit, spice, earth. Food pairings: slow-cooked lamb; game; barbecue; rich stews. Ageing: Best with 5–15 years. Origin: Valencia, Spain. Also known as: Monastrell, Mataró (Spain); Mataro (Australia, Catalonia). Key regions: Southern Rhône; Bandol (Provence); Spain; Jumilla; Yecla; Barossa Valley."
+    },
+    {
+      "grape": "Dornfelder",
+      "also_known_as": "",
+      "colour": "Red",
+      "body": "Full-bodied",
+      "acidity": "Moderate",
+      "tannin": "Moderate",
+      "sweetness": "Dry",
+      "alcohol_abv": "Moderate (12–13.5%)",
+      "aromas": "vanilla, chocolate, plum, blackberry, black cherry",
+      "flavours": "dark fruit, vanilla, soft spice",
+      "food_pairings": "roast beef; game; sausages; hard cheese",
+      "ageing_potential": "Best enjoyed in the first 3–6 years",
+      "origin_country": "Germany",
+      "origin_region": "Württemberg",
+      "origin_note": "A German-bred cross",
+      "key_regions": "Pfalz; Rheinhessen; Switzerland; England",
+      "summary": "A German red bred for deep colour and soft, easy drinking. Dark berries and cherry with gentle tannins; styles run light and juicy through to rich and barrel-aged. Often blended to deepen other wines' colour.",
+      "rag_text": "Dornfelder (red grape). A German red bred for deep colour and soft, easy drinking. Dark berries and cherry with gentle tannins; styles run light and juicy through to rich and barrel-aged. Often blended to deepen other wines' colour. Body: Full-bodied. Acidity: Moderate. Tannin: Moderate. Sweetness: Dry. Alcohol: Moderate (12–13.5%). Aromas: vanilla, chocolate, plum, blackberry, black cherry. Flavours: dark fruit, vanilla, soft spice. Food pairings: roast beef; game; sausages; hard cheese. Ageing: Best enjoyed in the first 3–6 years. Origin: Württemberg, Germany. A German-bred cross. Key regions: Pfalz; Rheinhessen; Switzerland; England."
+    }
+  ],
+  "cases": [
+    {
+      "id": "ASK-01",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What aromas does Merlot have?",
+      "expected_answer": "Merlot has aromas of cedar, bay leaf, cocoa, black cherry and plum.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Merlot"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-02",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Pinot Noir",
+        "variety": "Pinot Noir",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What are Pinot Noir’s body, tannin and acidity levels?",
+      "expected_answer": "Pinot Noir is medium-bodied, with low tannins and high acidity.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Pinot Noir"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-03",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Cabernet Sauvignon",
+        "variety": "Cabernet Sauvignon",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "How does climate affect Cabernet Sauvignon’s character?",
+      "expected_answer": "Cabernet Sauvignon tastes darker and plusher in warm places, and leaner and more savoury in cooler places.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Cabernet Sauvignon"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-04",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Shiraz / Syrah",
+        "variety": "Shiraz / Syrah",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Are Shiraz and Syrah different grapes?",
+      "expected_answer": "The profile describes them as the same grape: called Syrah in France and Shiraz in Australia.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Shiraz / Syrah"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-05",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Arinto",
+        "variety": "Arinto",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Which has higher acidity: Arinto or Vermentino?",
+      "expected_answer": "Arinto has very high acidity, while Vermentino has high acidity.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Arinto",
+        "Vermentino"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-06",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Carménère",
+        "variety": "Carménère",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What aromas are listed for Carménère?",
+      "expected_answer": "Carménère has aromas of herbs, cocoa, spice, red pepper and blackberry.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Carménère"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-07",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Barbera",
+        "variety": "Barbera",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "How do Barbera and Petit Verdot compare in tannin?",
+      "expected_answer": "Barbera has low tannins, while Petit Verdot has very firm tannins.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Barbera",
+        "Petit Verdot"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-08",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Verdicchio",
+        "variety": "Verdicchio",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What finish is characteristic of Verdicchio?",
+      "expected_answer": "Verdicchio has a gently bitter-almond finish.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Verdicchio"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-09",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Scheurebe",
+        "variety": "Scheurebe",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Can Scheurebe be made as both dry and sweet wine?",
+      "expected_answer": "Yes. Scheurebe is made in styles ranging from dry to sweet.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Scheurebe"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-10",
+      "category": "supported",
+      "bottle": {
+        "name": "Evaluation bottle — Mourvèdre",
+        "variety": "Mourvèdre",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What does the profile suggest about decanting Mourvèdre?",
+      "expected_answer": "Decanting helps Mourvèdre open up.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Mourvèdre"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-11",
+      "category": "no_information",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What is Zorvella?",
+      "expected_answer": "I'm sorry, I do not have that information.",
+      "expected_route": "KOTLIN_REFUSAL",
+      "source_grapes": [],
+      "grading": "exact"
+    },
+    {
+      "id": "ASK-12",
+      "category": "no_information",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What aromas does Nuvorix have?",
+      "expected_answer": "I'm sorry, I do not have that information.",
+      "expected_route": "KOTLIN_REFUSAL",
+      "source_grapes": [],
+      "grading": "exact"
+    },
+    {
+      "id": "ASK-13",
+      "category": "no_information",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What is the body of Velquora?",
+      "expected_answer": "I'm sorry, I do not have that information.",
+      "expected_route": "KOTLIN_REFUSAL",
+      "source_grapes": [],
+      "grading": "exact"
+    },
+    {
+      "id": "ASK-14",
+      "category": "no_information",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "How tannic is Tazmirel?",
+      "expected_answer": "I'm sorry, I do not have that information.",
+      "expected_route": "KOTLIN_REFUSAL",
+      "source_grapes": [],
+      "grading": "exact"
+    },
+    {
+      "id": "ASK-15",
+      "category": "no_information",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "What acidity does Orvexia have?",
+      "expected_answer": "I'm sorry, I do not have that information.",
+      "expected_route": "KOTLIN_REFUSAL",
+      "source_grapes": [],
+      "grading": "exact"
+    },
+    {
+      "id": "ASK-16",
+      "category": "false_claim",
+      "bottle": {
+        "name": "Evaluation bottle — Pinot Noir",
+        "variety": "Pinot Noir",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Pinot Noir is full-bodied with very firm tannins and low acidity, correct?",
+      "expected_answer": "That claim does not match my data. According to my sources, Pinot Noir is medium-bodied, with low tannins and high acidity.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Pinot Noir"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-17",
+      "category": "false_claim",
+      "bottle": {
+        "name": "Evaluation bottle — Merlot",
+        "variety": "Merlot",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Merlot has high acidity and firmer tannins than Cabernet Sauvignon, right?",
+      "expected_answer": "That claim does not match my data. According to my sources, Merlot has low acidity and moderate tannins that are softer than Cabernet Sauvignon’s.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Merlot"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-18",
+      "category": "false_claim",
+      "bottle": {
+        "name": "Evaluation bottle — Shiraz / Syrah",
+        "variety": "Shiraz / Syrah",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Shiraz is a light-bodied grape with no tannins, correct?",
+      "expected_answer": "That claim does not match my data. According to my sources, Shiraz / Syrah is very full-bodied, with very firm tannins and medium acidity.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Shiraz / Syrah"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-19",
+      "category": "false_claim",
+      "bottle": {
+        "name": "Evaluation bottle — Vermentino",
+        "variety": "Vermentino",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Vermentino has very firm tannins and low acidity, doesn’t it?",
+      "expected_answer": "That claim does not match my data. According to my sources, Vermentino is medium-bodied, with no tannins recorded and high acidity.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Vermentino"
+      ],
+      "grading": "human_review"
+    },
+    {
+      "id": "ASK-20",
+      "category": "false_claim",
+      "bottle": {
+        "name": "Evaluation bottle — Garnacha",
+        "variety": "Garnacha",
+        "country": "Unknown",
+        "province": "Unknown"
+      },
+      "question": "Garnacha is medium-bodied with high acidity, right?",
+      "expected_answer": "That claim does not match my data. According to my sources, Garnacha is very full-bodied, with low acidity and moderate tannins.",
+      "expected_route": "WINE_DISCUSSION",
+      "source_grapes": [
+        "Grenache Noir"
+      ],
+      "grading": "human_review"
+    }
+  ]
+}

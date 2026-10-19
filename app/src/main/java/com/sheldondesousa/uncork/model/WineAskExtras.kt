@@ -97,7 +97,19 @@ object FollowUp {
 }
 
 /** The outcome of looking a question up: context for Gemma, or the app's own refusal (Gemma is then not called). */
-class AskLookup(val context: String?, val refusal: String? = null, val rewritten: String? = null)
+enum class AskLookupOutcome { CONTEXT, ALREADY_IN_CONVERSATION, NO_INFORMATION, DIRECT_REPLY, NO_EXTRA_NEEDED }
+
+class AskLookup(
+    val context: String?,
+    val refusal: String? = null,
+    val rewritten: String? = null,
+    val outcome: AskLookupOutcome = when {
+        refusal == ChatFlowText.NO_INFORMATION -> AskLookupOutcome.NO_INFORMATION
+        refusal != null -> AskLookupOutcome.DIRECT_REPLY
+        !context.isNullOrBlank() -> AskLookupOutcome.CONTEXT
+        else -> AskLookupOutcome.NO_EXTRA_NEEDED
+    },
+)
 
 /**
  * Questions the app holds no data for: what a bottle costs, where to buy it, whether it is in stock, today's rating.
@@ -154,10 +166,36 @@ object RefusalGate {
                     GrapeProfileInternal.normalize(w).let { n -> n !in known && CountryMentions.find(n).isEmpty() && GrapeVarietyLookup.findMentioned(n).isEmpty() }
             }
 
+    // Capture an explicitly named subject independently of capitalisation. Restrict the
+    // patterns to descriptions and grape traits; ordinary follow-ups keep the bottle context.
+    private val SUBJECTS = listOf(
+        "(?:tell me (?:more )?about|describe) (.+)",
+        "(?:aromas?|body(?: level)?|tannin(?: level)?|acidity(?: level)?) (?:are recorded|is listed|is recorded|do you have|level)?\\s*(?:for|of) (.+)",
+        "(?:which|what) aromas? does (.+?) have",
+        "what body would (.+?) have",
+        "how acidic is (.+)",
+    ).map { Regex(it, RegexOption.IGNORE_CASE) }
+    private val REFERENCES = setOf(
+        "it", "this", "that", "these", "those", "the", "my", "our", "your", "wine", "wines", "bottle", "grape", "variety",
+        "of", "a", "an", "its", "s", "and", "in", "on", "potential", "known", "level", "levels", "style", "colour", "color",
+        "taste", "tastes", "flavour", "flavours", "flavor", "flavors", "finish", "structure", "texture", "sweetness", "alcohol",
+        "more", "please", "body", "acidity", "acidic", "tannin", "tannins", "aroma", "aromas", "ageing", "aging", "origin", "regions",
+    )
+
+    fun namesUnfamiliarSubject(query: String, known: Set<String> = emptySet()): Boolean {
+        if (EXEMPT.containsMatchIn(query)) return false
+        return SUBJECTS.any { pattern ->
+            val subject = pattern.find(query)?.groupValues?.get(1) ?: return@any false
+            val words = GrapeProfileInternal.normalize(subject).split(' ').filter { it.isNotBlank() }
+            words.isNotEmpty() && GrapeVarietyLookup.findMentioned(subject).isEmpty() && CountryMentions.find(subject).isEmpty() &&
+                words.any { it !in REFERENCES && it !in known }
+        }
+    }
+
     /** [known] holds words that are already about the open bottle (its name, winery, grape, place), which are not new names. */
     fun shouldRefuse(query: String, known: Set<String> = emptySet()): Boolean {
         if (EXEMPT.containsMatchIn(query)) return false
-        return WineryIntent.asksAboutWineries(query) || ProductionIntent.asksHowMade(query) || namesSomethingSpecific(query, known)
+        return WineryIntent.asksAboutWineries(query) || ProductionIntent.asksHowMade(query) || namesSomethingSpecific(query, known) || namesUnfamiliarSubject(query, known)
     }
 }
 
@@ -222,7 +260,7 @@ object WineryWinesIntent {
 object WineryIntent {
     private val PATTERN = Regex(
         "\\b(wineries|winery|producers?|vineyards?|estates?|bodegas?|vignerons?|domaines?)\\b|" +
-            "\\bwho\\s+(makes|produces|grows)\\b|\\b(located|based)\\b",
+            "\\bwho\\s+(makes|produces|grows)\\b|\\b(located|based(?!\\s+on\\b))\\b",
         RegexOption.IGNORE_CASE,
     )
 
@@ -501,7 +539,7 @@ class WineAskExtras(
         // A rewritten follow-up that finds no real notes is refused outright; the rewrite itself is not a note.
         if (blocks.isEmpty() && rewritten != null) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
         if (blocks.isEmpty() && !alreadySentHit && RefusalGate.shouldRefuse(query, ownWords)) return AskLookup(null, ChatFlowText.NO_INFORMATION, rewritten)
-        return AskLookup(text, null, rewritten)
+        return AskLookup(text, null, rewritten, if (alreadySentHit && text.isNullOrBlank()) AskLookupOutcome.ALREADY_IN_CONVERSATION else if (text.isNullOrBlank()) AskLookupOutcome.NO_EXTRA_NEEDED else AskLookupOutcome.CONTEXT)
     }
 
     override suspend fun forQuestion(query: String): String? {
@@ -512,7 +550,12 @@ class WineAskExtras(
             sentGrapes.clear(); sentKaggleExtracted.clear(); sentWineries.clear(); sentReviews.clear(); sentProduction.clear()
         }
         // "Tell me more" or "describe it", with no grape named, is about the grape last discussed (else the open wine's).
-        val grapeText = if (GrapeIntent.asksToDescribe(query) && GrapeVarietyLookup.findMentioned(query).isEmpty() && knowledge.findMentioned(query).isEmpty()) {
+        // An explicit unfamiliar name is not a reference to the selected grape. Let the
+        // normal missing-information gate handle it instead of manufacturing a Merlot hit.
+        val grapeText = if (GrapeIntent.asksToDescribe(query) &&
+            !RefusalGate.shouldRefuse(query, ownWords) &&
+            GrapeVarietyLookup.findMentioned(query).isEmpty() && knowledge.findMentioned(query).isEmpty()
+        ) {
             (lastGrape ?: ownVariety.firstOrNull())?.let { "$query $it" } ?: query
         } else query
         val mentioned = GrapeVarietyLookup.findMentioned(grapeText)

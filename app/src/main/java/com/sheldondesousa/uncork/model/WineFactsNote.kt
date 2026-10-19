@@ -124,8 +124,8 @@ object WineFactsNote {
             val details = listOf(wine.variety.takeIf(::isKnown), place.takeIf { it.isNotBlank() }).filterNotNull()
             if (details.isNotEmpty()) append(" (${details.joinToString(", ")})")
         }
-        return "[Reminder: we are talking about $about. State specifics about this bottle only if they are in WINE FACTS; " +
-            "otherwise say you don't know. Stay excited and wine-only, and vary the wording that signals general knowledge.]"
+        return "[Reminder: we are talking about $about. State specifics about this bottle or <more context>; " +
+            "otherwise say you don't know. Stay excited, address wine-only questions, remember your guardrails]"
     }
 
     private fun isKnown(value: String) = value.isNotBlank() && !value.equals("Unknown", ignoreCase = true)

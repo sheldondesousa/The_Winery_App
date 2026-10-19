@@ -57,7 +57,13 @@ class GrapeProfileInternal(entries: List<InternalGrapeProfile>) {
             .map { it.replace(Regex("(?i)\\bblend\\b"), "").trim() }
             .filter { it.isNotBlank() }
         if (parts.size > 1 || label.contains("blend", ignoreCase = true)) {
-            val grapes = parts.mapNotNull(::singleGrape).distinct()
+            val resolved = parts.map(::singleGrape)
+            val grapes = resolved.filterNotNull().distinct()
+            // A list of aliases is one grape, not a blend. Require every part to resolve so
+            // an unknown component cannot silently disappear from a genuine blend.
+            if (parts.size > 1 && resolved.all { it != null } && grapes.size == 1 &&
+                !label.contains("blend", ignoreCase = true)
+            ) return GrapeLookup(grapes)
             val note = if (parts.size > 1) {
                 "\"$label\" is a blend. Notes are given for each grape named in the label; the exact proportions are not known."
             } else {
@@ -163,7 +169,7 @@ class GrapeProfileInternal(entries: List<InternalGrapeProfile>) {
                 .trim()
 
         private fun keysOf(entry: InternalGrapeProfile): List<String> {
-            val names = entry.grape.split("/") +
+            val names = listOf(entry.grape) + entry.grape.split("/") +
                 entry.alsoKnownAs.split(";", ",").map { it.replace(Regex("\\(.*?\\)"), "") }
             return names.map { normalize(it) }.filter { it.isNotBlank() }
         }

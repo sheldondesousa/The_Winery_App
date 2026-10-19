@@ -39,13 +39,12 @@ private sealed interface EvalRunState {
 }
 
 /**
- * Debug-only screen that kicks off [GemmaEvalRunner] against the bundled 50-conversation test
- * set and reports progress. Only ever reachable when [BuildConfig.DEBUG] is true — see
+ * Debug-only screen for bottle ASK and retained card evaluations. Reports progress. Only ever reachable when [BuildConfig.DEBUG] is true — see
  * [com.sheldondesousa.uncork.ui.landing.LandingRoute]'s debug entry point.
  */
 @Composable
-internal fun GemmaEvalDebugScreen(onBack: () -> Unit, ragExtras: (() -> com.sheldondesousa.uncork.model.AskExtras)? = null,
-    bottle: GemmaRagEvalRunner.BottleFactory? = null,
+internal fun GemmaEvalDebugScreen(onBack: () -> Unit,
+    bottle: BottleAskEvalRunner.BottleFactory? = null,
 ) {
     check(BuildConfig.DEBUG) { "GemmaEvalDebugScreen must never be reachable in a release build." }
     val context = LocalContext.current
@@ -79,26 +78,12 @@ internal fun GemmaEvalDebugScreen(onBack: () -> Unit, ragExtras: (() -> com.shel
     ) {
         Text("Gemma Eval Runner", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Runs every conversation in the bundled test set through the real Gemma chat path, " +
-                "3 times each. This can take a while — progress is also logged to Logcat under " +
-                "tag \"GemmaEval\".",
+            "Choose a bottle-card evaluation or the first bottle detail ASK evaluation.",
             style = MaterialTheme.typography.bodyMedium,
         )
 
         when (val current = state) {
             is EvalRunState.Idle -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
-                    state = EvalRunState.Running(0, 0, "")
-                    stage1Job = null
-                    scope.launch {
-                        runCatching {
-                            GemmaEvalRunner.run(context) { progress ->
-                                state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
-                            }
-                        }.onSuccess { file -> state = EvalRunState.Done(file) }
-                            .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
-                    }
-                }) { Text("Run eval") }
                 Button(onClick = {
                     state = EvalRunState.Running(0, 0, "")
                     stage1Controller.paused = false
@@ -137,39 +122,28 @@ internal fun GemmaEvalDebugScreen(onBack: () -> Unit, ragExtras: (() -> com.shel
                             }
                     }
                 }) { Text("Run Eval B only (100 cases)") }
-                Button(onClick = {
-                    state = EvalRunState.Running(0, 0, "")
-                    scope.launch {
+                if (bottle != null) Button(onClick = {
+                    state = EvalRunState.Running(0, 100, "")
+                    stage1Job = scope.launch {
                         runCatching {
-                            GemmaHandoverEvalRunner.run(context) { progress ->
+                            BottleAskEvalRunner.run(context, bottle) { progress ->
                                 state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
                             }
                         }.onSuccess { file -> state = EvalRunState.Done(file) }
                             .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
                     }
-                }) { Text("Run Handover eval (40 cases x 3)") }
-                if (ragExtras != null) Button(onClick = {
-                    state = EvalRunState.Running(0, 0, "")
-                    scope.launch {
+                }) { Text("Run bottle detail ASK v3 (100 questions)") }
+                if (bottle != null) Button(onClick = {
+                    state = EvalRunState.Running(0, 300, "ASK4")
+                    stage1Job = scope.launch {
                         runCatching {
-                            GemmaRagEvalRunner.run(context, ragExtras, onProgress = { progress ->
+                            BottleAskEvalRunner.runBroadBatch(context, bottle) { progress ->
                                 state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
-                            })
+                            }
                         }.onSuccess { file -> state = EvalRunState.Done(file) }
                             .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
                     }
-                }) { Text("Run RAG eval (40 convos, RAG off + on)") }
-                if (ragExtras != null && bottle != null) Button(onClick = {
-                    state = EvalRunState.Running(0, 0, "")
-                    scope.launch {
-                        runCatching {
-                            GemmaRagEvalRunner.run(context, ragExtras, { progress ->
-                                state = EvalRunState.Running(progress.completed, progress.total, progress.lastCaseId)
-                            }, bottle)
-                        }.onSuccess { file -> state = EvalRunState.Done(file) }
-                            .onFailure { error -> state = EvalRunState.Failed(error.message ?: error.javaClass.simpleName) }
-                    }
-                }) { Text("Run RAG eval - BOTTLE prompt (RAG off + on)") }
+                }) { Text("Run ASK v4: 100 questions × 3 runs") }
             }
 
             is EvalRunState.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -182,7 +156,7 @@ internal fun GemmaEvalDebugScreen(onBack: () -> Unit, ragExtras: (() -> com.shel
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (stage1Job != null) {
-                    Button(onClick = {
+                    if (!current.lastCaseId.startsWith("ASK") && current.total != 100) Button(onClick = {
                         stage1Paused = !stage1Paused
                         stage1Controller.paused = stage1Paused
                     }) { Text(if (stage1Paused) "Resume" else "Pause after this case") }
