@@ -272,7 +272,8 @@ fun StageShowRoute(
                 )
                 WineSuggestionSource.KAGGLE -> LongDetail(
                     "CRITIC REVIEW",
-                    if (criticLoading) "Unknown" else criticSummary ?: profile.reviewSummary,
+                    if (criticLoading) "Unknown" else criticSummary
+                        ?: BottleReviews.split(profile.reviewSummary).singleOrNull() ?: profile.reviewSummary,
                     criticLoading,
                 )
                 WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
