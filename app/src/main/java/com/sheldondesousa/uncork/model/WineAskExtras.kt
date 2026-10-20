@@ -585,7 +585,7 @@ class WineAskExtras(
                 if (!sentReviews.add(key)) alreadySentHit = true
                 else {
                     val block = when {
-                        typed != null -> wineBlock(typed) ?: if (country.isNotBlank() && countriesNamed.isNotEmpty()) sampleBlock()
+                        typed != null -> wineBlock(typed) ?: if (country.isNotBlank() && countriesNamed.isNotEmpty() && !typed.equals(ownWineName, true)) sampleBlock()
                             else ownWineName.takeIf { it.isNotBlank() && !it.equals(typed, true) }?.let { wineBlock(it) } ?: WineFactsNote.noNotes("reviews of $typed")
                         countriesNamed.isNotEmpty() -> sampleBlock()
                         ownWineName.isNotBlank() -> wineBlock(ownWineName) ?: WineFactsNote.noNotes("reviews of $ownWineName")

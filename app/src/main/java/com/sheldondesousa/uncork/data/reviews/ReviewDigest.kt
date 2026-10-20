@@ -48,7 +48,7 @@ internal object ReviewExcerpts {
 
 /** Picks the same number of reviews from each third of the score range. Pure, so it is easy to test. */
 internal object ReviewSampler {
-    const val PER_BAND = 12
+    const val PER_BAND = 1
     private val NAMES = listOf("highest-scored third", "middle third", "lowest-scored third")
 
     class Band(val name: String, val pool: List<PoolReview>, val picked: List<PoolReview>)
