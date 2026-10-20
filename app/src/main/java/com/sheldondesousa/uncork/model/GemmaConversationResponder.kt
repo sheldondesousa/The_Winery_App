@@ -10,6 +10,7 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.SamplerConfig
+import com.sheldondesousa.uncork.data.reviews.BottleReviews
 import com.sheldondesousa.uncork.data.reviews.FindPhraseEvidence
 import com.sheldondesousa.uncork.ui.conversation.ChatMessage
 import com.sheldondesousa.uncork.ui.conversation.ConversationStreamUpdate
@@ -95,6 +96,7 @@ class GemmaConversationResponder(
     private val chatSearchInstruction: String by lazy { loadPrompt("chat_search_instruction.txt") }
     private val wineDetailInstruction: String by lazy { loadPrompt("wine_detail_instruction.txt") }
     private val webResultSystemInstruction: String by lazy { loadPrompt("web_result_system_instruction.txt") }
+    private val criticSummaryInstruction: String by lazy { loadPrompt("wine_critic_summary_instruction.txt") }
     private val wineDiscussionInstruction: String by lazy { loadPrompt("wine_discussion_instruction.txt") }
 
     override suspend fun replyTo(query: String): ChatMessage =
@@ -763,6 +765,34 @@ class GemmaConversationResponder(
         put("name", name)
         listOf(
             "winery" to winery, "wine_type" to wineType, "country" to country,
+    /** An impartial summary of a bottle's critic reviews (two or more), or null when there is nothing to summarise or Gemma fails. */
+    suspend fun summarizeCriticReviews(card: WineSuggestion): String? = withContext(Dispatchers.Default) {
+        val reviews = BottleReviews.pick(BottleReviews.split(card.reviewSummary))
+        if (reviews.size < 2) return@withContext null
+        val request = buildString {
+            appendLine("Wine: ${card.name} (${card.variety}, ${card.country})")
+            reviews.forEachIndexed { index, text -> appendLine("${index + 1}. $text") }
+        }
+        requestMutex.withLock {
+            val conversation = ensureEngine().createConversation(
+                ConversationConfig(
+                    systemInstruction = Contents.of(criticSummaryInstruction),
+                    samplerConfig = SamplerConfig(topK = DETAIL_TOP_K, topP = DETAIL_TOP_P, temperature = DETAIL_TEMPERATURE),
+                    maxOutputToken = CRITIC_SUMMARY_MAX_OUTPUT_TOKENS,
+                ),
+            )
+            try {
+                buildString {
+                    conversation.sendMessageAsync(request).collect { message ->
+                        message.contents.contents.filterIsInstance<Content.Text>().forEach { append(it.text) }
+                    }
+                }.trim().takeIf { it.isNotBlank() }
+            } finally {
+                conversation.close()
+            }
+        }
+    }
+
             "province" to province, "variety" to variety, "sweetness" to sweetness,
             "body" to body, "tannin" to tannin, "acidity" to acidity,
             "flavor_notes" to flavorNotes, "suggested_pairing" to suggestedPairing,
@@ -1522,6 +1552,7 @@ class GemmaConversationResponder(
                 key = "sounds good",
                 pattern = Regex("^\\s*sounds good[.!,:;—-]*\\s*", RegexOption.IGNORE_CASE),
             ),
+        private const val CRITIC_SUMMARY_MAX_OUTPUT_TOKENS = 200
         )
     }
 }

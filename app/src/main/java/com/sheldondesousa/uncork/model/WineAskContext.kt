@@ -94,7 +94,7 @@ class WineAskContext(
     }
 
     private suspend fun reviewSample(spellings: List<String>, country: String) =
-        reviews.digestFor(spellings, country, seed = sampleSeed(spellings.first(), country))
+        reviews.digestFor(spellings, country, seed = kotlin.random.Random.nextLong(1L, 2_000_000_000L))
 
     private suspend fun grapeWineries(spellings: List<String>, country: String?, limit: Int, exclude: Set<String>, province: String? = null) =
         reviews.wineriesFor(spellings, country, limit = limit, seed = sampleSeed(spellings.first(), country.orEmpty() + province.orEmpty()), exclude = exclude, province = province)

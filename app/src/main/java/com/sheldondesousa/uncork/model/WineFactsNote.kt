@@ -161,23 +161,16 @@ object WineFactsNote {
         }
     }.trimEnd()
 
-    /** The even review sample, with a heading and tags. Sent only when the user asks what people say. */
+    /** A few reviews picked at random across the grape's reviews in a country, with a heading and tags. Sent only when the user asks what people say. */
     fun reviewsBlock(reviews: VarietyCountryDigest): String = buildString {
         appendLine(
-            "WHAT WINE ENTHUSIASTS SAY (an even sample of critic reviews of ${reviews.variety} from " +
-                "${reviews.country}: the same number from the highest-scored, middle and lowest-scored thirds. " +
+            "WHAT WINE ENTHUSIASTS SAY (${reviews.bands.sumOf { it.reviews.size }} critic reviews of ${reviews.variety} from " +
+                "${reviews.country}, picked at random. " +
                 "About the grape in that country, not this bottle)",
         )
-        val average = reviews.averagePoints?.let { " average_score=\"${"%.1f".format(java.util.Locale.ROOT, it)}\"" }.orEmpty()
-        appendLine("<reviews variety=\"${reviews.variety}\" country=\"${reviews.country}\" total=\"${reviews.totalReviews}\"$average>")
-        reviews.bands.filter { it.reviews.isNotEmpty() }.forEach { band ->
-            val range = if (band.minPoints != null && band.maxPoints != null) " points=\"${band.minPoints}-${band.maxPoints}\"" else ""
-            appendLine("<band name=\"${band.name}\"$range sampled=\"${band.reviews.size}\" of=\"${band.poolSize}\">")
-            band.reviews.forEach { review ->
-                val score = review.points?.let { ", $it" }.orEmpty()
-                appendLine("- [${review.province}$score] ${review.excerpt}")
-            }
-            appendLine("</band>")
+        appendLine("<reviews variety=\"${reviews.variety}\" country=\"${reviews.country}\">")
+        reviews.bands.flatMap { it.reviews }.forEach { review ->
+            appendLine("- [${review.province}] ${review.excerpt}")
         }
         appendLine("</reviews>")
     }.trimEnd()

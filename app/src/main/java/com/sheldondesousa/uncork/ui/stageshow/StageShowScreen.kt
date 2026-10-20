@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sheldondesousa.uncork.data.reviews.BottleReviews
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestion
 import com.sheldondesousa.uncork.ui.conversation.WineSuggestionSource
 import com.sheldondesousa.uncork.ui.components.AppBottomBar
@@ -115,6 +116,7 @@ fun StageShowRoute(
     onHome: () -> Unit = onBack,
     onAsk: () -> Unit = {},
     loadDetails: (suspend (WineSuggestion, (WineSuggestion) -> Unit) -> WineSuggestion)? = null,
+    loadCriticSummary: (suspend (WineSuggestion) -> String?)? = null,
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = onBack)
@@ -135,6 +137,17 @@ fun StageShowRoute(
                 displayedWine = displayedWine.copy(ai = enriched.toStageWine().ai)
             }
             detailsLoading = false
+        }
+    }
+    // A reviewed bottle with two or more critic reviews gets one impartial summary from Gemma; with one, the review is shown as stored.
+    val summariseReviews = loadCriticSummary != null && wine.ai.source == WineSuggestionSource.KAGGLE &&
+        BottleReviews.split(wine.ai.reviewSummary).size >= 2
+    var criticSummary by remember(wine) { mutableStateOf<String?>(null) }
+    var criticLoading by remember(wine, loadCriticSummary) { mutableStateOf(summariseReviews) }
+    LaunchedEffect(wine) {
+        if (summariseReviews && loadCriticSummary != null) {
+            criticSummary = runCatching { loadCriticSummary(wine.toWineSuggestion()) }.getOrNull()
+            criticLoading = false
         }
     }
     val profile = if (source == WineSource.Kaggle) {
@@ -257,7 +270,11 @@ fun StageShowRoute(
                     profile.summary.takeIf { it.isResolvedValue() } ?: "Unknown",
                     detailsLoading,
                 )
-                WineSuggestionSource.KAGGLE -> LongDetail("CRITIC REVIEW", profile.reviewSummary)
+                WineSuggestionSource.KAGGLE -> LongDetail(
+                    "CRITIC REVIEW",
+                    if (criticLoading) "Unknown" else criticSummary ?: profile.reviewSummary,
+                    criticLoading,
+                )
                 WineSuggestionSource.CACHE -> LongDetail("SAVED SUMMARY", profile.webSummary)
                 WineSuggestionSource.WEB_SEARCH -> LongDetail("WEB SUMMARY", profile.webSummary)
             }

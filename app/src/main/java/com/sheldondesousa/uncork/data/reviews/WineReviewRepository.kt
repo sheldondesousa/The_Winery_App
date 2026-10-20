@@ -236,7 +236,7 @@ class WineReviewRepository(context: Context) : WineReviewDataSource {
                             maxPoints = band.pool.mapNotNull { it.points }.maxOrNull(),
                             poolSize = band.pool.size,
                             reviews = band.picked.mapNotNull { pick ->
-                                ReviewExcerpts.shorten(text[pick.id].orEmpty(), maxChars = 140)
+                                ReviewExcerpts.shorten(text[pick.id].orEmpty(), maxChars = 200)
                                     .takeIf { it.isNotBlank() }
                                     ?.let { SampledReview(pick.province, pick.points, it) }
                             },

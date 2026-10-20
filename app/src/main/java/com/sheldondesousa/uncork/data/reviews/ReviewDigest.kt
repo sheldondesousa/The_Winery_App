@@ -75,3 +75,26 @@ internal object ReviewSampler {
 
     fun tieBreak(id: Long, seed: Long): Long = (id * GuidedReviewQuery.hashMultiplier(seed)) % 2147483647L
 }
+
+/**
+ * The critic reviews stored for one bottle ("Review 1: … || Review 2: …"). A bottle with two or more is summarised by
+ * Gemma; a bottle with more than [MAX_REVIEWS] sends [PER_THIRD] random reviews from each third. Pure, so it is easy to test.
+ */
+object BottleReviews {
+    const val MAX_REVIEWS = 6
+    const val PER_THIRD = 2
+
+    fun split(reviewSummary: String): List<String> = reviewSummary.split("||")
+        .map { it.replace(Regex("^\\s*Review\\s*\\d+\\s*:\\s*", RegexOption.IGNORE_CASE), "").replace(Regex("\\s+"), " ").trim() }
+        .filter { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) }
+        .distinct()
+
+    /** Up to [MAX_REVIEWS] reviews. Over that, two at random from each third of the source order. */
+    fun pick(reviews: List<String>, random: Random = Random.Default): List<String> {
+        if (reviews.size <= MAX_REVIEWS) return reviews
+        val a = reviews.size / 3
+        val b = reviews.size * 2 / 3
+        return listOf(reviews.subList(0, a), reviews.subList(a, b), reviews.subList(b, reviews.size))
+            .flatMap { it.shuffled(random).take(PER_THIRD) }
+    }
+}

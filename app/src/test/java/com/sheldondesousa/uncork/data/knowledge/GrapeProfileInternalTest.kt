@@ -167,7 +167,7 @@ class ReviewDigestNoteTest {
         assertEquals(5, tiny.sumOf { it.picked.size })
     }
 
-    @Test fun factsNoteLabelsTheThreeBandsAndMarksTheDataAsAboutTheGrapeNotTheBottle() {
+    @Test fun factsNoteListsTheSampledReviewsWithoutScoresAndMarksTheDataAsAboutTheGrapeNotTheBottle() {
         val digest = com.sheldondesousa.uncork.data.reviews.VarietyCountryDigest(
             variety = "Merlot", country = "France", totalReviews = 120, averagePoints = 88.46,
             bands = listOf(
@@ -181,11 +181,10 @@ class ReviewDigestNoteTest {
         val note = WineFactsNote.build(WineSuggestion(name = "Chateau X", province = "Bordeaux", country = "France", variety = "Merlot"), reviews = digest)
         assertTrue(note.contains("WHAT WINE ENTHUSIASTS SAY"))
         assertTrue(note.contains("not this bottle"))
-        assertTrue(note.contains("<reviews variety=\"Merlot\" country=\"France\" total=\"120\" average_score=\"88.5\">"))
-        assertTrue(note.contains("<band name=\"highest-scored third\" points=\"90-93\" sampled=\"1\" of=\"40\">"))
-        assertTrue(note.contains("- [Bordeaux, 92] Dark plum and cedar."))
-        assertTrue(note.contains("- [Languedoc-Roussillon, 84] Thin and simple."))
-        assertFalse(note.contains("middle third"))
+        assertTrue(note.contains("<reviews variety=\"Merlot\" country=\"France\">"))
+        assertTrue(note.contains("- [Bordeaux] Dark plum and cedar."))
+        assertTrue(note.contains("- [Languedoc-Roussillon] Thin and simple."))
+        assertFalse(note.contains("average_score"))
         assertTrue(note.contains("</reviews>"))
         assertFalse(WineFactsNote.build(WineSuggestion(name = "A", province = "B")).contains("WHAT WINE ENTHUSIASTS SAY"))
     }
@@ -289,7 +288,7 @@ class AskExtrasTest {
         assertEquals(0, loads)
         val first = extras.forQuestion("What do wine enthusiasts say?")!!
         assertTrue(first.contains("WHAT WINE ENTHUSIASTS SAY"))
-        assertTrue(first.contains("- [Bordeaux, 92] Rich plum."))
+        assertTrue(first.contains("- [Bordeaux] Rich plum."))
         assertNull(extras.forQuestion("Any other reviews?"))
         assertEquals(1, loads)
         extras.reset()

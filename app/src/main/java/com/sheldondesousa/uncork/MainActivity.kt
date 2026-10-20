@@ -317,6 +317,7 @@ class MainActivity : ComponentActivity() {
                                     wine.ai.source == WineSuggestionSource.GEMMA &&
                                     !wine.ai.profileComplete
                                 ) gemmaResponder::enrichWineDetails else null,
+                                loadCriticSummary = gemmaResponder::summarizeCriticReviews,
                                 onAsk = {
                                     // Open the chat straight away with its welcome message; the wine's facts are looked
                                     // up in the background while the user reads it.
