@@ -643,14 +643,6 @@ class WineAskExtras(
             }
         }
 
-        // Offer other countries once for each grape the user names.
-        // Each line names its grape, and a grape never gets two.
-        mentioned.take(MAX_GRAPES).forEach { grape ->
-            if (!offeredCountries.add(grape.name.lowercase())) return@forEach
-            val others = runCatching { loadOtherCountries(grape.databaseNames, country) }.getOrNull().orEmpty()
-            if (others.isNotEmpty()) WineFactsNote.otherCountriesLine(others, grape.name).let { if (it !in blocks) blocks += it }
-        }
-
         // 3b. "How is Merlot made in Bordeaux?": the French production notes for that grape and place.
         productionBlock(query, countriesNamed)?.let { blocks += it }
 

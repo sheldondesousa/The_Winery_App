@@ -20,7 +20,7 @@ import java.io.File
 class BottleAskGoldenTest(private val assetName: String) {
     companion object {
         @JvmStatic @Parameterized.Parameters(name = "{0}")
-        fun assets() = listOf(arrayOf("bottle_ask_v1.json"), arrayOf("bottle_ask_v2.json"), arrayOf("bottle_ask_v3.json"), arrayOf("bottle_ask_v4.json"), arrayOf("bottle_ask_v5.json"), arrayOf("bottle_ask_v6.json"))
+        fun assets() = listOf(arrayOf("bottle_ask_v1.json"), arrayOf("bottle_ask_v2.json"), arrayOf("bottle_ask_v3.json"), arrayOf("bottle_ask_v4.json"), arrayOf("bottle_ask_v5.json"), arrayOf("bottle_ask_v6.json"), arrayOf("bottle_ask_v7.json"))
     }
     private val set = JSONObject(File("src/debug/assets/eval/$assetName").readText())
     private val knowledge = GrapeProfileInternal.fromJsonLines(File("src/main/assets/knowledge/grape_profile_internal.jsonl").readText())
@@ -45,7 +45,7 @@ class BottleAskGoldenTest(private val assetName: String) {
 
     @Test fun goldenProfilesStillMatchTheBundledSource() {
         val profiles = set.getJSONArray("profiles")
-        assertEquals(if (assetName.contains("v4") || assetName.contains("v5") || assetName.contains("v6")) 67 else 15, profiles.length())
+        assertEquals(if (assetName.contains("v4") || assetName.contains("v5") || assetName.contains("v6") || assetName.contains("v7")) 67 else 15, profiles.length())
         for (i in 0 until profiles.length()) {
             val saved = profiles.getJSONObject(i)
             val source = File("src/main/assets/knowledge/grape_profile_internal.jsonl").readLines()
@@ -72,8 +72,9 @@ class BottleAskGoldenTest(private val assetName: String) {
 
     @Test fun missingNamesAreRefusedAndSupportedCasesHaveSourceNotes() = runBlocking {
         val cases = set.getJSONArray("cases")
-        assertEquals(when { assetName.contains("v5") || assetName.contains("v6") -> 300; assetName.contains("v3") || assetName.contains("v4") -> 100; else -> 20 }, cases.length())
+        assertEquals(when { assetName.contains("v7") -> 400; assetName.contains("v5") || assetName.contains("v6") -> 300; assetName.contains("v3") || assetName.contains("v4") -> 100; else -> 20 }, cases.length())
         val counts = mutableMapOf<String, Int>()
+        val notRefused = mutableListOf<String>()
         for (i in 0 until cases.length()) {
             val case = cases.getJSONObject(i)
             val category = case.getString("category")
@@ -88,11 +89,15 @@ class BottleAskGoldenTest(private val assetName: String) {
                 ownVariety = if (own.isNotEmpty()) own.map { it.grape } else listOf(variety),
                 ownCountry = place("country"), ownRegion = place("province"), loadKaggleExtracted = kaggle, loadReviews = { _, _ -> null })
             val lookup = extras.lookup(case.getString("question"))
-            if (category == "no_information") {
+            if (assetName.contains("v7") && category == "no_information" && case.getString("expected_route") == "WINE_DISCUSSION" && !case.optBoolean("expected_kotlin_miss")) {
+                // v7: a grape in the notes asked about a detail the notes never hold. Kotlin finds the grape's notes, so Gemma has to decline.
+                assertNull(case.getString("id"), lookup.refusal)
+                assertEquals(ChatFlowText.NO_INFORMATION, case.getString("expected_answer"))
+            } else if (category == "no_information") {
                 // v5 marks the unsupported questions Kotlin's lookup did not refuse when the set was built; they reach Gemma on
                 // purpose. If Kotlin is fixed this fails, which is the reminder to update the flag.
                 if (case.optBoolean("expected_kotlin_miss")) assertNull(case.getString("id"), lookup.refusal)
-                else assertEquals(case.getString("id"), ChatFlowText.NO_INFORMATION, lookup.refusal)
+                else if (lookup.refusal != ChatFlowText.NO_INFORMATION) notRefused += case.getString("id")
                 assertEquals(ChatFlowText.NO_INFORMATION, case.getString("expected_answer"))
             } else {
                 assertNull(case.getString("id"), lookup.refusal)
@@ -102,6 +107,7 @@ class BottleAskGoldenTest(private val assetName: String) {
             }
         }
         val expectedCounts = when {
+            assetName.contains("v7") -> mapOf("supported" to 200, "false_claim" to 100, "no_information" to 100)
             assetName.contains("v6") -> mapOf("supported" to 190, "false_claim" to 80, "no_information" to 15, "needs_place" to 15)
             assetName.contains("v5") -> mapOf("supported" to 100, "no_information" to 100, "false_claim" to 100)
             assetName.contains("v4") -> mapOf("supported" to 50, "no_information" to 25, "false_claim" to 25)
@@ -109,6 +115,7 @@ class BottleAskGoldenTest(private val assetName: String) {
             else -> mapOf("supported" to 10, "no_information" to 5, "false_claim" to 5)
         }
         assertEquals(expectedCounts, counts)
+        assertTrue("Kotlin did not refuse: ${notRefused.joinToString(" ")}", notRefused.isEmpty())
     }
     @Test fun lowercaseNamesAndCapitalisationVariantsAreExplicitMisses() = runBlocking {
         listOf(

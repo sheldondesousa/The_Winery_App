@@ -36,7 +36,7 @@ internal object BottleAskEvalRunner {
         onProgress: (EvalProgress) -> Unit,
     ): File {
         check(BuildConfig.DEBUG) { "Evaluation is available only in debug builds." }
-        require(assetName in setOf("bottle_ask_v3.json", "bottle_ask_v4.json", "bottle_ask_v5.json", "bottle_ask_v6.json"))
+        require(assetName in setOf("bottle_ask_v3.json", "bottle_ask_v4.json", "bottle_ask_v5.json", "bottle_ask_v6.json", "bottle_ask_v7.json"))
         val datasetBytes = context.assets.open("eval/$assetName").use { it.readBytes() }
         val set = JSONObject(datasetBytes.toString(Charsets.UTF_8))
         val cases = set.getJSONArray("cases")
@@ -147,7 +147,7 @@ internal object BottleAskEvalRunner {
      */
     suspend fun runOnce(context: Context, bottle: BottleFactory, assetName: String, onProgress: (EvalProgress) -> Unit): File {
         check(BuildConfig.DEBUG) { "Evaluation is available only in debug builds." }
-        require(assetName in setOf("bottle_ask_v5.json", "bottle_ask_v6.json"))
+        require(assetName in setOf("bottle_ask_v5.json", "bottle_ask_v6.json", "bottle_ask_v7.json"))
         val directory = File(context.getExternalFilesDir(null), "eval/${assetName.removeSuffix(".json").replace('_', '-')}-${System.currentTimeMillis()}").apply { mkdirs() }
         return run(context, bottle, assetName, 1, directory, onProgress)
     }

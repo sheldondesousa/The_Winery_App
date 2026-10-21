@@ -32,12 +32,9 @@ class WineAskContext(
             kaggleExtractedFor(spellings, wine.country, preferredProvince = wine.province)
         }
         val needsPlace = grapes.grapes.isEmpty() && !wine.variety.isUnknown() && wine.country.isUnknown()
-        val otherCountries = if (wine.country.isUnknown() || wine.variety.isUnknown()) emptyList() else {
-            runCatching { reviews.topCountriesFor(spellings, excludeCountry = wine.country) }.getOrNull().orEmpty()
-        }
         // The broader review sample is not part of the first message; see [extrasFor].
         return WineFactsNote.build(
-            wine, grapes, regionStyles, winery = winery, otherCountries = otherCountries,
+            wine, grapes, regionStyles, winery = winery,
             askForPlace = needsPlace,
         )
     }

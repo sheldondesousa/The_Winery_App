@@ -462,13 +462,12 @@ class ChatExtrasTest {
         loadReviews = { spellings, country -> onReviews(spellings, country); digest },
     )
 
-    @Test fun aGrapeInGrapeProfileInternalGetsItsNotesAndAnOfferOfOtherCountriesOnce() = kotlinx.coroutines.runBlocking {
+    @Test fun aGrapeInGrapeProfileInternalGetsItsNotesOnce() = kotlinx.coroutines.runBlocking {
         val extras = chatExtras()
         val block = extras.forQuestion("Tell me about Malbec in Argentina")!!
         assertTrue(block.contains("Grape_Profile_Internal"))
         assertTrue(block.contains("- Malbec (red)"))
-        assertTrue(block.contains("OTHER COUNTRIES with the most reviews of Malbec"))
-        assertTrue(block.contains("United States (900 reviews), Italy (400 reviews)"))
+        assertFalse(block.contains("OTHER COUNTRIES"))
         assertNull(extras.forQuestion("And Malbec again?"))
     }
 
@@ -946,14 +945,6 @@ class RetrievalCleanUpTest {
     private val directory = WineriesDirectory.fromCsv(File("src/main/assets/knowledge/wineries_directory.csv").readText())
     private val others = listOf(com.sheldondesousa.uncork.data.reviews.CountryReviewCount("Italy", 400))
     private fun extras() = WineAskExtras(base, loadWineries = { directory }, loadOtherCountries = { _, _ -> others }) { _, _ -> null }
-
-    @Test fun twoGrapesGetTwoLabelledOtherCountriesLinesNotTheSameOneTwice() = kotlinx.coroutines.runBlocking {
-        val text = extras().forQuestion("Is Merlot sweeter than Cabernet Sauvignon?")!!
-        val lines = text.lines().filter { it.startsWith("OTHER COUNTRIES") }
-        assertEquals(2, lines.size)
-        assertEquals(2, lines.distinct().size)
-        assertTrue(lines.any { it.contains("of Merlot") } && lines.any { it.contains("of Cabernet Sauvignon") })
-    }
 
     @Test fun aWineryPlacedInTheWrongPlaceGetsACorrection() = kotlinx.coroutines.runBlocking {
         val text = extras().forQuestion("Which Pauillac château makes Pétrus?")!!
