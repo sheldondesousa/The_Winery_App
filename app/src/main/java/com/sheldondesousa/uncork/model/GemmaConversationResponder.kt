@@ -740,31 +740,6 @@ class GemmaConversationResponder(
         }
     }
 
-    private fun WineSuggestion.pendingDetailFieldCount(): Int =
-        if (requestContext?.trimStart()?.startsWith("{") == true) {
-            listOf(summary).count { !it.isResolvedValue() }
-        } else {
-            listOf(
-                winery, wineType, sweetness, body, tannin, acidity,
-                flavorNotes, suggestedPairing, summary,
-            ).count { !it.isResolvedValue() }
-        }
-
-    private fun WineSuggestion.toStyleCardJson(): String = JSONObject().apply {
-        put("variety", variety)
-        put("type", when (wineType.lowercase()) {
-            "rose", "rosé" -> "Rosé"
-            "sweet", "dessert" -> "Dessert"
-            else -> wineType.replaceFirstChar(Char::uppercase)
-        })
-        put("country", country)
-        put("region", province)
-    }.toString()
-
-    private fun WineSuggestion.toKnownDetailJson(): String = JSONObject().apply {
-        put("name", name)
-        listOf(
-            "winery" to winery, "wine_type" to wineType, "country" to country,
     /** An impartial summary of a bottle's critic reviews (two or more), or null when there is nothing to summarise or Gemma fails. */
     suspend fun summarizeCriticReviews(card: WineSuggestion): String? = withContext(Dispatchers.Default) {
         val reviews = BottleReviews.pick(BottleReviews.split(card.reviewSummary))
@@ -793,6 +768,31 @@ class GemmaConversationResponder(
         }
     }
 
+    private fun WineSuggestion.pendingDetailFieldCount(): Int =
+        if (requestContext?.trimStart()?.startsWith("{") == true) {
+            listOf(summary).count { !it.isResolvedValue() }
+        } else {
+            listOf(
+                winery, wineType, sweetness, body, tannin, acidity,
+                flavorNotes, suggestedPairing, summary,
+            ).count { !it.isResolvedValue() }
+        }
+
+    private fun WineSuggestion.toStyleCardJson(): String = JSONObject().apply {
+        put("variety", variety)
+        put("type", when (wineType.lowercase()) {
+            "rose", "rosé" -> "Rosé"
+            "sweet", "dessert" -> "Dessert"
+            else -> wineType.replaceFirstChar(Char::uppercase)
+        })
+        put("country", country)
+        put("region", province)
+    }.toString()
+
+    private fun WineSuggestion.toKnownDetailJson(): String = JSONObject().apply {
+        put("name", name)
+        listOf(
+            "winery" to winery, "wine_type" to wineType, "country" to country,
             "province" to province, "variety" to variety, "sweetness" to sweetness,
             "body" to body, "tannin" to tannin, "acidity" to acidity,
             "flavor_notes" to flavorNotes, "suggested_pairing" to suggestedPairing,
@@ -1527,6 +1527,7 @@ class GemmaConversationResponder(
         internal const val DETAIL_TEMPERATURE = 0.35
         private const val INITIAL_CARD_MAX_OUTPUT_TOKENS = 384
         private const val DETAIL_MAX_OUTPUT_TOKENS = 512
+        private const val CRITIC_SUMMARY_MAX_OUTPUT_TOKENS = 200
         private const val DETAIL_STREAM_UPDATE_INTERVAL_MS = 80L
         // The prompt asks Gemma for a summary "under 200 characters", but models don't hit an
         // exact count reliably — allow a 10% buffer (220) rather than hard-truncating a
@@ -1552,7 +1553,6 @@ class GemmaConversationResponder(
                 key = "sounds good",
                 pattern = Regex("^\\s*sounds good[.!,:;—-]*\\s*", RegexOption.IGNORE_CASE),
             ),
-        private const val CRITIC_SUMMARY_MAX_OUTPUT_TOKENS = 200
         )
     }
 }
